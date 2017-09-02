@@ -5,8 +5,12 @@ authors = ["Andreas Fuchs <asf@boinkor.net>"]
 license = "MIT"
 homepage = "https://github.com/antifuchs/ratelimit_meter"
 repository = "https://github.com/antifuchs/ratelimit_meter.git"
-
+readme = "README.md"
 description = "A leaky-bucket-as-a-meter rate-limiting implementation in Rust"
+
+[badges]
+travis-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
+maintenance = { status = "passively-maintained" }
 
 [dependencies]
 error-chain = "0.11.0-rc.2"
