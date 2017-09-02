@@ -1,11 +1,11 @@
+pub mod errors;
+
+#[macro_use] extern crate error_chain;
+
 use std::time::{Instant, Duration};
 use std::cmp;
 
-pub struct Limiter {
-    capacity: u32,
-    weight: u32,
-    time_unit: Duration,
-}
+pub use errors::*;
 
 #[derive(PartialEq, Debug)]
 /// A decision on a single cell from the metered rate-limiter.
@@ -19,6 +19,14 @@ pub enum Decision<T> {
     No(T)
 }
 
+/// A builder object that can be used to construct rate-limiters as
+/// meters.
+pub struct Limiter {
+    capacity: Option<u32>,
+    weight: Option<u32>,
+    time_unit: Duration,
+}
+
 /// A builder pattern implementation that can construct deciders.
 /// # Basic example
 /// This example constructs a decider that considers every cell
@@ -27,7 +35,7 @@ pub enum Decision<T> {
 /// ```
 /// # use ratelimit_meter::{Limiter, Decider, Allower};
 ///
-/// let mut limiter = Limiter::new().build::<Allower>();
+/// let mut limiter = Limiter::new().build::<Allower>().unwrap();
 /// for _i in 1..3 {
 ///     println!("{:?}...", limiter.check());
 /// }
@@ -37,22 +45,22 @@ impl Limiter {
     /// cell weight of zero, and a time_unit of zero.
     pub fn new() -> Limiter {
         Limiter{
-            capacity: 0,
-            weight: 0,
+            capacity: None,
+            weight: None,
             time_unit: Duration::from_secs(1),
         }
     }
 
     /// Sets the capacity of the limiter's "bucket" in elements per `time_unit`.
     pub fn capacity<'a>(&'a mut self, capacity: u32) -> &'a mut Limiter {
-        self.capacity = capacity;
+        self.capacity = Some(capacity);
         self
     }
 
     /// Sets the "weight" of each cell being checked against the
     /// bucket. Each cell fills the bucket by this much.
     pub fn weight<'a>(&'a mut self, weight: u32) -> &'a mut Limiter {
-        self.weight = weight;
+        self.weight = Some(weight);
         self
     }
 
@@ -63,7 +71,7 @@ impl Limiter {
     }
 
     /// Builds and returns a concrete structure that implements the Decider trait.
-    pub fn build<D>(&self) -> D where D: Decider {
+    pub fn build<D>(&self) -> Result<D> where D: Decider {
         D::build_with(self)
     }
 }
@@ -79,7 +87,7 @@ pub trait Decider {
     fn test_and_update(&mut self, at: Instant) -> Decision<Self::T>;
 
     /// Converts the limiter builder into a concrete decider structure.
-    fn build_with(l: &Limiter) -> Self;
+    fn build_with(l: &Limiter) -> Result<Self> where Self: Sized;
 
     /// Tests if a single cell can be accomodated now. See `test_and_update`.
     fn check(&mut self) -> Decision<Self::T> {
@@ -101,13 +109,13 @@ pub trait Decider {
 /// ```
 /// # use ratelimit_meter::{Limiter, Decider, GCRA, Decision};
 /// # use std::time::{Instant, Duration};
-/// let mut limiter = Limiter::new().capacity(20).weight(1).build::<GCRA>();
+/// let mut limiter = Limiter::new().capacity(20).weight(1).build::<GCRA>().unwrap();
 /// let now = Instant::now();
 /// let ms = Duration::from_millis(1);
 /// assert_eq!(Decision::Yes, limiter.test_and_update(now)); // the first cell is free
 /// for i in 0..20 {
 ///     // Spam a lot:
-///     assert_eq!(Decision::Yes, limiter.test_and_update(now));
+///     assert_eq!(Decision::Yes, limiter.test_and_update(now), "at {}", i);
 /// }
 /// // We have exceeded the bucket capacity:
 /// assert_ne!(Decision::Yes, limiter.test_and_update(now));
@@ -140,12 +148,17 @@ impl Decider for GCRA {
         Decision::Yes
     }
 
-    fn build_with(l: &Limiter) -> Self {
-        GCRA {
-            t: (l.time_unit / l.capacity) * l.weight,
+    fn build_with(l: &Limiter) -> Result<Self> {
+        let capacity = l.capacity.ok_or(ErrorKind::CapacityRequired)?;
+        let weight = l.weight.ok_or(ErrorKind::WeightRequired)?;
+        if l.time_unit <= Duration::new(0, 0) {
+            return Err(ErrorKind::InvalidTimeUnit(l.time_unit).into());
+        }
+        Ok(GCRA{
+            t: (l.time_unit / capacity) * weight,
             tau: l.time_unit,
             tat: None,
-        }
+        })
     }
 }
 
@@ -164,8 +177,8 @@ impl Decider for Allower {
     }
 
     /// Builds the most useless rate-limiter in existence.
-    fn build_with(_l: &Limiter) -> Self {
-        Allower{}
+    fn build_with(_l: &Limiter) -> Result<Self> {
+        Ok(Allower{})
     }
 }
 
@@ -176,12 +189,12 @@ mod tests {
 
     #[test]
     fn accepts_first_cell() {
-        let mut gcra = Limiter::new().capacity(5).weight(1).build::<GCRA>();
+        let mut gcra = Limiter::new().capacity(5).weight(1).build::<GCRA>().unwrap();
         assert_eq!(Decision::Yes, gcra.check());
     }
     #[test]
     fn rejects_too_many() {
-        let mut gcra = Limiter::new().capacity(1).weight(1).build::<GCRA>();
+        let mut gcra = Limiter::new().capacity(1).weight(1).build::<GCRA>().unwrap();
         let now = Instant::now();
         gcra.test_and_update(now);
         gcra.test_and_update(now);
@@ -189,7 +202,7 @@ mod tests {
     }
     #[test]
     fn allows_after_interval() {
-        let mut gcra = Limiter::new().capacity(1).weight(1).build::<GCRA>();
+        let mut gcra = Limiter::new().capacity(1).weight(1).build::<GCRA>().unwrap();
         let now = Instant::now();
         let ms = Duration::from_millis(1);
         gcra.test_and_update(now);

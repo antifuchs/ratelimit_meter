@@ -4,3 +4,4 @@ version = "0.1.0"
 authors = ["Andreas Fuchs <asf@boinkor.net>"]
 
 [dependencies]
+error-chain = "0.10.0"
