@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/antifuchs/ratelimit_meter.svg?branch=master)](https://travis-ci.org/antifuchs/ratelimit_meter)
+[![Build Status](https://travis-ci.org/antifuchs/ratelimit_meter.svg?branch=master)](https://travis-ci.org/antifuchs/ratelimit_meter) [![Docs](https://docs.rs/ratelimit_meter/badge.svg)](https://docs.rs/ratelimit_meter/)
 
 # Leaky Bucket Rate-Limiting (as a meter) in Rust
 
