@@ -1,0 +1,30 @@
+dist: trusty
+language: rust
+sudo: required
+
+rust:
+  - stable
+  - beta
+  - nightly
+
+os:
+  - linux
+
+env:
+  global:
+    - CRATE_NAME=ratelimit_meter
+    - DEPLOY_VERSION=stable
+
+matrix:
+  allow_failures:
+    - nightly
+
+branches:
+  only:
+    # release tags
+    - /^v\d+\.\d+\.\d+.*$/
+    - master
+
+notifications:
+  email:
+    on_success: never
