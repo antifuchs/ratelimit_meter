@@ -107,13 +107,13 @@ pub trait Decider {
     /// Tests if a single cell can be accomodated in the rate limiter
     /// at the instant `at` and updates the rate-limiter to account
     /// for the weight of the cell.
-    fn test_and_update(&mut self, at: Instant) -> Decision<Self::T>;
+    fn test_and_update(&mut self, at: Instant) -> Result<Decision<Self::T>>;
 
     /// Converts the limiter builder into a concrete decider structure.
     fn build_with(l: &Limiter) -> Result<Self> where Self: Sized;
 
     /// Tests if a single cell can be accomodated now. See `test_and_update`.
-    fn check(&mut self) -> Decision<Self::T> {
+    fn check(&mut self) -> Result<Decision<Self::T>> {
         self.test_and_update(Instant::now())
     }
 }

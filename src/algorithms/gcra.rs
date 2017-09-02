@@ -11,8 +11,8 @@ use std::cmp;
 ///
 /// # Example
 /// In this example, we construct a rate-limiter with the GCR
-/// algorithm that can accomodate 20 requests per second. This
-/// translates to the GCRA parameters τ=1s, T=50ms.
+/// algorithm that can accomodate 20 cells per second. This translates
+/// to the GCRA parameters τ=1s, T=50ms (that's 1s / 20 cells).
 ///
 /// ```
 /// # use ratelimit_meter::{Limiter, Decider, GCRA, Decision};
@@ -20,16 +20,16 @@ use std::cmp;
 /// let mut limiter = Limiter::new().capacity(20).weight(1).build::<GCRA>().unwrap();
 /// let now = Instant::now();
 /// let ms = Duration::from_millis(1);
-/// assert_eq!(Decision::Yes, limiter.test_and_update(now)); // the first cell is free
+/// assert_eq!(Decision::Yes, limiter.test_and_update(now).unwrap()); // the first cell is free
 /// for i in 0..20 {
 ///     // Spam a lot:
-///     assert_eq!(Decision::Yes, limiter.test_and_update(now), "at {}", i);
+///     assert_eq!(Decision::Yes, limiter.test_and_update(now).unwrap(), "at {}", i);
 /// }
 /// // We have exceeded the bucket capacity:
-/// assert!(!limiter.test_and_update(now).is_compliant());
+/// assert!(!limiter.test_and_update(now).unwrap().is_compliant());
 ///
 /// // After a sufficient time period, cells are allowed again:
-/// assert_eq!(Decision::Yes, limiter.test_and_update(now + ms*50));
+/// assert_eq!(Decision::Yes, limiter.test_and_update(now + ms*50).unwrap());
 pub struct GCRA {
     // The "weight" of a single packet in units of time.
     t: Duration,
@@ -47,13 +47,13 @@ impl Decider for GCRA {
     /// this to decide what to do with the non-conforming cell.
     type T = Instant;
 
-    fn test_and_update(&mut self, t0: Instant) -> Decision<Instant> {
+    fn test_and_update(&mut self, t0: Instant) -> Result<Decision<Instant>> {
         let tat = self.tat.unwrap_or(t0);
         if t0 < tat - self.tau {
-            return Decision::No(tat)
+            return Ok(Decision::No(tat))
         }
         self.tat = Some(cmp::max(tat, t0) + self.t);
-        Decision::Yes
+        Ok(Decision::Yes)
     }
 
     fn build_with(l: &Limiter) -> Result<Self> {

@@ -14,8 +14,8 @@ impl Decider for Allower {
     type T = ();
 
     /// Allows the cell through unconditionally.
-    fn test_and_update(&mut self, _t0: Instant) -> Decision<()> {
-        Decision::Yes
+    fn test_and_update(&mut self, _t0: Instant) -> Result<Decision<()>> {
+        Ok(Decision::Yes)
     }
 
     /// Builds the most useless rate-limiter in existence.

@@ -24,8 +24,8 @@ impl<Impl> Decider for Threadsafe<Impl>
 {
     type T = Impl::T;
 
-    fn test_and_update(&mut self, at: Instant) -> Decision<Impl::T> {
-        self.sub.lock().unwrap().test_and_update(at)
+    fn test_and_update(&mut self, at: Instant) -> Result<Decision<Impl::T>> {
+        self.sub.lock()?.test_and_update(at)
     }
 
     fn build_with(l: &Limiter) -> Result<Self> {
