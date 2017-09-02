@@ -26,7 +26,7 @@ use std::cmp;
 ///     assert_eq!(Decision::Yes, limiter.test_and_update(now), "at {}", i);
 /// }
 /// // We have exceeded the bucket capacity:
-/// assert_ne!(Decision::Yes, limiter.test_and_update(now));
+/// assert!(!limiter.test_and_update(now).is_compliant());
 ///
 /// // After a sufficient time period, cells are allowed again:
 /// assert_eq!(Decision::Yes, limiter.test_and_update(now + ms*50));

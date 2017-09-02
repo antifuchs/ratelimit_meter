@@ -1,7 +1,8 @@
 pub mod errors;
 mod algorithms;
 
-#[macro_use] extern crate error_chain;
+#[macro_use]
+extern crate error_chain;
 
 use std::time::{Instant, Duration};
 
@@ -17,7 +18,21 @@ pub enum Decision<T> {
     /// The cell is non-conforming. A rate-limiting algorithm
     /// implementation may return additional information for the
     /// caller, e.g. a time when the cell was expected to arrive.
-    No(T)
+    No(T),
+}
+
+impl<T> Decision<T> {
+    /// Check if a decision on a cell indicates the cell is compliant
+    /// or not. Returns `true` iff the cell was compliant, i.e. the
+    /// decision was `Decision::Yes`.
+    ///
+    /// Note: This method is mostly useful in tests.
+    pub fn is_compliant(&self) -> bool {
+        match self {
+            &Decision::Yes => true,
+            &Decision::No(_) => false,
+        }
+    }
 }
 
 /// A builder object that can be used to construct rate-limiters as
@@ -45,7 +60,7 @@ impl Limiter {
     /// Returns a default (useless) limiter without a capacity or cell
     /// weight, and a time_unit of 1 second.
     pub fn new() -> Limiter {
-        Limiter{
+        Limiter {
             capacity: None,
             weight: None,
             time_unit: Duration::from_secs(1),
@@ -77,7 +92,9 @@ impl Limiter {
     }
 
     /// Builds and returns a concrete structure that implements the Decider trait.
-    pub fn build<D>(&self) -> Result<D> where D: Decider {
+    pub fn build<D>(&self) -> Result<D>
+        where D: Decider
+    {
         D::build_with(self)
     }
 }
