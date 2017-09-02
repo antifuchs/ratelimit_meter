@@ -92,6 +92,7 @@ pub trait Decider {
 /// Rate Algorithm, attributed to ITU-T in recommendation I.371
 /// Traffic control and congestion control in B-ISDN; from
 /// [Wikipedia](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm).
+///
 /// # Example
 /// In this example, we construct a rate-limiter with the GCR
 /// algorithm that can accomodate 20 requests per second. This
