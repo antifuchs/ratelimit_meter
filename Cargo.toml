@@ -1,7 +1,12 @@
 [package]
 name = "ratelimit_meter"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Andreas Fuchs <asf@boinkor.net>"]
+license = "MIT"
+homepage = "https://github.com/antifuchs/ratelimit_meter"
+repository = "https://github.com/antifuchs/ratelimit_meter.git"
+
+description = "A leaky-bucket-as-a-meter rate-limiting implementation in Rust"
 
 [dependencies]
 error-chain = "0.11.0-rc.2"
