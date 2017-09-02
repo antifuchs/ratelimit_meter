@@ -14,14 +14,14 @@ fn bench_gcra(b: &mut test::Bencher) {
     let mut i = 0;
     b.iter(|| {
         i += 1;
-        gcra.test_and_update(now + (ms * i))
+        gcra.test_and_update(now + (ms * i)).unwrap();
     });
 }
 
 #[bench]
 fn bench_allower(b: &mut test::Bencher) {
     let mut allower = Limiter::new().capacity(50).weight(1).build::<Allower>().unwrap();
-    b.iter(|| allower.check());
+    b.iter(|| allower.check().unwrap());
 }
 
 #[bench]
@@ -32,7 +32,7 @@ fn bench_threadsafe_gcra(b: &mut test::Bencher) {
     let mut i = 0;
     b.iter(|| {
         i += 1;
-        gcra.test_and_update(now + (ms * i))
+        gcra.test_and_update(now + (ms * i)).unwrap();
     });
 }
 
