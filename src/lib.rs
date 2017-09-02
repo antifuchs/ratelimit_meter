@@ -42,8 +42,8 @@ pub struct Limiter {
 /// }
 /// ```
 impl Limiter {
-    /// Returns a default (useless) limiter with a capacity of zero, a
-    /// cell weight of zero, and a time_unit of zero.
+    /// Returns a default (useless) limiter without a capacity or cell
+    /// weight, and a time_unit of 1 second.
     pub fn new() -> Limiter {
         Limiter{
             capacity: None,
@@ -53,6 +53,8 @@ impl Limiter {
     }
 
     /// Sets the capacity of the limiter's "bucket" in elements per `time_unit`.
+    ///
+    /// See [`time_unit`](#method.time_unit).
     pub fn capacity<'a>(&'a mut self, capacity: u32) -> &'a mut Limiter {
         self.capacity = Some(capacity);
         self
@@ -65,7 +67,10 @@ impl Limiter {
         self
     }
 
-    /// Sets the "unit of time" that the bucket drains at.
+    /// Sets the "unit of time" within which the bucket drains.
+    ///
+    /// The assumption is that in a period of `time_unit` (if no cells
+    /// are being checked), the bucket is fully drained.
     pub fn time_unit<'a>(&'a mut self, time_unit: Duration) -> &'a mut Limiter {
         self.time_unit = time_unit;
         self
