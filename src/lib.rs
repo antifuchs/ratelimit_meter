@@ -1,11 +1,12 @@
 pub mod errors;
+mod algorithms;
 
 #[macro_use] extern crate error_chain;
 
 use std::time::{Instant, Duration};
-use std::cmp;
 
 pub use errors::*;
+pub use self::algorithms::*;
 
 #[derive(PartialEq, Debug)]
 /// A decision on a single cell from the metered rate-limiter.
@@ -92,93 +93,6 @@ pub trait Decider {
     /// Tests if a single cell can be accomodated now. See `test_and_update`.
     fn check(&mut self) -> Decision<Self::T> {
         self.test_and_update(Instant::now())
-    }
-}
-
-#[derive(Debug)]
-/// Implements the virtual scheduling description of the Generic Cell
-/// Rate Algorithm, attributed to ITU-T in recommendation I.371
-/// Traffic control and congestion control in B-ISDN; from
-/// [Wikipedia](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm).
-///
-/// # Example
-/// In this example, we construct a rate-limiter with the GCR
-/// algorithm that can accomodate 20 requests per second. This
-/// translates to the GCRA parameters τ=1s, T=50ms.
-///
-/// ```
-/// # use ratelimit_meter::{Limiter, Decider, GCRA, Decision};
-/// # use std::time::{Instant, Duration};
-/// let mut limiter = Limiter::new().capacity(20).weight(1).build::<GCRA>().unwrap();
-/// let now = Instant::now();
-/// let ms = Duration::from_millis(1);
-/// assert_eq!(Decision::Yes, limiter.test_and_update(now)); // the first cell is free
-/// for i in 0..20 {
-///     // Spam a lot:
-///     assert_eq!(Decision::Yes, limiter.test_and_update(now), "at {}", i);
-/// }
-/// // We have exceeded the bucket capacity:
-/// assert_ne!(Decision::Yes, limiter.test_and_update(now));
-///
-/// // After a sufficient time period, cells are allowed again:
-/// assert_eq!(Decision::Yes, limiter.test_and_update(now + ms*50));
-pub struct GCRA {
-    // The "weight" of a single packet in units of time.
-    t: Duration,
-
-    // The "capacity" of the bucket.
-    tau: Duration,
-
-    // The theoretical arrival time of the next packet.
-    tat: Option<Instant>,
-}
-
-impl Decider for GCRA {
-    /// In GCRA, negative decisions come with the time at which the
-    /// next cell was expected to arrive; client code of GCRA can use
-    /// this to decide what to do with the non-conforming cell.
-    type T = Instant;
-
-    fn test_and_update(&mut self, t0: Instant) -> Decision<Instant> {
-        let tat = self.tat.unwrap_or(t0);
-        if t0 < tat - self.tau {
-            return Decision::No(tat)
-        }
-        self.tat = Some(cmp::max(tat, t0) + self.t);
-        Decision::Yes
-    }
-
-    fn build_with(l: &Limiter) -> Result<Self> {
-        let capacity = l.capacity.ok_or(ErrorKind::CapacityRequired)?;
-        let weight = l.weight.ok_or(ErrorKind::WeightRequired)?;
-        if l.time_unit <= Duration::new(0, 0) {
-            return Err(ErrorKind::InvalidTimeUnit(l.time_unit).into());
-        }
-        Ok(GCRA{
-            t: (l.time_unit / capacity) * weight,
-            tau: l.time_unit,
-            tat: None,
-        })
-    }
-}
-
-/// The most naive implementation of a rate-limiter ever: Always
-/// allows every cell through.
-pub struct Allower {}
-
-impl Decider for Allower {
-    /// Allower never returns a negative answer, so negative answers
-    /// don't carry information.
-    type T = ();
-
-    /// Allows the cell through unconditionally.
-    fn test_and_update(&mut self, _t0: Instant) -> Decision<()> {
-        Decision::Yes
-    }
-
-    /// Builds the most useless rate-limiter in existence.
-    fn build_with(_l: &Limiter) -> Result<Self> {
-        Ok(Allower{})
     }
 }
 
