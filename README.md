@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/antifuchs/ratelimit_meter.svg?branch=master)](https://travis-ci.org/antifuchs/ratelimit_meter)
+
 # Leaky Bucket Rate-Limiting (as a meter) in Rust
 
 This crate implements
