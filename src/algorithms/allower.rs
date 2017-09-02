@@ -1,7 +1,9 @@
 use {Decider, Decision, Limiter, Result};
 
-use std::time::{Instant};
+use std::time::Instant;
 
+
+#[derive(Copy, Clone)]
 /// The most naive implementation of a rate-limiter ever: Always
 /// allows every cell through.
 pub struct Allower {}
@@ -18,6 +20,6 @@ impl Decider for Allower {
 
     /// Builds the most useless rate-limiter in existence.
     fn build_with(_l: &Limiter) -> Result<Self> {
-        Ok(Allower{})
+        Ok(Allower {})
     }
 }

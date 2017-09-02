@@ -3,7 +3,7 @@ use {Decider, Decision, Limiter, ErrorKind, Result};
 use std::time::{Instant, Duration};
 use std::cmp;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Implements the virtual scheduling description of the Generic Cell
 /// Rate Algorithm, attributed to ITU-T in recommendation I.371
 /// Traffic control and congestion control in B-ISDN; from
