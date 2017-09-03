@@ -6,7 +6,9 @@
 //!
 //! ## Interface
 //!
-//! You construct a rate limiter using the `Limiter` builder:
+//! There is currently one rate limiter implementation in this crate,
+//! the Generic Cell Rate Algorithm. Use it by creating a builder from
+//! the [`GCRA`](struct.GCRA.html) struct:
 //!
 //! ``` rust
 //! use std::time::Duration;
