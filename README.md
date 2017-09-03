@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/antifuchs/ratelimit_meter.svg?branch=master)](https://travis-ci.org/antifuchs/ratelimit_meter) [![Docs](https://docs.rs/ratelimit_meter/badge.svg)](https://docs.rs/ratelimit_meter/)
+[![Build Status](https://travis-ci.org/antifuchs/ratelimit_meter.svg?branch=master)](https://travis-ci.org/antifuchs/ratelimit_meter) [![Docs](https://docs.rs/ratelimit_meter/badge.svg)](https://docs.rs/ratelimit_meter/) [![crates.io](https://img.shields.io/crates/v/ratelimit_meter.svg)](https://crates.io/crates/ratelimit_meter)
 
 # Leaky Bucket Rate-Limiting (as a meter) in Rust
 
@@ -7,33 +7,15 @@ the
 [generic cell rate algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm) (GCRA)
 for rate-limiting and scheduling in Rust.
 
-## Interface
+## Installation
 
-You construct a rate limiter using the `Limiter` builder:
+Add the crate `ratelimit_meter` to your `Cargo.toml`
+file; [the crates.io page](https://crates.io/crates/ratelimit_meter)
+can give you the exact thing to paste.
 
-``` rust
-use std::time::Duration;
-use ratelimit_meter::{Limiter, Decider, GCRA, Decision};
+## API Docs
 
-let mut lim = Limiter::new()
-    .time_unit(Duration::from_secs(1)) // We calculate per-second (this is the default).
-    .capacity(50) // Allow 50 units of work per second
-    .weight(1) // Each cell is one unit of work "heavy".
-    .build::<GCRA>(); // Construct a non-threadsafe GCRA decider.
-lim.check() // => Decision::Yes
-```
-
-The rate-limiter interface is intentionally geared towards only
-providing callers with the information they need to make decisions
-about what to do with each cell. Whenever possible, additional
-information about why a cell should be denied - the `GCRA`
-implementation will return a `time::Instant` alongside the decision to
-allow callers to e.g. provide better error messages to users.
-
-Due to this, the `ratelimit_meter` crate does not provide any facility
-to wait until a cell would be allowed - if you require this, you
-should use the `Instant` returned with negative decisions and wait
-in your own, e.g. event loop.
+Find them [on docs.rs](https://docs.rs/ratelimit_meter/) for the latest version!
 
 ## Design and implementation
 
@@ -68,24 +50,14 @@ test bench_threadsafe_gcra    ... bench:          84 ns/iter (+/- 36)
 test result: ok. 0 passed; 0 failed; 0 ignored; 4 measured; 0 filtered out
 ```
 
-## Thread-safe operation
+## Contributions welcome!
 
-The default GCRA implementation can not be used across
-threads. However, there is a wrapper struct `Threadsafe`, that wraps
-the hot path in an atomically reference-counted mutex. It still
-manages to be pretty fast (see the benchmarks above), but the lock
-comes with an overhead even in single-threaded operation.
+I am actively hoping that this project gives people joy in using
+rate-limiting techniques. You can use these techniques for so many
+things (from throttling api requests to ensuring you don't spam people
+with emails about the same thing)!
 
-Example:
-
-``` rust
-use std::time::Duration;
-use ratelimit_meter::{Limiter, Decider, GCRA, Decision};
-
-let mut lim = Limiter::new()
-    .time_unit(Duration::from_secs(1)) // We calculate per-second (this is the default).
-    .capacity(50) // Allow 50 units of work per second
-    .weight(1) // Each cell is one unit of work "heavy".
-    .build::<Threadsafe<GCRA>>(); // Construct a threadsafe GCRA decider.
-lim.check() // => Decision::Yes
-```
+So if you have any thoughts about the API design, the internals, or
+you want to implement other rate-limiting algotrithms, I would be
+thrilled to have your input. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for details!
