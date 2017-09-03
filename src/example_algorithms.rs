@@ -1,4 +1,4 @@
-use {Decider, Decision, Limiter, Result};
+use {DeciderImpl, Decider, Decision, Limiter, Result};
 
 use std::time::Instant;
 
@@ -8,18 +8,21 @@ use std::time::Instant;
 /// allows every cell through.
 pub struct Allower {}
 
-impl Decider for Allower {
+impl DeciderImpl for Allower {
     /// Allower never returns a negative answer, so negative answers
     /// don't carry information.
     type T = ();
 
     /// Allows the cell through unconditionally.
-    fn test_and_update(&mut self, _t0: Instant) -> Decision<()> {
-        Decision::Yes
+    fn test_and_update(&mut self, _t0: Instant) -> Result<Decision<()>> {
+        Ok(Decision::Yes)
     }
 
     /// Builds the most useless rate-limiter in existence.
     fn build_with(_l: &Limiter) -> Result<Self> {
         Ok(Allower {})
     }
+}
+
+impl Decider for Allower {
 }
