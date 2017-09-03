@@ -5,7 +5,7 @@ use std::time::{Instant, Duration};
 
 #[test]
 fn accepts_first_cell() {
-    let mut gcra = GCRA::for_capacity(5).build();
+    let mut gcra: GCRA = GCRA::for_capacity(5).into();
     assert_eq!(Decision::Yes, gcra.check().unwrap());
 }
 #[test]

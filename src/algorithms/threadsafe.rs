@@ -1,4 +1,5 @@
 use {DeciderImpl, Decider, Decision, Result};
+use algorithms::gcra::{GCRA, Builder};
 
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -43,4 +44,10 @@ impl<Impl> Decider for Threadsafe<Impl>
           Impl: Sized,
           Impl: Clone
 {
+}
+
+impl<'a> From<&'a Builder> for Threadsafe<GCRA> {
+    fn from(b: &'a Builder) -> Self {
+        b.build_sync()
+    }
 }

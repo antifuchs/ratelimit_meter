@@ -112,3 +112,9 @@ impl DeciderImpl for GCRA {
 }
 
 impl Decider for GCRA {}
+
+impl From<Builder> for GCRA {
+    fn from(b: Builder) -> Self {
+        b.build()
+    }
+}
