@@ -1,4 +1,4 @@
-use {Decider, Decision, Limiter, ErrorKind, Result};
+use {DeciderImpl, Decider, Decision, Limiter, ErrorKind, Result};
 
 use std::time::{Instant, Duration};
 use std::cmp;
@@ -20,16 +20,16 @@ use std::cmp;
 /// let mut limiter = Limiter::new().capacity(20).weight(1).build::<GCRA>().unwrap();
 /// let now = Instant::now();
 /// let ms = Duration::from_millis(1);
-/// assert_eq!(Decision::Yes, limiter.test_and_update(now).unwrap()); // the first cell is free
+/// assert_eq!(Decision::Yes, limiter.check_at(now).unwrap()); // the first cell is free
 /// for i in 0..20 {
 ///     // Spam a lot:
-///     assert_eq!(Decision::Yes, limiter.test_and_update(now).unwrap(), "at {}", i);
+///     assert_eq!(Decision::Yes, limiter.check_at(now).unwrap(), "at {}", i);
 /// }
 /// // We have exceeded the bucket capacity:
-/// assert!(!limiter.test_and_update(now).unwrap().is_compliant());
+/// assert!(!limiter.check_at(now).unwrap().is_compliant());
 ///
 /// // After a sufficient time period, cells are allowed again:
-/// assert_eq!(Decision::Yes, limiter.test_and_update(now + ms*50).unwrap());
+/// assert_eq!(Decision::Yes, limiter.check_at(now + ms*50).unwrap());
 pub struct GCRA {
     // The "weight" of a single packet in units of time.
     t: Duration,
@@ -41,7 +41,7 @@ pub struct GCRA {
     tat: Option<Instant>,
 }
 
-impl Decider for GCRA {
+impl DeciderImpl for GCRA {
     /// In GCRA, negative decisions come with the time at which the
     /// next cell was expected to arrive; client code of GCRA can use
     /// this to decide what to do with the non-conforming cell.
@@ -50,7 +50,7 @@ impl Decider for GCRA {
     fn test_and_update(&mut self, t0: Instant) -> Result<Decision<Instant>> {
         let tat = self.tat.unwrap_or(t0);
         if t0 < tat - self.tau {
-            return Ok(Decision::No(tat))
+            return Ok(Decision::No(tat));
         }
         self.tat = Some(cmp::max(tat, t0) + self.t);
         Ok(Decision::Yes)
@@ -62,10 +62,12 @@ impl Decider for GCRA {
         if l.time_unit <= Duration::new(0, 0) {
             return Err(ErrorKind::InvalidTimeUnit(l.time_unit).into());
         }
-        Ok(GCRA{
+        Ok(GCRA {
             t: (l.time_unit / capacity) * weight,
             tau: l.time_unit,
             tat: None,
         })
     }
 }
+
+impl Decider for GCRA {}

@@ -1,4 +1,4 @@
-use {Decider, Decision, Limiter, Result};
+use {DeciderImpl, Decider, Decision, Limiter, Result};
 
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -17,7 +17,7 @@ pub struct Threadsafe<Impl>
     sub: Arc<Mutex<Impl>>,
 }
 
-impl<Impl> Decider for Threadsafe<Impl>
+impl<Impl> DeciderImpl for Threadsafe<Impl>
     where Impl: Decider,
           Impl: Sized,
           Impl: Clone
@@ -31,4 +31,12 @@ impl<Impl> Decider for Threadsafe<Impl>
     fn build_with(l: &Limiter) -> Result<Self> {
         Ok(Threadsafe { sub: Arc::new(Mutex::new(Impl::build_with(l)?)) })
     }
+}
+
+impl<Impl> Decider for Threadsafe<Impl>
+    where Impl: Decider,
+          Impl: Sized,
+          Impl: Clone
+{
+
 }

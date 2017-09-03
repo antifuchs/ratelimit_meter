@@ -99,7 +99,10 @@ impl Limiter {
     }
 }
 
-pub trait Decider {
+/// The trait that implementations of the metered rate-limiter
+/// interface have to implement. Users of this library should rely on
+/// [Decider](trait.Decider.html) for the external interface.
+pub trait DeciderImpl {
     /// The (optional) type for additional information on negative
     /// decisions.
     type T;
@@ -107,13 +110,25 @@ pub trait Decider {
     /// Tests if a single cell can be accomodated in the rate limiter
     /// at the instant `at` and updates the rate-limiter to account
     /// for the weight of the cell.
+    ///
+    /// This method is not meant to be called by users,
     fn test_and_update(&mut self, at: Instant) -> Result<Decision<Self::T>>;
 
     /// Converts the limiter builder into a concrete decider structure.
     fn build_with(l: &Limiter) -> Result<Self> where Self: Sized;
+}
 
-    /// Tests if a single cell can be accomodated now. See `test_and_update`.
+/// The external interface offered by all rate-limiting implementations.
+pub trait Decider: DeciderImpl {
+    /// Tests if a single cell can be accomodated at
+    /// `Instant::now()`. See [`check_at`](#method.check_at).
     fn check(&mut self) -> Result<Decision<Self::T>> {
         self.test_and_update(Instant::now())
+    }
+
+    /// Tests is a single cell can be accomodated at the given time
+    /// stamp.
+    fn check_at(&mut self, at: Instant) -> Result<Decision<Self::T>> {
+        self.test_and_update(at)
     }
 }

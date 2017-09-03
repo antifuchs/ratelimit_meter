@@ -12,19 +12,19 @@ fn accepts_first_cell() {
 fn rejects_too_many() {
     let mut gcra = Limiter::new().capacity(1).weight(1).build::<GCRA>().unwrap();
     let now = Instant::now();
-    gcra.test_and_update(now).unwrap();
-    gcra.test_and_update(now).unwrap();
-    assert_ne!(Decision::Yes, gcra.test_and_update(now).unwrap());
+    gcra.check_at(now).unwrap();
+    gcra.check_at(now).unwrap();
+    assert_ne!(Decision::Yes, gcra.check_at(now).unwrap());
 }
 #[test]
 fn allows_after_interval() {
     let mut gcra = Limiter::new().capacity(1).weight(1).build::<GCRA>().unwrap();
     let now = Instant::now();
     let ms = Duration::from_millis(1);
-    gcra.test_and_update(now).unwrap();
-    gcra.test_and_update(now + ms * 1).unwrap();
-    gcra.test_and_update(now + ms * 2).unwrap();
+    gcra.check_at(now).unwrap();
+    gcra.check_at(now + ms * 1).unwrap();
+    gcra.check_at(now + ms * 2).unwrap();
     // should be ok again in 1s:
     let next = now + Duration::from_secs(1);
-    assert_eq!(Decision::Yes, gcra.test_and_update(next).unwrap());
+    assert_eq!(Decision::Yes, gcra.check_at(next).unwrap());
 }

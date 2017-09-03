@@ -1,4 +1,4 @@
-use {Decider, Decision, Limiter, Result};
+use {DeciderImpl, Decider, Decision, Limiter, Result};
 
 use std::time::Instant;
 
@@ -8,7 +8,7 @@ use std::time::Instant;
 /// allows every cell through.
 pub struct Allower {}
 
-impl Decider for Allower {
+impl DeciderImpl for Allower {
     /// Allower never returns a negative answer, so negative answers
     /// don't carry information.
     type T = ();
@@ -23,3 +23,5 @@ impl Decider for Allower {
         Ok(Allower {})
     }
 }
+
+impl Decider for Allower {}

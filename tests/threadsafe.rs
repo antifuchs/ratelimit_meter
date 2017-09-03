@@ -25,16 +25,16 @@ fn actual_threadsafety() {
     let ms = Duration::from_millis(1);
     let mut children = vec![];
 
-    lim.test_and_update(now).unwrap();
+    lim.check_at(now).unwrap();
     for _i in 0..20 {
         let mut lim = lim.clone();
         children.push(thread::spawn(move || {
-            lim.test_and_update(now).unwrap();
+            lim.check_at(now).unwrap();
         }));
     }
     for child in children {
         child.join().unwrap();
     }
-    assert!(!lim.test_and_update(now).unwrap().is_compliant());
-    assert_eq!(Decision::Yes, lim.test_and_update(now+ms*1000).unwrap());
+    assert!(!lim.check_at(now).unwrap().is_compliant());
+    assert_eq!(Decision::Yes, lim.check_at(now+ms*1000).unwrap());
 }
