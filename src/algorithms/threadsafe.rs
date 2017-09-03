@@ -12,25 +12,23 @@ use std::time::Instant;
 /// in an atomically reference-counted mutex. It takes out a mutex
 /// whenever `.test_and_update()` is called.
 pub struct Threadsafe<Impl>
-    where Impl: Sized,
-          Impl: Clone
+    where Impl: Decider + Sized + Clone
 {
     sub: Arc<Mutex<Impl>>,
 }
 
 impl<Impl> Threadsafe<Impl>
-    where Impl: Sized,
-          Impl: Clone
+    where Impl: Decider + Sized + Clone
 {
+    // Returns a new Threadsafe wrapper for the given rate-limiting
+    // implementation object `sub`.
     pub fn new(sub: Impl) -> Threadsafe<Impl> {
         Threadsafe { sub: Arc::new(Mutex::new(sub)) }
     }
 }
 
 impl<Impl> DeciderImpl for Threadsafe<Impl>
-    where Impl: Decider,
-          Impl: Sized,
-          Impl: Clone
+    where Impl: Decider + Sized + Clone
 {
     type T = Impl::T;
 
@@ -40,9 +38,7 @@ impl<Impl> DeciderImpl for Threadsafe<Impl>
 }
 
 impl<Impl> Decider for Threadsafe<Impl>
-    where Impl: Decider,
-          Impl: Sized,
-          Impl: Clone
+    where Impl: Decider + Sized + Clone
 {
 }
 
