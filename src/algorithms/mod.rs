@@ -1,5 +1,5 @@
-mod gcra;
+pub mod gcra;
 mod threadsafe;
 
-pub use self::gcra::*;
+pub use self::gcra::GCRA;
 pub use self::threadsafe::*;

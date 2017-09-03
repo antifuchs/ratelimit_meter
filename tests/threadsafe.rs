@@ -1,26 +1,18 @@
 extern crate ratelimit_meter;
 
-use ratelimit_meter::{GCRA, Threadsafe, Limiter, Decider, Decision};
+use ratelimit_meter::{GCRA, Decider, Decision};
 use std::thread;
 use std::time::{Instant, Duration};
 
 #[test]
 fn simple_operation() {
-    let mut lim = Limiter::new()
-        .capacity(5)
-        .weight(1)
-        .build::<Threadsafe<GCRA>>()
-        .unwrap();
+    let mut lim = GCRA::for_capacity(5).build_sync();
     assert_eq!(Decision::Yes, lim.check().unwrap());
 }
 
 #[test]
 fn actual_threadsafety() {
-    let mut lim = Limiter::new()
-        .capacity(20)
-        .weight(1)
-        .build::<Threadsafe<GCRA>>()
-        .unwrap();
+    let mut lim = GCRA::for_capacity(20).build_sync();
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     let mut children = vec![];

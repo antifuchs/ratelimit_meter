@@ -10,13 +10,12 @@
 //!
 //! ``` rust
 //! use std::time::Duration;
-//! use ratelimit_meter::{Limiter, Decider, GCRA, Decision};
+//! use ratelimit_meter::{Decider, GCRA, Decision};
 //!
-//! let mut lim = Limiter::new()
-//!     .time_unit(Duration::from_secs(1)) // We calculate per-second (this is the default).
-//!     .capacity(50) // Allow 50 units of work per second
-//!     .weight(1) // Each cell is one unit of work "heavy".
-//!     .build::<GCRA>().unwrap(); // Construct a non-threadsafe GCRA decider.
+//! let mut lim = GCRA::for_capacity(50) // Allow 50 units of work
+//!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
+//!     .cell_weight(1) // Each cell is one unit of work "heavy".
+//!     .build(); // Construct a non-threadsafe GCRA decider.
 //! assert_eq!(Decision::Yes, lim.check().unwrap());
 //! ```
 //!
@@ -56,13 +55,12 @@
 //!
 //! ```
 //! use std::time::Duration;
-//! use ratelimit_meter::{Limiter, Decider, GCRA, Threadsafe, Decision};
+//! use ratelimit_meter::{Decider, GCRA, Decision};
 //!
-//! let mut lim = Limiter::new()
-//!     .time_unit(Duration::from_secs(1)) // We calculate per-second (this is the default).
-//!     .capacity(50) // Allow 50 units of work per second
-//!     .weight(1) // Each cell is one unit of work "heavy".
-//!     .build::<Threadsafe<GCRA>>().unwrap(); // Construct a threadsafe GCRA decider.
+//! let mut lim = GCRA::for_capacity(50) // Allow 50 units of work
+//!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
+//!     .cell_weight(1) // Each cell is one unit of work "heavy".
+//!     .build_sync(); // Construct a threadsafe GCRA decider.
 //! assert_eq!(Decision::Yes, lim.check().unwrap());
 //! ```
 
@@ -73,7 +71,7 @@ mod algorithms;
 #[macro_use]
 extern crate error_chain;
 
-use std::time::{Instant, Duration};
+use std::time::{Instant};
 
 pub use errors::*;
 pub use self::algorithms::*;
@@ -104,71 +102,6 @@ impl<T> Decision<T> {
     }
 }
 
-/// A builder object that can be used to construct rate-limiters as
-/// meters.
-pub struct Limiter {
-    capacity: Option<u32>,
-    weight: Option<u32>,
-    time_unit: Duration,
-}
-
-/// A builder pattern implementation that can construct deciders.
-/// # Basic example
-/// This example constructs a decider that considers every cell
-/// compliant:
-///
-/// ```
-/// # use ratelimit_meter::{Limiter, Decider};
-/// # use ratelimit_meter::example_algorithms::Allower;
-///
-/// let mut limiter = Limiter::new().build::<Allower>().unwrap();
-/// for _i in 1..3 {
-///     println!("{:?}...", limiter.check());
-/// }
-/// ```
-impl Limiter {
-    /// Returns a default (useless) limiter without a capacity or cell
-    /// weight, and a time_unit of 1 second.
-    pub fn new() -> Limiter {
-        Limiter {
-            capacity: None,
-            weight: None,
-            time_unit: Duration::from_secs(1),
-        }
-    }
-
-    /// Sets the capacity of the limiter's "bucket" in elements per `time_unit`.
-    ///
-    /// See [`time_unit`](#method.time_unit).
-    pub fn capacity<'a>(&'a mut self, capacity: u32) -> &'a mut Limiter {
-        self.capacity = Some(capacity);
-        self
-    }
-
-    /// Sets the "weight" of each cell being checked against the
-    /// bucket. Each cell fills the bucket by this much.
-    pub fn weight<'a>(&'a mut self, weight: u32) -> &'a mut Limiter {
-        self.weight = Some(weight);
-        self
-    }
-
-    /// Sets the "unit of time" within which the bucket drains.
-    ///
-    /// The assumption is that in a period of `time_unit` (if no cells
-    /// are being checked), the bucket is fully drained.
-    pub fn time_unit<'a>(&'a mut self, time_unit: Duration) -> &'a mut Limiter {
-        self.time_unit = time_unit;
-        self
-    }
-
-    /// Builds and returns a concrete structure that implements the Decider trait.
-    pub fn build<D>(&self) -> Result<D>
-        where D: Decider
-    {
-        D::build_with(self)
-    }
-}
-
 /// The trait that implementations of the metered rate-limiter
 /// interface have to implement. Users of this library should rely on
 /// [Decider](trait.Decider.html) for the external interface.
@@ -183,9 +116,6 @@ pub trait DeciderImpl {
     ///
     /// This method is not meant to be called by users,
     fn test_and_update(&mut self, at: Instant) -> Result<Decision<Self::T>>;
-
-    /// Converts the limiter builder into a concrete decider structure.
-    fn build_with(l: &Limiter) -> Result<Self> where Self: Sized;
 }
 
 /// The external interface offered by all rate-limiting implementations.

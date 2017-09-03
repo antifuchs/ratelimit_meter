@@ -3,14 +3,14 @@
 extern crate test;
 extern crate ratelimit_meter;
 
-use ratelimit_meter::{GCRA, Threadsafe, Limiter, Decider};
+use ratelimit_meter::{GCRA, Threadsafe, Decider};
 use ratelimit_meter::example_algorithms::Allower;
 use std::time::{Instant, Duration};
 use std::thread;
 
 #[bench]
 fn bench_gcra(b: &mut test::Bencher) {
-    let mut gcra = Limiter::new().capacity(50).weight(1).build::<GCRA>().unwrap();
+    let mut gcra = GCRA::for_capacity(50).cell_weight(1).build();
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut i = 0;
@@ -22,13 +22,13 @@ fn bench_gcra(b: &mut test::Bencher) {
 
 #[bench]
 fn bench_allower(b: &mut test::Bencher) {
-    let mut allower = Limiter::new().capacity(50).weight(1).build::<Allower>().unwrap();
+    let mut allower = Allower::new();
     b.iter(|| allower.check().unwrap());
 }
 
 #[bench]
 fn bench_threadsafe_gcra(b: &mut test::Bencher) {
-    let mut gcra = Limiter::new().capacity(50).weight(1).build::<Threadsafe<GCRA>>().unwrap();
+    let mut gcra = GCRA::for_capacity(50).cell_weight(1).build_sync();
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut i = 0;
@@ -40,18 +40,15 @@ fn bench_threadsafe_gcra(b: &mut test::Bencher) {
 
 #[bench]
 fn bench_threadsafe_allower(b: &mut test::Bencher) {
-    let mut allower = Limiter::new().capacity(50).weight(1).build::<Threadsafe<Allower>>().unwrap();
-    b.iter(|| allower.check());
+    let allower_one = Allower::new();
+    let mut threadsafe_allower = Threadsafe::new(allower_one);
+    b.iter(|| threadsafe_allower.check());
 }
 
 // This one doesn't seem to actually do a thing & I can't quite figure out why /:
 #[bench]
 fn bench_multithreading_potentially_buggy(b: &mut test::Bencher) {
-    let mut lim = Limiter::new()
-        .capacity(20)
-        .weight(1)
-        .build::<Threadsafe<GCRA>>()
-        .unwrap();
+    let mut lim = GCRA::for_capacity(50).cell_weight(1).build_sync();
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut children = vec![];
