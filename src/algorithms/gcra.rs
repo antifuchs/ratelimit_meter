@@ -85,7 +85,7 @@ impl Builder {
 impl GCRA {
     /// Constructs a builder object for a GCRA rate-limiter with the
     /// given capacity per second, at cell weight=1. See
-    /// [`Builder`](struct.Builder.html) for options.
+    /// [`Builder`](gcra/struct.Builder.html) for options.
     pub fn for_capacity(capacity: u32) -> Builder {
         Builder {
             capacity: capacity,
@@ -113,8 +113,31 @@ impl DeciderImpl for GCRA {
 
 impl Decider for GCRA {}
 
+/// Allows converting from a GCRA builder directly into a
+/// GCRA decider. Same as
+/// [the borrowed implementation](#impl-From<&'a Builder>), except for
+/// owned `Builder`s.
+/// # Example:
+/// ```
+/// use ratelimit_meter::{GCRA, Decider, Decision};
+/// let mut gcra: GCRA = GCRA::for_capacity(50).into();
+/// assert_eq!(Decision::Yes, gcra.check().unwrap());
+/// ```
 impl From<Builder> for GCRA {
     fn from(b: Builder) -> Self {
+        b.build()
+    }
+}
+
+/// Allows converting a GCRA builder directly into a GCRA decider.
+/// # Example:
+/// ```
+/// use ratelimit_meter::{GCRA, Decider, Decision};
+/// let mut gcra: GCRA = GCRA::for_capacity(50).cell_weight(2).into();
+/// assert_eq!(Decision::Yes, gcra.check().unwrap());
+/// ```
+impl<'a> From<&'a mut Builder> for GCRA {
+    fn from(b: &'a mut Builder) -> Self {
         b.build()
     }
 }
