@@ -6,6 +6,13 @@ use std::time::Instant;
 #[derive(Copy, Clone)]
 /// The most naive implementation of a rate-limiter ever: Always
 /// allows every cell through.
+/// # Example
+/// ```
+/// use ratelimit_meter::{Decider};
+/// use ratelimit_meter::example_algorithms::Allower;
+/// let mut allower = Allower::new();
+/// assert!(allower.check().unwrap().is_compliant());
+/// ```
 pub struct Allower {}
 
 impl Allower {
