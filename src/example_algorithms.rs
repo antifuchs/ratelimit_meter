@@ -24,4 +24,5 @@ impl DeciderImpl for Allower {
     }
 }
 
-impl Decider for Allower {}
+impl Decider for Allower {
+}

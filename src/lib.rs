@@ -1,3 +1,4 @@
+pub mod example_algorithms;
 pub mod errors;
 mod algorithms;
 
@@ -49,7 +50,8 @@ pub struct Limiter {
 /// compliant:
 ///
 /// ```
-/// # use ratelimit_meter::{Limiter, Decider, Allower};
+/// # use ratelimit_meter::{Limiter, Decider};
+/// # use ratelimit_meter::example_algorithms::Allower;
 ///
 /// let mut limiter = Limiter::new().build::<Allower>().unwrap();
 /// for _i in 1..3 {
