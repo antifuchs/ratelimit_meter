@@ -103,31 +103,6 @@ impl DeciderImpl for GCRA {
     /// this to decide what to do with the non-conforming cell.
     type T = Instant;
 
-    /// Tests if a `n` cells can be accomodated by the rate-limiter
-    /// and updates rate limiter state iff they can be.
-    ///
-    /// As this method is an extension of GCRA (using multiplication),
-    /// it is likely not as fast (and not as obviously "right") as the
-    /// single-cell variant.
-    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<Decision<Instant>> {
-        let tat = self.tat.unwrap_or(t0);
-        let additional_weight = if n >= 1 {
-            self.t * (n - 1)
-        } else {
-            Duration::new(0, 0)
-        };
-
-        if t0 < (tat + additional_weight) - self.tau {
-            if self.t + additional_weight > self.tau {
-                // The bucket capacity can never accomodate this request
-                return Err(ErrorKind::CapacityError.into())
-            }
-            return Ok(Decision::No(tat));
-        }
-        self.tat = Some(cmp::max(tat, t0) + self.t + additional_weight);
-        Ok(Decision::Yes)
-    }
-
     /// Tests if a single cell can be accomodated by the
     /// rate-limiter. This is the method described directly in the
     /// GCRA algorithm, and is the fastest.
@@ -138,6 +113,39 @@ impl DeciderImpl for GCRA {
             return Ok(Decision::No(tat));
         }
         self.tat = Some(cmp::max(tat, t0) + self.t);
+        Ok(Decision::Yes)
+    }
+
+    /// Tests if a `n` cells can be accomodated by the rate-limiter
+    /// and updates rate limiter state iff they can be.
+    ///
+    /// As this method is an extension of GCRA (using multiplication),
+    /// it is likely not as fast (and not as obviously "right") as the
+    /// single-cell variant.
+    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<Decision<Instant>> {
+        let tat = self.tat.unwrap_or(t0);
+        let tat = match n {
+            0 => t0,
+            1 => tat,
+            _ => {
+                let weight = self.t * (n - 1);
+                if (weight + self.t) > self.tau {
+                    // The bucket capacity can never accomodate this request
+                    return Err(ErrorKind::CapacityError.into());
+                }
+                tat + weight
+            }
+        };
+
+        if t0 < tat - self.tau {
+            return Ok(Decision::No(tat));
+        }
+        let additional_weight = match n {
+            0 => Duration::new(0, 0),
+            1 => self.t,
+            _ => self.t * n,
+        };
+        self.tat = Some(cmp::max(tat, t0) + additional_weight);
         Ok(Decision::Yes)
     }
 }
