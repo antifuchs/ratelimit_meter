@@ -1,4 +1,4 @@
-use {DeciderImpl, Decider, Decision, Threadsafe, Result};
+use {DeciderImpl, Decider, Decision, Threadsafe, Result, ErrorKind};
 
 use std::time::{Instant, Duration};
 use std::cmp;
@@ -95,14 +95,45 @@ impl GCRA {
     }
 }
 
+impl Decider for GCRA {}
+
 impl DeciderImpl for GCRA {
     /// In GCRA, negative decisions come with the time at which the
     /// next cell was expected to arrive; client code of GCRA can use
     /// this to decide what to do with the non-conforming cell.
     type T = Instant;
 
+    /// Tests if a `n` cells can be accomodated by the rate-limiter
+    /// and updates rate limiter state iff they can be.
+    ///
+    /// As this method is an extension of GCRA (using multiplication),
+    /// it is likely not as fast (and not as obviously "right") as the
+    /// single-cell variant.
+    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<Decision<Instant>> {
+        let tat = self.tat.unwrap_or(t0);
+        let additional_weight = if n >= 1 {
+            self.t * (n - 1)
+        } else {
+            Duration::new(0, 0)
+        };
+
+        if t0 < (tat + additional_weight) - self.tau {
+            if self.t + additional_weight > self.tau {
+                // The bucket capacity can never accomodate this request
+                return Err(ErrorKind::CapacityError.into())
+            }
+            return Ok(Decision::No(tat));
+        }
+        self.tat = Some(cmp::max(tat, t0) + self.t + additional_weight);
+        Ok(Decision::Yes)
+    }
+
+    /// Tests if a single cell can be accomodated by the
+    /// rate-limiter. This is the method described directly in the
+    /// GCRA algorithm, and is the fastest.
     fn test_and_update(&mut self, t0: Instant) -> Result<Decision<Instant>> {
         let tat = self.tat.unwrap_or(t0);
+
         if t0 < tat - self.tau {
             return Ok(Decision::No(tat));
         }
@@ -110,8 +141,6 @@ impl DeciderImpl for GCRA {
         Ok(Decision::Yes)
     }
 }
-
-impl Decider for GCRA {}
 
 /// Allows converting from a GCRA builder directly into a
 /// GCRA decider. Same as

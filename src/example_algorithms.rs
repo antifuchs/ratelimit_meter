@@ -26,8 +26,8 @@ impl DeciderImpl for Allower {
     /// don't carry information.
     type T = ();
 
-    /// Allows the cell through unconditionally.
-    fn test_and_update(&mut self, _t0: Instant) -> Result<Decision<()>> {
+    /// Allows all cells through unconditionally.
+    fn test_n_and_update(&mut self, _n: u32, _t0: Instant) -> Result<Decision<()>> {
         Ok(Decision::Yes)
     }
 }

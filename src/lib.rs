@@ -116,8 +116,25 @@ pub trait DeciderImpl {
     /// at the instant `at` and updates the rate-limiter to account
     /// for the weight of the cell.
     ///
-    /// This method is not meant to be called by users,
-    fn test_and_update(&mut self, at: Instant) -> Result<Decision<Self::T>>;
+    /// This method is not meant to be called by users, see instead
+    /// the [Decider trait](trait.Decider.html). The default
+    /// implementation only calls
+    /// [`test_n_and_update`](#test_n_and_update).
+    fn test_and_update(&mut self, at: Instant) -> Result<Decision<Self::T>> {
+        self.test_n_and_update(1, at)
+    }
+
+    /// Tests if a n cells can be accomodated in the rate limiter at
+    /// the instant `at` and updates the rate-limiter to account for
+    /// the weight of the cells and updates the ratelimiter state.
+    ///
+    /// The update is all or nothing: Unless all n cells can be
+    /// accomodated, the state of the rate limiter will not be
+    /// updated.
+    ///
+    /// This method is not meant to be called by users, see instead
+    /// [the `Decider` trait](trait.Decider.html).
+    fn test_n_and_update(&mut self, n: u32, at: Instant) -> Result<Decision<Self::T>>;
 }
 
 /// The external interface offered by all rate-limiting implementations.
@@ -132,5 +149,19 @@ pub trait Decider: DeciderImpl {
     /// stamp.
     fn check_at(&mut self, at: Instant) -> Result<Decision<Self::T>> {
         self.test_and_update(at)
+    }
+
+    /// Tests if `n` cells can be accomodated at the given time
+    /// stamp. An error `ErrorKind::CapacityError` is
+    /// returned if `n` exceeds the bucket capacity.
+    fn check_n_at(&mut self, n: u32, at: Instant) -> Result<Decision<Self::T>> {
+        self.test_n_and_update(n, at)
+    }
+
+    /// Tests if `n` cells can be accomodated at the current time
+    /// (`Instant::now()`). An error `ErrorKind::CapacityError` is
+    /// returned if `n` exceeds the bucket capacity.
+    fn check_n(&mut self, n: u32) -> Result<Decision<Self::T>> {
+        self.test_n_and_update(n, Instant::now())
     }
 }

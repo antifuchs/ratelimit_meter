@@ -35,6 +35,10 @@ impl<Impl> DeciderImpl for Threadsafe<Impl>
     fn test_and_update(&mut self, at: Instant) -> Result<Decision<Impl::T>> {
         self.sub.lock()?.test_and_update(at)
     }
+
+    fn test_n_and_update(&mut self, n: u32, at: Instant) -> Result<Decision<Impl::T>> {
+        self.sub.lock()?.test_n_and_update(n, at)
+    }
 }
 
 impl<Impl> Decider for Threadsafe<Impl>

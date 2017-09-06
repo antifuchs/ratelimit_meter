@@ -6,6 +6,13 @@ error_chain! {
         ThreadingError {
             display("mutex is poisoned")
         }
+
+        /// Returned when an internal inconsistency is detected
+        /// (e.g. a bucket's capacity is too small to accomodate a
+        /// single cell)
+        CapacityError {
+            display("bucket capacity is wrong")
+        }
     }
 }
 
