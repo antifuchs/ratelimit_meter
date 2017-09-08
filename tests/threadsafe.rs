@@ -6,13 +6,13 @@ use std::time::{Instant, Duration};
 
 #[test]
 fn simple_operation() {
-    let mut lim = GCRA::for_capacity(5).build_sync();
+    let mut lim = GCRA::for_capacity(5).unwrap().build_sync();
     assert_eq!(Decision::Yes, lim.check().unwrap());
 }
 
 #[test]
 fn actual_threadsafety() {
-    let mut lim = GCRA::for_capacity(20).build_sync();
+    let mut lim = GCRA::for_capacity(20).unwrap().build_sync();
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     let mut children = vec![];

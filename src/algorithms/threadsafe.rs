@@ -51,7 +51,7 @@ impl<Impl> Decider for Threadsafe<Impl>
 /// # Example
 /// ```
 /// use ratelimit_meter::{GCRA, Decider, Threadsafe, Decision};
-/// let mut gcra_sync: Threadsafe<GCRA> = GCRA::for_capacity(50).into();
+/// let mut gcra_sync: Threadsafe<GCRA> = GCRA::for_capacity(50).unwrap().into();
 /// assert_eq!(Decision::Yes, gcra_sync.check().unwrap());
 /// ```
 impl<'a> From<&'a Builder> for Threadsafe<GCRA> {

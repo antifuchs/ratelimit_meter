@@ -9,7 +9,7 @@ use std::time::{Instant, Duration};
 
 #[bench]
 fn bench_gcra(b: &mut test::Bencher) {
-    let mut gcra = GCRA::for_capacity(50).cell_weight(1).build();
+    let mut gcra = GCRA::for_capacity(50).unwrap().cell_weight(1).unwrap().build();
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut i = 0;
@@ -27,7 +27,7 @@ fn bench_allower(b: &mut test::Bencher) {
 
 #[bench]
 fn bench_threadsafe_gcra(b: &mut test::Bencher) {
-    let mut gcra = GCRA::for_capacity(50).cell_weight(1).build_sync();
+    let mut gcra = GCRA::for_capacity(50).unwrap().cell_weight(1).unwrap().build_sync();
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut i = 0;

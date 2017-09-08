@@ -14,9 +14,9 @@
 //! use std::time::Duration;
 //! use ratelimit_meter::{Decider, GCRA, Decision};
 //!
-//! let mut lim = GCRA::for_capacity(50) // Allow 50 units of work
+//! let mut lim = GCRA::for_capacity(50).unwrap() // Allow 50 units of work
 //!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
-//!     .cell_weight(1) // Each cell is one unit of work "heavy".
+//!     .cell_weight(1).unwrap() // Each cell is one unit of work "heavy".
 //!     .build(); // Construct a non-threadsafe GCRA decider.
 //! assert_eq!(Decision::Yes, lim.check().unwrap());
 //! ```
@@ -59,9 +59,9 @@
 //! use std::time::Duration;
 //! use ratelimit_meter::{Decider, GCRA, Decision};
 //!
-//! let mut lim = GCRA::for_capacity(50) // Allow 50 units of work
+//! let mut lim = GCRA::for_capacity(50).unwrap() // Allow 50 units of work
 //!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
-//!     .cell_weight(1) // Each cell is one unit of work "heavy".
+//!     .cell_weight(1).unwrap() // Each cell is one unit of work "heavy".
 //!     .build_sync(); // Construct a threadsafe GCRA decider.
 //! assert_eq!(Decision::Yes, lim.check().unwrap());
 //! ```

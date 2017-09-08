@@ -17,7 +17,7 @@ use std::cmp;
 /// ```
 /// # use ratelimit_meter::{Decider, GCRA, Decision};
 /// # use std::time::{Instant, Duration};
-/// let mut limiter = GCRA::for_capacity(20).cell_weight(1).build();
+/// let mut limiter = GCRA::for_capacity(20).unwrap().cell_weight(1).unwrap().build();
 /// let now = Instant::now();
 /// let ms = Duration::from_millis(1);
 /// assert_eq!(Decision::Yes, limiter.check_at(now).unwrap()); // the first cell is free
@@ -53,9 +53,12 @@ pub struct Builder {
 impl Builder {
     /// Sets the "weight" of each cell being checked against the
     /// bucket. Each cell fills the bucket by this much.
-    pub fn cell_weight<'a>(&'a mut self, weight: u32) -> &'a mut Builder {
+    pub fn cell_weight<'a>(&'a mut self, weight: u32) -> Result<&'a mut Builder> {
+        if self.cell_weight > self.capacity {
+            return Err(ErrorKind::InconsistentCapacity(self.capacity, weight).into());
+        }
         self.cell_weight = weight;
-        self
+        Ok(self)
     }
 
     /// Sets the "unit of time" within which the bucket drains.
@@ -86,12 +89,15 @@ impl GCRA {
     /// Constructs a builder object for a GCRA rate-limiter with the
     /// given capacity per second, at cell weight=1. See
     /// [`Builder`](gcra/struct.Builder.html) for options.
-    pub fn for_capacity(capacity: u32) -> Builder {
-        Builder {
+    pub fn for_capacity(capacity: u32) -> Result<Builder> {
+        if capacity == 0 {
+            return Err(ErrorKind::InconsistentCapacity(capacity, 0).into());
+        }
+        Ok(Builder {
             capacity: capacity,
             cell_weight: 1,
             time_unit: Duration::from_secs(1),
-        }
+        })
     }
 }
 
@@ -131,7 +137,7 @@ impl DeciderImpl for GCRA {
                 let weight = self.t * (n - 1);
                 if (weight + self.t) > self.tau {
                     // The bucket capacity can never accomodate this request
-                    return Err(ErrorKind::CapacityError.into());
+                    return Err(ErrorKind::InsufficientCapacity(n).into());
                 }
                 tat + weight
             }
@@ -157,7 +163,7 @@ impl DeciderImpl for GCRA {
 /// # Example:
 /// ```
 /// use ratelimit_meter::{GCRA, Decider, Decision};
-/// let mut gcra: GCRA = GCRA::for_capacity(50).into();
+/// let mut gcra: GCRA = GCRA::for_capacity(50).unwrap().into();
 /// assert_eq!(Decision::Yes, gcra.check().unwrap());
 /// ```
 impl From<Builder> for GCRA {
@@ -170,7 +176,7 @@ impl From<Builder> for GCRA {
 /// # Example:
 /// ```
 /// use ratelimit_meter::{GCRA, Decider, Decision};
-/// let mut gcra: GCRA = GCRA::for_capacity(50).cell_weight(2).into();
+/// let mut gcra: GCRA = GCRA::for_capacity(50).unwrap().cell_weight(2).unwrap().into();
 /// assert_eq!(Decision::Yes, gcra.check().unwrap());
 /// ```
 impl<'a> From<&'a mut Builder> for GCRA {
