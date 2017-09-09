@@ -121,6 +121,15 @@ impl GCRA {
             time_unit: Duration::from_secs(1),
         })
     }
+
+    /// Constructs a GCRA rate-limiter with the parameters T (the
+    /// minimum amount of time that single cells are spaced apart),
+    /// tau (τ, the number of cells that fit into this buffer), and an
+    /// optional t_at (the earliest instant that the rate-limiter
+    /// would accept another cell).
+    pub fn with_parameters(t: Duration, tau: Duration, tat: Option<Instant>) -> GCRA {
+        GCRA{t: t, tau: tau, tat: tat}
+    }
 }
 
 impl Decider for GCRA {}
