@@ -1,4 +1,5 @@
-use {DeciderImpl, Decider, Decision, Threadsafe, Result};
+use {TypedDecider, DeciderImpl, MultiDeciderImpl, Decider, MultiDecider, Decision, Threadsafe,
+     Result, ErrorKind};
 
 use std::time::{Instant, Duration};
 use std::cmp;
@@ -9,6 +10,28 @@ use std::cmp;
 /// Traffic control and congestion control in B-ISDN; from
 /// [Wikipedia](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm).
 ///
+///
+/// While algorithms like leaky-bucket rate limiters allow cells to be
+/// distributed across time in any way, GCRA is a rate-limiting *and*
+/// traffic-shaping algorithm. It mandates that a minimum amount of
+/// time passes between cells being measured. For example, if your API
+/// mandates that only 20 requests can be made per second, GCRA will
+/// ensure that each request is at least 50ms apart from the previous
+/// request. This makes GCRA suitable for shaping traffic in
+/// networking and telecom equipment (it was initially made for
+/// asynchronous transfer mode networks), or for outgoing workloads on
+/// *consumers* of attention, e.g. distributing outgoing emails across
+/// a day.
+///
+/// In a blatant side-stepping of the above traffic-shaping criteria,
+/// this implementation of GCRA comes with an extension that allows
+/// measuring multiple cells at once, assuming that if a pause of
+/// `n*(the minimum time between cells)` has passed, we can allow a
+/// single big batch of `n` cells through. This assumption may not be
+/// correct for your application, but if you depend on GCRA's
+/// traffic-shaping properties, it's better to not use the `_n`
+/// suffixed check functions.
+///
 /// # Example
 /// In this example, we construct a rate-limiter with the GCR
 /// algorithm that can accomodate 20 cells per second. This translates
@@ -17,7 +40,7 @@ use std::cmp;
 /// ```
 /// # use ratelimit_meter::{Decider, GCRA, Decision};
 /// # use std::time::{Instant, Duration};
-/// let mut limiter = GCRA::for_capacity(20).cell_weight(1).build();
+/// let mut limiter = GCRA::for_capacity(20).unwrap().cell_weight(1).unwrap().build();
 /// let now = Instant::now();
 /// let ms = Duration::from_millis(1);
 /// assert_eq!(Decision::Yes, limiter.check_at(now).unwrap()); // the first cell is free
@@ -53,9 +76,12 @@ pub struct Builder {
 impl Builder {
     /// Sets the "weight" of each cell being checked against the
     /// bucket. Each cell fills the bucket by this much.
-    pub fn cell_weight<'a>(&'a mut self, weight: u32) -> &'a mut Builder {
+    pub fn cell_weight<'a>(&'a mut self, weight: u32) -> Result<&'a mut Builder> {
+        if self.cell_weight > self.capacity {
+            return Err(ErrorKind::InconsistentCapacity(self.capacity, weight).into());
+        }
         self.cell_weight = weight;
-        self
+        Ok(self)
     }
 
     /// Sets the "unit of time" within which the bucket drains.
@@ -86,23 +112,48 @@ impl GCRA {
     /// Constructs a builder object for a GCRA rate-limiter with the
     /// given capacity per second, at cell weight=1. See
     /// [`Builder`](gcra/struct.Builder.html) for options.
-    pub fn for_capacity(capacity: u32) -> Builder {
-        Builder {
+    pub fn for_capacity(capacity: u32) -> Result<Builder> {
+        if capacity == 0 {
+            return Err(ErrorKind::InconsistentCapacity(capacity, 0).into());
+        }
+        Ok(Builder {
             capacity: capacity,
             cell_weight: 1,
             time_unit: Duration::from_secs(1),
+        })
+    }
+
+    /// Constructs a GCRA rate-limiter with the parameters T (the
+    /// minimum amount of time that single cells are spaced apart),
+    /// tau (τ, the number of cells that fit into this buffer), and an
+    /// optional t_at (the earliest instant that the rate-limiter
+    /// would accept another cell).
+    pub fn with_parameters(t: Duration, tau: Duration, tat: Option<Instant>) -> GCRA {
+        GCRA {
+            t: t,
+            tau: tau,
+            tat: tat,
         }
     }
 }
 
-impl DeciderImpl for GCRA {
+
+impl TypedDecider for GCRA {
     /// In GCRA, negative decisions come with the time at which the
     /// next cell was expected to arrive; client code of GCRA can use
     /// this to decide what to do with the non-conforming cell.
     type T = Instant;
+}
 
+impl Decider for GCRA {}
+
+impl DeciderImpl for GCRA {
+    /// Tests if a single cell can be accomodated by the
+    /// rate-limiter. This is the method described directly in the
+    /// GCRA algorithm, and is the fastest.
     fn test_and_update(&mut self, t0: Instant) -> Result<Decision<Instant>> {
         let tat = self.tat.unwrap_or(t0);
+
         if t0 < tat - self.tau {
             return Ok(Decision::No(tat));
         }
@@ -111,7 +162,50 @@ impl DeciderImpl for GCRA {
     }
 }
 
-impl Decider for GCRA {}
+impl MultiDeciderImpl for GCRA {
+    /// Tests if a `n` cells can be accomodated by the rate-limiter
+    /// and updates rate limiter state iff they can be.
+    ///
+    /// As this method is an extension of GCRA (using multiplication),
+    /// it is likely not as fast (and not as obviously "right") as the
+    /// single-cell variant.
+    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<Decision<Instant>> {
+        let tat = self.tat.unwrap_or(t0);
+        let tat = match n {
+            0 => t0,
+            1 => tat,
+            _ => {
+                let weight = self.t * (n - 1);
+                if (weight + self.t) > self.tau {
+                    // The bucket capacity can never accomodate this request
+                    return Err(ErrorKind::InsufficientCapacity(n).into());
+                }
+                tat + weight
+            }
+        };
+
+        if t0 < tat - self.tau {
+            return Ok(Decision::No(tat));
+        }
+        let additional_weight = match n {
+            0 => Duration::new(0, 0),
+            1 => self.t,
+            _ => self.t * n,
+        };
+        self.tat = Some(cmp::max(tat, t0) + additional_weight);
+        Ok(Decision::Yes)
+    }
+}
+
+/// This crate's GCRA implementation also allows checking multiple
+/// cells at once, assuming that (counter the traffic-shaping
+/// properties of GCRA) if a sufficiently long pause (`n*t`) has
+/// occurred between cells, the algorithm can accomodate `n` cells.
+///
+/// As this assumption does not necessarily hold in all circumstances,
+/// users of this trait on GCRA limiters should ensure that this is
+/// ok.
+impl MultiDecider for GCRA {}
 
 /// Allows converting from a GCRA builder directly into a
 /// GCRA decider. Same as
@@ -120,7 +214,7 @@ impl Decider for GCRA {}
 /// # Example:
 /// ```
 /// use ratelimit_meter::{GCRA, Decider, Decision};
-/// let mut gcra: GCRA = GCRA::for_capacity(50).into();
+/// let mut gcra: GCRA = GCRA::for_capacity(50).unwrap().into();
 /// assert_eq!(Decision::Yes, gcra.check().unwrap());
 /// ```
 impl From<Builder> for GCRA {
@@ -133,11 +227,36 @@ impl From<Builder> for GCRA {
 /// # Example:
 /// ```
 /// use ratelimit_meter::{GCRA, Decider, Decision};
-/// let mut gcra: GCRA = GCRA::for_capacity(50).cell_weight(2).into();
+/// let mut gcra: GCRA = GCRA::for_capacity(50).unwrap().cell_weight(2).unwrap().into();
 /// assert_eq!(Decision::Yes, gcra.check().unwrap());
 /// ```
 impl<'a> From<&'a mut Builder> for GCRA {
     fn from(b: &'a mut Builder) -> Self {
         b.build()
+    }
+}
+
+/// Allows converting a GCRA into a tuple containing its T (the
+/// minimum amount of time that single cells are spaced apart), tau
+/// (τ, the number of cells that fit into this buffer), and an
+/// optional t_at (the earliest instant that the rate-limiter would
+/// accept another cell).
+///
+/// These parameters can be used with
+/// [`.with_parameters`](#method.with_parameters) to persist and
+/// construct a copy of the GCRA rate-limiter.
+impl<'a> Into<(Duration, Duration, Option<Instant>)> for &'a GCRA {
+    fn into(self) -> (Duration, Duration, Option<Instant>) {
+        (self.t, self.tau, self.tat)
+    }
+}
+
+/// Allows converting the parameters returned from
+/// [`Into<(Duration, Duration, Option<Instant>)>`](#impl-Into<(Duration, Duration, Option<Instant>)>)
+/// back into a GCRA.
+impl From<(Duration, Duration, Option<Instant>)> for GCRA {
+    fn from(params: (Duration, Duration, Option<Instant>)) -> GCRA {
+        let (t, tau, tat) = params;
+        GCRA::with_parameters(t, tau, tat)
     }
 }
