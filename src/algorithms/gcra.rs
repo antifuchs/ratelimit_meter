@@ -1,4 +1,5 @@
-use {DeciderImpl, Decider, Decision, Threadsafe, Result, ErrorKind};
+use {TypedDecider, DeciderImpl, MultiDeciderImpl, Decider, MultiDecider, Decision, Threadsafe,
+     Result, ErrorKind};
 
 use std::time::{Instant, Duration};
 use std::cmp;
@@ -128,18 +129,25 @@ impl GCRA {
     /// optional t_at (the earliest instant that the rate-limiter
     /// would accept another cell).
     pub fn with_parameters(t: Duration, tau: Duration, tat: Option<Instant>) -> GCRA {
-        GCRA{t: t, tau: tau, tat: tat}
+        GCRA {
+            t: t,
+            tau: tau,
+            tat: tat,
+        }
     }
+}
+
+
+impl TypedDecider for GCRA {
+    /// In GCRA, negative decisions come with the time at which the
+    /// next cell was expected to arrive; client code of GCRA can use
+    /// this to decide what to do with the non-conforming cell.
+    type T = Instant;
 }
 
 impl Decider for GCRA {}
 
 impl DeciderImpl for GCRA {
-    /// In GCRA, negative decisions come with the time at which the
-    /// next cell was expected to arrive; client code of GCRA can use
-    /// this to decide what to do with the non-conforming cell.
-    type T = Instant;
-
     /// Tests if a single cell can be accomodated by the
     /// rate-limiter. This is the method described directly in the
     /// GCRA algorithm, and is the fastest.
@@ -152,7 +160,9 @@ impl DeciderImpl for GCRA {
         self.tat = Some(cmp::max(tat, t0) + self.t);
         Ok(Decision::Yes)
     }
+}
 
+impl MultiDeciderImpl for GCRA {
     /// Tests if a `n` cells can be accomodated by the rate-limiter
     /// and updates rate limiter state iff they can be.
     ///
@@ -186,6 +196,16 @@ impl DeciderImpl for GCRA {
         Ok(Decision::Yes)
     }
 }
+
+/// This crate's GCRA implementation also allows checking multiple
+/// cells at once, assuming that (counter the traffic-shaping
+/// properties of GCRA) if a sufficiently long pause (`n*t`) has
+/// occurred between cells, the algorithm can accomodate `n` cells.
+///
+/// As this assumption does not necessarily hold in all circumstances,
+/// users of this trait on GCRA limiters should ensure that this is
+/// ok.
+impl MultiDecider for GCRA {}
 
 /// Allows converting from a GCRA builder directly into a
 /// GCRA decider. Same as

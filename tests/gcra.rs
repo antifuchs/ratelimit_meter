@@ -1,6 +1,6 @@
 extern crate ratelimit_meter;
 
-use ratelimit_meter::{GCRA, Decider, Decision, ErrorKind, Error};
+use ratelimit_meter::{GCRA, MultiDecider, Decider, Decision, ErrorKind, Error};
 use std::time::{Instant, Duration};
 
 #[test]

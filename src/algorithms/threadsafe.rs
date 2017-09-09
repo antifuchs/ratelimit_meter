@@ -1,4 +1,4 @@
-use {DeciderImpl, Decider, Decision, Result};
+use {MultiDeciderImpl, DeciderImpl, TypedDecider, Decider, Decision, Result};
 use algorithms::gcra::{GCRA, Builder};
 
 use std::sync::{Arc, Mutex};
@@ -27,15 +27,19 @@ impl<Impl> Threadsafe<Impl>
     }
 }
 
+impl<Impl> TypedDecider for Threadsafe<Impl> where Impl: TypedDecider + Decider + Sized + Clone {
+    type T = Impl::T;
+}
+
 impl<Impl> DeciderImpl for Threadsafe<Impl>
     where Impl: Decider + Sized + Clone
 {
-    type T = Impl::T;
-
     fn test_and_update(&mut self, at: Instant) -> Result<Decision<Impl::T>> {
         self.sub.lock()?.test_and_update(at)
     }
+}
 
+impl <Impl> MultiDeciderImpl for Threadsafe<Impl> where Impl: MultiDeciderImpl + Decider + Sized + Clone {
     fn test_n_and_update(&mut self, n: u32, at: Instant) -> Result<Decision<Impl::T>> {
         self.sub.lock()?.test_n_and_update(n, at)
     }

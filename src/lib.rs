@@ -40,7 +40,7 @@
 //! optimizations which result in much more consise and fast code (it
 //! does not even use multiplication or division in the "hot" path).
 //!
-//! See [the documentation of the GCRA type](struct.GCRA.html) for
+//! See [the documentation of the GCRA type](algorithms/gcra/struct.GCRA.html) for
 //! more details on its implementation and on trade-offs that apply to
 //! it.
 //!
@@ -67,7 +67,8 @@
 
 pub mod example_algorithms;
 pub mod errors;
-mod algorithms;
+pub mod algorithms;
+mod implementation;
 
 #[macro_use]
 extern crate error_chain;
@@ -76,6 +77,7 @@ use std::time::{Instant};
 
 pub use errors::*;
 pub use self::algorithms::*;
+use implementation::*;
 
 #[derive(PartialEq, Debug)]
 /// A decision on a single cell from the metered rate-limiter.
@@ -103,40 +105,17 @@ impl<T> Decision<T> {
     }
 }
 
-/// The trait that implementations of the metered rate-limiter
-/// interface have to implement. Users of this library should rely on
-/// [Decider](trait.Decider.html) for the external interface.
-pub trait DeciderImpl {
-    /// The (optional) type for additional information on negative
-    /// decisions.
+/// A prerequisite for implementing any Decider trait. It provides the
+/// associated type for [`Decision`](enum.Decision.html)'s additional
+/// information for negative decisions.
+pub trait TypedDecider {
+    /// The type for additional information on negative decisions.
     type T;
-
-    /// Tests if a single cell can be accomodated in the rate limiter
-    /// at the instant `at` and updates the rate-limiter to account
-    /// for the weight of the cell.
-    ///
-    /// This method is not meant to be called by users, see instead
-    /// the [Decider trait](trait.Decider.html). The default
-    /// implementation only calls
-    /// [`test_n_and_update`](#test_n_and_update).
-    fn test_and_update(&mut self, at: Instant) -> Result<Decision<Self::T>> {
-        self.test_n_and_update(1, at)
-    }
-
-    /// Tests if a n cells can be accomodated in the rate limiter at
-    /// the instant `at` and updates the rate-limiter to account for
-    /// the weight of the cells and updates the ratelimiter state.
-    ///
-    /// The update is all or nothing: Unless all n cells can be
-    /// accomodated, the state of the rate limiter will not be
-    /// updated.
-    ///
-    /// This method is not meant to be called by users, see instead
-    /// [the `Decider` trait](trait.Decider.html).
-    fn test_n_and_update(&mut self, n: u32, at: Instant) -> Result<Decision<Self::T>>;
 }
 
-/// The external interface offered by all rate-limiting implementations.
+/// The main decision trait. It allows checking a single cell against
+/// the rate-limiter, either at the current time instant, or at a
+/// given instant in time, both destructively.
 pub trait Decider: DeciderImpl {
     /// Tests if a single cell can be accomodated at
     /// `Instant::now()`. See [`check_at`](#method.check_at).
@@ -149,7 +128,9 @@ pub trait Decider: DeciderImpl {
     fn check_at(&mut self, at: Instant) -> Result<Decision<Self::T>> {
         self.test_and_update(at)
     }
+}
 
+pub trait MultiDecider: MultiDeciderImpl {
     /// Tests if `n` cells can be accomodated at the given time
     /// stamp. An error `ErrorKind::CapacityError` is
     /// returned if `n` exceeds the bucket capacity.
