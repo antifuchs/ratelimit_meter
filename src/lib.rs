@@ -33,17 +33,16 @@
 //! should use the `Instant` returned with negative decisions and wait
 //! in your own, e.g. event loop.
 //!
-//! ## Design and implementation
+//! ## Design and implementation of GCRA
 //!
-//! Unlike some other token bucket algorithms, the GCRA one assumes that
-//! all units of work are of the same "weight", and so allows some
-//! optimizations which result in much more consise and fast code (it does
-//! not even use multiplication or division in the "hot" path).
+//! Unlike token bucket algorithms, the GCRA one assumes that all
+//! units of work are of the same "weight", and so allows some
+//! optimizations which result in much more consise and fast code (it
+//! does not even use multiplication or division in the "hot" path).
 //!
-//! The trade-off here this is that there is currently no support for
-//! assigning different weights to incoming cells (say, particularly
-//! heavy api calls vs. lightweight ones) using the same rate-limiter
-//! structure.
+//! See [the documentation of the GCRA type](struct.GCRA.html) for
+//! more details on its implementation and on trade-offs that apply to
+//! it.
 //!
 //! ## Thread-safe operation
 //!

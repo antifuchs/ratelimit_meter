@@ -9,6 +9,28 @@ use std::cmp;
 /// Traffic control and congestion control in B-ISDN; from
 /// [Wikipedia](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm).
 ///
+///
+/// While algorithms like leaky-bucket rate limiters allow cells to be
+/// distributed across time in any way, GCRA is a rate-limiting *and*
+/// traffic-shaping algorithm. It mandates that a minimum amount of
+/// time passes between cells being measured. For example, if your API
+/// mandates that only 20 requests can be made per second, GCRA will
+/// ensure that each request is at least 50ms apart from the previous
+/// request. This makes GCRA suitable for shaping traffic in
+/// networking and telecom equipment (it was initially made for
+/// asynchronous transfer mode networks), or for outgoing workloads on
+/// *consumers* of attention, e.g. distributing outgoing emails across
+/// a day.
+///
+/// In a blatant side-stepping of the above traffic-shaping criteria,
+/// this implementation of GCRA comes with an extension that allows
+/// measuring multiple cells at once, assuming that if a pause of
+/// `n*(the minimum time between cells)` has passed, we can allow a
+/// single big batch of `n` cells through. This assumption may not be
+/// correct for your application, but if you depend on GCRA's
+/// traffic-shaping properties, it's better to not use the `_n`
+/// suffixed check functions.
+///
 /// # Example
 /// In this example, we construct a rate-limiter with the GCR
 /// algorithm that can accomodate 20 cells per second. This translates
