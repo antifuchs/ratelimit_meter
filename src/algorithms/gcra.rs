@@ -235,3 +235,28 @@ impl<'a> From<&'a mut Builder> for GCRA {
         b.build()
     }
 }
+
+/// Allows converting a GCRA into a tuple containing its T (the
+/// minimum amount of time that single cells are spaced apart), tau
+/// (τ, the number of cells that fit into this buffer), and an
+/// optional t_at (the earliest instant that the rate-limiter would
+/// accept another cell).
+///
+/// These parameters can be used with
+/// [`.with_parameters`](#method.with_parameters) to persist and
+/// construct a copy of the GCRA rate-limiter.
+impl<'a> Into<(Duration, Duration, Option<Instant>)> for &'a GCRA {
+    fn into(self) -> (Duration, Duration, Option<Instant>) {
+        (self.t, self.tau, self.tat)
+    }
+}
+
+/// Allows converting the parameters returned from
+/// [`Into<(Duration, Duration, Option<Instant>)>`](#impl-Into<(Duration, Duration, Option<Instant>)>)
+/// back into a GCRA.
+impl From<(Duration, Duration, Option<Instant>)> for GCRA {
+    fn from(params: (Duration, Duration, Option<Instant>)) -> GCRA {
+        let (t, tau, tat) = params;
+        GCRA::with_parameters(t, tau, tat)
+    }
+}
