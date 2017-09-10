@@ -1,5 +1,5 @@
 pub mod gcra;
-pub mod leaky_bucket;
+mod leaky_bucket;
 mod threadsafe;
 
 pub use self::gcra::GCRA;
