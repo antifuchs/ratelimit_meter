@@ -161,13 +161,13 @@ pub trait TypedDecider {
 /// the rate-limiter, either at the current time instant, or at a
 /// given instant in time, both destructively.
 pub trait Decider: DeciderImpl {
-    /// Tests if a single cell can be accomodated at
+    /// Tests if a single cell can be accommodated at
     /// `Instant::now()`. See [`check_at`](#method.check_at).
     fn check(&mut self) -> Result<Decision<Self::T>> {
         self.test_and_update(Instant::now())
     }
 
-    /// Tests is a single cell can be accomodated at the given time
+    /// Tests is a single cell can be accommodated at the given time
     /// stamp.
     fn check_at(&mut self, at: Instant) -> Result<Decision<Self::T>> {
         self.test_and_update(at)
@@ -175,14 +175,14 @@ pub trait Decider: DeciderImpl {
 }
 
 pub trait MultiDecider: MultiDeciderImpl {
-    /// Tests if `n` cells can be accomodated at the given time
+    /// Tests if `n` cells can be accommodated at the given time
     /// stamp. An error [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html) is
     /// returned if `n` exceeds the bucket capacity.
     fn check_n_at(&mut self, n: u32, at: Instant) -> Result<Decision<Self::T>> {
         self.test_n_and_update(n, at)
     }
 
-    /// Tests if `n` cells can be accomodated at the current time
+    /// Tests if `n` cells can be accommodated at the current time
     /// (`Instant::now()`). An error [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html) is
     /// returned if `n` exceeds the bucket capacity.
     fn check_n(&mut self, n: u32) -> Result<Decision<Self::T>> {

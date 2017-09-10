@@ -40,7 +40,7 @@ fn allows_n_after_interval() {
     let next = now + Duration::from_secs(1);
     assert_eq!(Decision::Yes, gcra.check_n_at(2, next).unwrap(), "now: {:?}", next);
 
-    // should always accomodate 0 cells:
+    // should always accommodate 0 cells:
     assert_eq!(Decision::Yes, gcra.check_n_at(0, next).unwrap());
 }
 
