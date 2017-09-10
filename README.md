@@ -22,7 +22,7 @@ Find them [on docs.rs](https://docs.rs/ratelimit_meter/) for the latest version!
 
 Unlike some other token bucket algorithms, the GCRA one assumes that
 all units of work are of the same "weight", and so allows some
-optimizations which result in much more consise and fast code (it does
+optimizations which result in much more concise and fast code (it does
 not even use multiplication or division in the "hot" path).
 
 The downside of this is that there is currently no support for

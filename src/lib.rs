@@ -59,7 +59,7 @@
 //!
 //! Unlike token or leaky bucket algorithms, the GCRA assumes that all
 //! units of work are of the same "weight", and so allows some
-//! optimizations which result in much more consise and fast code (it
+//! optimizations which result in much more concise and fast code (it
 //! does not even use multiplication or division in the "hot" path).
 //!
 //! See [the documentation of the GCRA type](algorithms/gcra/struct.GCRA.html) for
