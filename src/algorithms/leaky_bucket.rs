@@ -119,7 +119,7 @@ impl MultiDeciderImpl for LeakyBucket {
 
         let weight = self.token_interval * n;
         if weight + self.current <= self.full {
-            self.current = self.current + weight;
+            self.current += weight;
             Ok(Decision::Yes)
         } else {
             let wait_period = (weight + current) - self.full;
