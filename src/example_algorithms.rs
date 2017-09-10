@@ -2,6 +2,8 @@ use {MultiDeciderImpl, TypedDecider, ImpliedDeciderImpl, MultiDecider, Decider, 
 
 use std::time::Instant;
 
+impl Decider for Allower {}
+impl MultiDecider for Allower {}
 
 #[derive(Copy, Clone)]
 /// The most naive implementation of a rate-limiter ever: Always
@@ -35,6 +37,3 @@ impl MultiDeciderImpl for Allower {
 }
 
 impl ImpliedDeciderImpl for Allower {}
-
-impl Decider for Allower {}
-impl MultiDecider for Allower {}

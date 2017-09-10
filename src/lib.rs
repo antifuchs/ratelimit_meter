@@ -33,9 +33,31 @@
 //! should use the `Instant` returned with negative decisions and wait
 //! in your own, e.g. event loop.
 //!
-//! ## Design and implementation of GCRA
+//! ## Rate-limiting Algorithms
 //!
-//! Unlike token bucket algorithms, the GCRA one assumes that all
+//! This crate implements two "serious" rate-limiting/traffic-shaping
+//! algorithms:
+//! [GCRA](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm)
+//! and a [Leaky
+//! Bucket](https://en.wikipedia.org/wiki/Leaky_bucket#As_a_meter). An
+//! "unserious" implementation is provided also, the
+//! [`Allower`](example_algorithms/struct.Allower.html), which returns
+//! "Yes" to all rate-limiting queries.
+//!
+//! ### Design and implementation of GCRA
+//!
+//! The GCRA limits the rate of cells by determining when the "next"
+//! cell is expected to arrive; any cells that arrive before that time
+//! are classified as non-conforming; the methods for checking cells
+//! also return an expected arrival time for these cells, so that
+//! callers can choose to wait (adding jitter), or reject the cell.
+//!
+//! Since using the GCRA results in a much smoother usage pattern, it
+//! appears to be very useful for "outgoing" traffic behaviors,
+//! e.g. throttling API call rates, or emails sent to a person in a
+//! period of time.
+//!
+//! Unlike token or leaky bucket algorithms, the GCRA assumes that all
 //! units of work are of the same "weight", and so allows some
 //! optimizations which result in much more consise and fast code (it
 //! does not even use multiplication or division in the "hot" path).
@@ -44,13 +66,35 @@
 //! more details on its implementation and on trade-offs that apply to
 //! it.
 //!
+//! ### Design and implementation of the leaky bucket
+//!
+//! In contrast to the GCRA, the leaky bucket algorithm does not place
+//! any constraints on the next cell's arrival time: Whenever there is
+//! capacity left in the bucket, it can be used. This means that the
+//! distribution of "yes" decisions from heavy usage on the leaky
+//! bucket rate-limiter will be clustered together. On average, the
+//! cell rates of both the GCRA and the leaky bucket will be the same,
+//! but in terms of observable behavior, the leaky bucket will appear
+//! to allow requests at a more predictable rate.
+//!
+//! This kind of behavior is usually what people of online APIs expect
+//! these days, which makes the leaky bucket a very popular technique
+//! for rate-limiting on these kinds of services.
+//!
+//! The leaky bucket algorithm implemented in this crate is fairly
+//! standard: It only updates the bucket fill gauge when a cell is
+//! checked, and supports checking "batches" of cells in a single call
+//! with no problems.
+//!
 //! ## Thread-safe operation
 //!
-//! The default GCRA implementation can not be used across
-//! threads. However, there is a wrapper struct `Threadsafe`, that wraps
-//! the hot path in an atomically reference-counted mutex. It still
-//! manages to be pretty fast (see the benchmarks above), but the lock
-//! comes with an overhead even in single-threaded operation.
+//! None of the stateful implementations in this crate can be used
+//! across threads by default. However, there is a wrapper struct
+//! [`Threadsafe`](algorithms/struct.Threadsafe.html), that wraps each
+//! implementation's hot path in an atomically reference-counted
+//! mutex. It still manages to be pretty fast (see the benchmarks
+//! above), but the lock comes with an overhead even in
+//! single-threaded operation.
 //!
 //! Example:
 //!
@@ -132,14 +176,14 @@ pub trait Decider: DeciderImpl {
 
 pub trait MultiDecider: MultiDeciderImpl {
     /// Tests if `n` cells can be accomodated at the given time
-    /// stamp. An error `ErrorKind::CapacityError` is
+    /// stamp. An error [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html) is
     /// returned if `n` exceeds the bucket capacity.
     fn check_n_at(&mut self, n: u32, at: Instant) -> Result<Decision<Self::T>> {
         self.test_n_and_update(n, at)
     }
 
     /// Tests if `n` cells can be accomodated at the current time
-    /// (`Instant::now()`). An error `ErrorKind::CapacityError` is
+    /// (`Instant::now()`). An error [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html) is
     /// returned if `n` exceeds the bucket capacity.
     fn check_n(&mut self, n: u32) -> Result<Decision<Self::T>> {
         self.test_n_and_update(n, Instant::now())
