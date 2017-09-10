@@ -142,9 +142,9 @@ impl<T> Decision<T> {
     ///
     /// Note: This method is mostly useful in tests.
     pub fn is_compliant(&self) -> bool {
-        match self {
-            &Decision::Yes => true,
-            &Decision::No(_) => false,
+        match *self {
+            Decision::Yes => true,
+            Decision::No(_) => false,
         }
     }
 }
