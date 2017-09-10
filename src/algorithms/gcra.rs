@@ -238,7 +238,7 @@ impl<'a> From<&'a mut Builder> for GCRA {
 /// Allows converting a GCRA into a tuple containing its T (the
 /// minimum amount of time that single cells are spaced apart), tau
 /// (τ, the number of cells that fit into this buffer), and an
-/// optional t_at (the earliest instant that the rate-limiter would
+/// optional `t_at` (the earliest instant that the rate-limiter would
 /// accept another cell).
 ///
 /// These parameters can be used with

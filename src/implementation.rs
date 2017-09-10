@@ -33,11 +33,11 @@ pub trait MultiDeciderImpl: TypedDecider {
 }
 
 /// A trait that some implementations can opt into, to get a default
-/// implementation of the DeciderImpl trait.
+/// implementation of the `DeciderImpl` trait.
 pub trait ImpliedDeciderImpl: TypedDecider + MultiDeciderImpl {}
 
 /// A default implementation of the Decider trait, using the
-/// MultiDeciderImpl trait's methods with `n=1`.
+/// `MultiDeciderImpl` trait's methods with `n=1`.
 impl<T> DeciderImpl for T
     where T: ImpliedDeciderImpl
 {

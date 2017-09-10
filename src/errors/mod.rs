@@ -26,7 +26,7 @@ error_chain! {
     }
 }
 
-/// This must discard the original PoisonError, as `error_chain` does
+/// This must discard the original `PoisonError`, as `error_chain` does
 /// not currently support parameterizing `foreign_link`s with types
 /// the way we would need to.
 impl<'a, T> ::std::convert::From<PoisonError<MutexGuard<'a, T>>> for Error {
