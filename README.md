@@ -55,7 +55,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 4 measured; 0 filtered out
 
 I am actively hoping that this project gives people joy in using
 rate-limiting techniques. You can use these techniques for so many
-things (from throttling api requests to ensuring you don't spam people
+things (from throttling API requests to ensuring you don't spam people
 with emails about the same thing)!
 
 So if you have any thoughts about the API design, the internals, or
