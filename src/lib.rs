@@ -6,9 +6,17 @@
 //!
 //! ## Interface
 //!
-//! There is currently one rate limiter implementation in this crate,
-//! the Generic Cell Rate Algorithm. Use it by creating a builder from
-//! the [`GCRA`](algorithms/gcra/struct.GCRA.html) struct:
+//! This crate implements two "serious" rate-limiting/traffic-shaping
+//! algorithms:
+//! [GCRA](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm)
+//! and a [Leaky
+//! Bucket](https://en.wikipedia.org/wiki/Leaky_bucket#As_a_meter). An
+//! "unserious" implementation is provided also, the
+//! [`Allower`](example_algorithms/struct.Allower.html), which returns
+//! "Yes" to all rate-limiting queries.
+//!
+//! The Generic Cell Rate Algorithm can be used by creating a builder
+//! from the [`GCRA`](algorithms/gcra/struct.GCRA.html) struct:
 //!
 //! ``` rust
 //! use std::time::Duration;
@@ -34,15 +42,6 @@
 //! in your own, e.g. event loop.
 //!
 //! ## Rate-limiting Algorithms
-//!
-//! This crate implements two "serious" rate-limiting/traffic-shaping
-//! algorithms:
-//! [GCRA](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm)
-//! and a [Leaky
-//! Bucket](https://en.wikipedia.org/wiki/Leaky_bucket#As_a_meter). An
-//! "unserious" implementation is provided also, the
-//! [`Allower`](example_algorithms/struct.Allower.html), which returns
-//! "Yes" to all rate-limiting queries.
 //!
 //! ### Design and implementation of GCRA
 //!
