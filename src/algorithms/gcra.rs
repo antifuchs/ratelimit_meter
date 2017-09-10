@@ -130,7 +130,7 @@ impl Builder {
 impl GCRA {
     /// Constructs a builder object for a GCRA rate-limiter with the
     /// given capacity per second, at cell weight=1. See
-    /// [`Builder`](gcra/struct.Builder.html) for options.
+    /// [`Builder`](struct.Builder.html) for options.
     pub fn for_capacity(capacity: u32) -> Result<Builder> {
         if capacity == 0 {
             return Err(ErrorKind::InconsistentCapacity(capacity, 0).into());
