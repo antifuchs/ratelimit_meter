@@ -1,11 +1,12 @@
 [![Build Status](https://travis-ci.org/antifuchs/ratelimit_meter.svg?branch=master)](https://travis-ci.org/antifuchs/ratelimit_meter) [![Docs](https://docs.rs/ratelimit_meter/badge.svg)](https://docs.rs/ratelimit_meter/) [![crates.io](https://img.shields.io/crates/v/ratelimit_meter.svg)](https://crates.io/crates/ratelimit_meter)
 
-# Leaky Bucket Rate-Limiting (as a meter) in Rust
+# Rate-Limiting with leaky buckets in Rust
 
-This crate implements
-the
-[generic cell rate algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm) (GCRA)
-for rate-limiting and scheduling in Rust.
+This crate implements two rate-limiting algorithms in rust:
+* a [leaky bucket](https://en.wikipedia.org/wiki/Leaky_bucket#As_a_meter) and
+* a variation on the leaky bucket, the
+  [generic cell rate algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm) (GCRA)
+  for rate-limiting and scheduling.
 
 ## Installation
 
