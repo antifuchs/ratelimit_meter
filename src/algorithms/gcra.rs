@@ -4,6 +4,25 @@ use {TypedDecider, DeciderImpl, MultiDeciderImpl, Decider, MultiDecider, Decisio
 use std::time::{Instant, Duration};
 use std::cmp;
 
+impl Decider for GCRA {}
+
+/// This crate's GCRA implementation also allows checking multiple
+/// cells at once, assuming that (counter the traffic-shaping
+/// properties of GCRA) if a sufficiently long pause (`n*t`) has
+/// occurred between cells, the algorithm can accomodate `n` cells.
+///
+/// As this assumption does not necessarily hold in all circumstances,
+/// users of this trait on GCRA limiters should ensure that this is
+/// ok.
+impl MultiDecider for GCRA {}
+
+impl TypedDecider for GCRA {
+    /// In GCRA, negative decisions come with the time at which the
+    /// next cell was expected to arrive; client code of GCRA can use
+    /// this to decide what to do with the non-conforming cell.
+    type T = Instant;
+}
+
 #[derive(Debug, Clone)]
 /// Implements the virtual scheduling description of the Generic Cell
 /// Rate Algorithm, attributed to ITU-T in recommendation I.371
@@ -137,16 +156,6 @@ impl GCRA {
     }
 }
 
-
-impl TypedDecider for GCRA {
-    /// In GCRA, negative decisions come with the time at which the
-    /// next cell was expected to arrive; client code of GCRA can use
-    /// this to decide what to do with the non-conforming cell.
-    type T = Instant;
-}
-
-impl Decider for GCRA {}
-
 impl DeciderImpl for GCRA {
     /// Tests if a single cell can be accomodated by the
     /// rate-limiter. This is the method described directly in the
@@ -196,16 +205,6 @@ impl MultiDeciderImpl for GCRA {
         Ok(Decision::Yes)
     }
 }
-
-/// This crate's GCRA implementation also allows checking multiple
-/// cells at once, assuming that (counter the traffic-shaping
-/// properties of GCRA) if a sufficiently long pause (`n*t`) has
-/// occurred between cells, the algorithm can accomodate `n` cells.
-///
-/// As this assumption does not necessarily hold in all circumstances,
-/// users of this trait on GCRA limiters should ensure that this is
-/// ok.
-impl MultiDecider for GCRA {}
 
 /// Allows converting from a GCRA builder directly into a
 /// GCRA decider. Same as
