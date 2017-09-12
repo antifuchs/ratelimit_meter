@@ -1,5 +1,4 @@
 use {MultiDeciderImpl, DeciderImpl, TypedDecider, Decider, Decision, Result};
-use algorithms::gcra::{GCRA, Builder};
 
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -58,28 +57,4 @@ impl<Impl> Decider for Threadsafe<Impl>
 where
     Impl: Decider + Sized + Clone,
 {
-}
-
-/// Allows converting from a GCRA builder directly into a threadsafe
-/// GCRA decider. For example:
-/// # Example
-/// ```
-/// use ratelimit_meter::{GCRA, Decider, Threadsafe, Decision};
-/// let mut gcra_sync: Threadsafe<GCRA> = GCRA::for_capacity(50).unwrap().into();
-/// assert_eq!(Decision::Yes, gcra_sync.check().unwrap());
-/// ```
-impl<'a> From<&'a Builder> for Threadsafe<GCRA> {
-    fn from(b: &'a Builder) -> Self {
-        b.build_sync()
-    }
-}
-
-/// Allows converting from a GCRA builder directly into a threadsafe
-/// GCRA decider. Same as
-/// [the borrowed implementation](#impl-From<&'a Builder>), except for
-/// owned `Builder`s.
-impl<'a> From<Builder> for Threadsafe<GCRA> {
-    fn from(b: Builder) -> Self {
-        b.build_sync()
-    }
 }
