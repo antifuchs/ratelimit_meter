@@ -95,7 +95,7 @@ pub struct Builder {
 impl Builder {
     /// Sets the "weight" of each cell being checked against the
     /// bucket. Each cell fills the bucket by this much.
-    pub fn cell_weight<'a>(&'a mut self, weight: u32) -> Result<&'a mut Builder> {
+    pub fn cell_weight(&mut self, weight: u32) -> Result<&mut Builder> {
         if self.cell_weight > self.capacity {
             return Err(ErrorKind::InconsistentCapacity(self.capacity, weight).into());
         }
@@ -107,7 +107,7 @@ impl Builder {
     ///
     /// The assumption is that in a period of `time_unit` (if no cells
     /// are being checked), the bucket is fully drained.
-    pub fn per<'a>(&'a mut self, time_unit: Duration) -> &'a mut Builder {
+    pub fn per(&mut self, time_unit: Duration) -> &mut Builder {
         self.time_unit = time_unit;
         self
     }
