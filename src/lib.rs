@@ -113,6 +113,7 @@ pub mod errors;
 pub mod algorithms;
 mod implementation;
 
+extern crate crossbeam;
 #[macro_use]
 extern crate error_chain;
 
