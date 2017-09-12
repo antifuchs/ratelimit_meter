@@ -130,34 +130,31 @@ impl MultiDeciderImpl for LeakyBucket {
         let guard = epoch::pin();
 
         loop {
-            match self.state.load(Relaxed, &guard) {
-                Some(state) => {
-                    let last = state.last_update.unwrap_or(t0);
-                    // Prevent time travel: If any parallel calls get re-ordered,
-                    // or any tests attempt silly things, make sure to answer from
-                    // the last query onwards instead.
-                    let t0 = cmp::max(t0, last);
-                    // Decrement the level by the amount the bucket
-                    // has dripped in the meantime:
-                    new.level = state.level - cmp::min(t0 - last, state.level);
+            if let Some(state) = self.state.load(Relaxed, &guard) {
+                let last = state.last_update.unwrap_or(t0);
+                // Prevent time travel: If any parallel calls get re-ordered,
+                // or any tests attempt silly things, make sure to answer from
+                // the last query onwards instead.
+                let t0 = cmp::max(t0, last);
+                // Decrement the level by the amount the bucket
+                // has dripped in the meantime:
+                new.level = state.level - cmp::min(t0 - last, state.level);
 
-                    // Determine if the cell fits & ensure it is recorded:
-                    if weight + new.level <= self.full {
-                        new.level = new.level + weight;
-                        match self.state.cas_and_ref(Some(state), new, Release, &guard) {
-                            Ok(_) => {
-                                return Ok(Decision::Yes);
-                            }
-                            Err(owned) => {
-                                new = owned;
-                            }
+                // Determine if the cell fits & ensure it is recorded:
+                if weight + new.level <= self.full {
+                    new.level += weight;
+                    match self.state.cas_and_ref(Some(state), new, Release, &guard) {
+                        Ok(_) => {
+                            return Ok(Decision::Yes);
                         }
-                    } else {
-                        let wait_period = (weight + new.level) - self.full;
-                        return Ok(Decision::No(wait_period));
+                        Err(owned) => {
+                            new = owned;
+                        }
                     }
+                } else {
+                    let wait_period = (weight + new.level) - self.full;
+                    return Ok(Decision::No(wait_period));
                 }
-                None => {} // retry.
             }
         }
     }
