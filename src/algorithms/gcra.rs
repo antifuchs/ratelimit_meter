@@ -9,7 +9,7 @@ impl Decider for GCRA {}
 /// This crate's GCRA implementation also allows checking multiple
 /// cells at once, assuming that (counter the traffic-shaping
 /// properties of GCRA) if a sufficiently long pause (`n*t`) has
-/// occurred between cells, the algorithm can accomodate `n` cells.
+/// occurred between cells, the algorithm can accommodate `n` cells.
 ///
 /// As this assumption does not necessarily hold in all circumstances,
 /// users of this trait on GCRA limiters should ensure that this is
@@ -53,7 +53,7 @@ impl TypedDecider for GCRA {
 ///
 /// # Example
 /// In this example, we construct a rate-limiter with the GCR
-/// algorithm that can accomodate 20 cells per second. This translates
+/// algorithm that can accommodate 20 cells per second. This translates
 /// to the GCRA parameters τ=1s, T=50ms (that's 1s / 20 cells).
 ///
 /// ```
@@ -130,7 +130,7 @@ impl Builder {
 impl GCRA {
     /// Constructs a builder object for a GCRA rate-limiter with the
     /// given capacity per second, at cell weight=1. See
-    /// [`Builder`](gcra/struct.Builder.html) for options.
+    /// [`Builder`](struct.Builder.html) for options.
     pub fn for_capacity(capacity: u32) -> Result<Builder> {
         if capacity == 0 {
             return Err(ErrorKind::InconsistentCapacity(capacity, 0).into());
@@ -157,7 +157,7 @@ impl GCRA {
 }
 
 impl DeciderImpl for GCRA {
-    /// Tests if a single cell can be accomodated by the
+    /// Tests if a single cell can be accommodated by the
     /// rate-limiter. This is the method described directly in the
     /// GCRA algorithm, and is the fastest.
     fn test_and_update(&mut self, t0: Instant) -> Result<Decision<Instant>> {
@@ -172,7 +172,7 @@ impl DeciderImpl for GCRA {
 }
 
 impl MultiDeciderImpl for GCRA {
-    /// Tests if a `n` cells can be accomodated by the rate-limiter
+    /// Tests if a `n` cells can be accommodated by the rate-limiter
     /// and updates rate limiter state iff they can be.
     ///
     /// As this method is an extension of GCRA (using multiplication),
@@ -186,7 +186,7 @@ impl MultiDeciderImpl for GCRA {
             _ => {
                 let weight = self.t * (n - 1);
                 if (weight + self.t) > self.tau {
-                    // The bucket capacity can never accomodate this request
+                    // The bucket capacity can never accommodate this request
                     return Err(ErrorKind::InsufficientCapacity(n).into());
                 }
                 tat + weight
@@ -238,7 +238,7 @@ impl<'a> From<&'a mut Builder> for GCRA {
 /// Allows converting a GCRA into a tuple containing its T (the
 /// minimum amount of time that single cells are spaced apart), tau
 /// (τ, the number of cells that fit into this buffer), and an
-/// optional t_at (the earliest instant that the rate-limiter would
+/// optional `t_at` (the earliest instant that the rate-limiter would
 /// accept another cell).
 ///
 /// These parameters can be used with

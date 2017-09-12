@@ -6,9 +6,17 @@
 //!
 //! ## Interface
 //!
-//! There is currently one rate limiter implementation in this crate,
-//! the Generic Cell Rate Algorithm. Use it by creating a builder from
-//! the [`GCRA`](struct.GCRA.html) struct:
+//! This crate implements two "serious" rate-limiting/traffic-shaping
+//! algorithms:
+//! [GCRA](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm)
+//! and a [Leaky
+//! Bucket](https://en.wikipedia.org/wiki/Leaky_bucket#As_a_meter). An
+//! "unserious" implementation is provided also, the
+//! [`Allower`](example_algorithms/struct.Allower.html), which returns
+//! "Yes" to all rate-limiting queries.
+//!
+//! The Generic Cell Rate Algorithm can be used by creating a builder
+//! from the [`GCRA`](algorithms/gcra/struct.GCRA.html) struct:
 //!
 //! ``` rust
 //! use std::time::Duration;
@@ -35,15 +43,6 @@
 //!
 //! ## Rate-limiting Algorithms
 //!
-//! This crate implements two "serious" rate-limiting/traffic-shaping
-//! algorithms:
-//! [GCRA](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm)
-//! and a [Leaky
-//! Bucket](https://en.wikipedia.org/wiki/Leaky_bucket#As_a_meter). An
-//! "unserious" implementation is provided also, the
-//! [`Allower`](example_algorithms/struct.Allower.html), which returns
-//! "Yes" to all rate-limiting queries.
-//!
 //! ### Design and implementation of GCRA
 //!
 //! The GCRA limits the rate of cells by determining when the "next"
@@ -59,7 +58,7 @@
 //!
 //! Unlike token or leaky bucket algorithms, the GCRA assumes that all
 //! units of work are of the same "weight", and so allows some
-//! optimizations which result in much more consise and fast code (it
+//! optimizations which result in much more concise and fast code (it
 //! does not even use multiplication or division in the "hot" path).
 //!
 //! See [the documentation of the GCRA type](algorithms/gcra/struct.GCRA.html) for
@@ -161,13 +160,13 @@ pub trait TypedDecider {
 /// the rate-limiter, either at the current time instant, or at a
 /// given instant in time, both destructively.
 pub trait Decider: DeciderImpl {
-    /// Tests if a single cell can be accomodated at
+    /// Tests if a single cell can be accommodated at
     /// `Instant::now()`. See [`check_at`](#method.check_at).
     fn check(&mut self) -> Result<Decision<Self::T>> {
         self.test_and_update(Instant::now())
     }
 
-    /// Tests is a single cell can be accomodated at the given time
+    /// Tests is a single cell can be accommodated at the given time
     /// stamp.
     fn check_at(&mut self, at: Instant) -> Result<Decision<Self::T>> {
         self.test_and_update(at)
@@ -175,14 +174,14 @@ pub trait Decider: DeciderImpl {
 }
 
 pub trait MultiDecider: MultiDeciderImpl {
-    /// Tests if `n` cells can be accomodated at the given time
+    /// Tests if `n` cells can be accommodated at the given time
     /// stamp. An error [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html) is
     /// returned if `n` exceeds the bucket capacity.
     fn check_n_at(&mut self, n: u32, at: Instant) -> Result<Decision<Self::T>> {
         self.test_n_and_update(n, at)
     }
 
-    /// Tests if `n` cells can be accomodated at the current time
+    /// Tests if `n` cells can be accommodated at the current time
     /// (`Instant::now()`). An error [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html) is
     /// returned if `n` exceeds the bucket capacity.
     fn check_n(&mut self, n: u32) -> Result<Decision<Self::T>> {

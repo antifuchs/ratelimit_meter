@@ -2,7 +2,7 @@
 
 # Rate-Limiting with leaky buckets in Rust
 
-This crate implements two rate-limiting algorithms in rust:
+This crate implements two rate-limiting algorithms in Rust:
 * a [leaky bucket](https://en.wikipedia.org/wiki/Leaky_bucket#As_a_meter) and
 * a variation on the leaky bucket, the
   [generic cell rate algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm) (GCRA)
@@ -22,7 +22,7 @@ Find them [on docs.rs](https://docs.rs/ratelimit_meter/) for the latest version!
 
 Unlike some other token bucket algorithms, the GCRA one assumes that
 all units of work are of the same "weight", and so allows some
-optimizations which result in much more consise and fast code (it does
+optimizations which result in much more concise and fast code (it does
 not even use multiplication or division in the "hot" path).
 
 The downside of this is that there is currently no support for
@@ -55,7 +55,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 4 measured; 0 filtered out
 
 I am actively hoping that this project gives people joy in using
 rate-limiting techniques. You can use these techniques for so many
-things (from throttling api requests to ensuring you don't spam people
+things (from throttling API requests to ensuring you don't spam people
 with emails about the same thing)!
 
 So if you have any thoughts about the API design, the internals, or

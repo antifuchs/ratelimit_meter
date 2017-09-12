@@ -34,7 +34,7 @@ impl TypedDecider for LeakyBucket {
 /// # Wait time calculation
 ///
 /// If the cell does not fit, this implementation computes the minimum
-/// wait time until the cell can be accomodated. This minimum wait
+/// wait time until the cell can be accommodated. This minimum wait
 /// time does not account for thundering herd effects or other
 /// problems in concurrent resource acquisition, so users of this
 /// library must take care to apply positive jitter to these wait

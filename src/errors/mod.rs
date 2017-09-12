@@ -14,19 +14,19 @@ error_chain! {
         /// the capacity is 0, or the weight of a single cell is
         /// larger than the bucket's capacity.
         InconsistentCapacity(capacity: u32, weight: u32) {
-            display("bucket capacity {} is not enough to accomodate even a single cell with weight {}",
+            display("bucket capacity {} is not enough to accommodate even a single cell with weight {}",
                     capacity, weight)
         }
 
         /// Returned when trying to check more cells than the bucket
-        /// can accomodate, given its capacity and per-cell weight.
+        /// can accommodate, given its capacity and per-cell weight.
         InsufficientCapacity(n: u32) {
-            display("bucket does not have enough capacity to accomodate {} cells", n)
+            display("bucket does not have enough capacity to accommodate {} cells", n)
         }
     }
 }
 
-/// This must discard the original PoisonError, as `error_chain` does
+/// This must discard the original `PoisonError`, as `error_chain` does
 /// not currently support parameterizing `foreign_link`s with types
 /// the way we would need to.
 impl<'a, T> ::std::convert::From<PoisonError<MutexGuard<'a, T>>> for Error {
