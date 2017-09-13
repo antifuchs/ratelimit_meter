@@ -38,10 +38,10 @@ script:
       ;
     fi'
   - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
-      cargo clippy -- -D warnings;
+      cargo bench;
     fi'
   - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
-      cargo bench
+      cargo clippy -- -D warnings;
     fi'
 
 matrix:
