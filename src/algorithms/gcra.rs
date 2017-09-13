@@ -97,7 +97,9 @@ impl Builder {
     /// bucket. Each cell fills the bucket by this much.
     pub fn cell_weight(&mut self, weight: u32) -> Result<&mut Builder> {
         if self.cell_weight > self.capacity {
-            return Err(ErrorKind::InconsistentCapacity(self.capacity, weight).into());
+            return Err(
+                ErrorKind::InconsistentCapacity(self.capacity, weight).into(),
+            );
         }
         self.cell_weight = weight;
         Ok(self)

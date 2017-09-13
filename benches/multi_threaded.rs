@@ -10,7 +10,11 @@ use std::thread;
 
 #[bench]
 fn bench_gcra_20threads(b: &mut test::Bencher) {
-    let mut lim = GCRA::for_capacity(50).unwrap().cell_weight(1).unwrap().build_sync();
+    let mut lim = GCRA::for_capacity(50)
+        .unwrap()
+        .cell_weight(1)
+        .unwrap()
+        .build_sync();
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut children = vec![];

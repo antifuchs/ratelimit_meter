@@ -39,7 +39,8 @@ pub trait ImpliedDeciderImpl: TypedDecider + MultiDeciderImpl {}
 /// A default implementation of the Decider trait, using the
 /// `MultiDeciderImpl` trait's methods with `n=1`.
 impl<T> DeciderImpl for T
-    where T: ImpliedDeciderImpl
+where
+    T: ImpliedDeciderImpl,
 {
     /// Default implementation of
     /// [trait.DeciderImpl.html#tymethod.test_and_update]`test_and_update`,

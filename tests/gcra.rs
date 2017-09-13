@@ -38,10 +38,12 @@ fn allows_n_after_interval() {
     assert!(!gcra.check_n_at(2, now + ms * 1).unwrap().is_compliant());
     // should be ok again in 1.5s:
     let next = now + Duration::from_secs(1);
-    assert_eq!(Decision::Yes,
-               gcra.check_n_at(2, next).unwrap(),
-               "now: {:?}",
-               next);
+    assert_eq!(
+        Decision::Yes,
+        gcra.check_n_at(2, next).unwrap(),
+        "now: {:?}",
+        next
+    );
 
     // should always accommodate 0 cells:
     assert_eq!(Decision::Yes, gcra.check_n_at(0, next).unwrap());

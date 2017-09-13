@@ -21,9 +21,11 @@ fn rejects_too_many() {
     let next = now + Duration::from_millis(1002);
     assert_eq!(Decision::Yes, lb.check_at(next).unwrap());
     assert_eq!(Decision::Yes, lb.check_at(next + ms * 1).unwrap());
-    assert!(!lb.check_at(next + ms * 2).unwrap().is_compliant(),
-            "{:?}",
-            lb);
+    assert!(
+        !lb.check_at(next + ms * 2).unwrap().is_compliant(),
+        "{:?}",
+        lb
+    );
 }
 
 #[test]

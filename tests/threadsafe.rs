@@ -20,9 +20,7 @@ fn actual_threadsafety() {
     lim.check_at(now).unwrap();
     for _i in 0..20 {
         let mut lim = lim.clone();
-        children.push(thread::spawn(move || {
-            lim.check_at(now).unwrap();
-        }));
+        children.push(thread::spawn(move || { lim.check_at(now).unwrap(); }));
     }
     for child in children {
         child.join().unwrap();
