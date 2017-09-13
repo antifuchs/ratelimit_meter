@@ -22,7 +22,7 @@ fn allows_after_interval() {
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     gcra.check_at(now).unwrap();
-    gcra.check_at(now + ms * 1).unwrap();
+    gcra.check_at(now + ms).unwrap();
     gcra.check_at(now + ms * 2).unwrap();
     // should be ok again in 1s:
     let next = now + Duration::from_secs(1);
@@ -35,7 +35,7 @@ fn allows_n_after_interval() {
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     assert_eq!(Decision::Yes, gcra.check_n_at(2, now).unwrap());
-    assert!(!gcra.check_n_at(2, now + ms * 1).unwrap().is_compliant());
+    assert!(!gcra.check_n_at(2, now + ms).unwrap().is_compliant());
     // should be ok again in 1.5s:
     let next = now + Duration::from_secs(1);
     assert_eq!(

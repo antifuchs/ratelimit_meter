@@ -20,7 +20,7 @@ fn rejects_too_many() {
     // should be ok again in 1s:
     let next = now + Duration::from_millis(1002);
     assert_eq!(Decision::Yes, lb.check_at(next).unwrap());
-    assert_eq!(Decision::Yes, lb.check_at(next + ms * 1).unwrap());
+    assert_eq!(Decision::Yes, lb.check_at(next + ms).unwrap());
     assert!(
         !lb.check_at(next + ms * 2).unwrap().is_compliant(),
         "{:?}",
@@ -79,6 +79,6 @@ fn prevents_time_travel() {
     let ms = Duration::from_millis(1);
 
     assert!(lb.check_at(now).unwrap().is_compliant());
-    assert!(lb.check_at(now - ms * 1).unwrap().is_compliant());
+    assert!(lb.check_at(now - ms).unwrap().is_compliant());
     assert!(lb.check_at(now - ms * 500).unwrap().is_compliant());
 }
