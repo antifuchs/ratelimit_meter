@@ -251,7 +251,8 @@ impl<'a> Into<(Duration, Duration, Option<Instant>)> for &'a GCRA {
 }
 
 /// Allows converting the parameters returned from
-/// [`Into<(Duration, Duration, Option<Instant>)>`](#impl-Into<(Duration, Duration, Option<Instant>)>)
+/// [`Into<(Duration, Duration,
+/// Option<Instant>)>`](#impl-Into<(Duration, Duration, Option<Instant>)>)
 /// back into a GCRA.
 impl From<(Duration, Duration, Option<Instant>)> for GCRA {
     fn from(params: (Duration, Duration, Option<Instant>)) -> GCRA {

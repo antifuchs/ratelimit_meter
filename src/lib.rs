@@ -116,7 +116,7 @@ mod implementation;
 #[macro_use]
 extern crate error_chain;
 
-use std::time::{Instant};
+use std::time::Instant;
 
 pub use errors::*;
 pub use self::algorithms::*;
@@ -182,8 +182,9 @@ pub trait MultiDecider: MultiDeciderImpl {
     }
 
     /// Tests if `n` cells can be accommodated at the current time
-    /// (`Instant::now()`). An error [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html) is
-    /// returned if `n` exceeds the bucket capacity.
+    /// (`Instant::now()`). An error
+    /// [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html)
+    /// is returned if `n` exceeds the bucket capacity.
     fn check_n(&mut self, n: u32) -> Result<Decision<Self::T>> {
         self.test_n_and_update(n, Instant::now())
     }

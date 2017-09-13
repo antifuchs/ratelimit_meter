@@ -67,7 +67,8 @@ impl LeakyBucket {
     ///
     /// assert!(!lb.check_at(now + day/2).unwrap().is_compliant()); // Can't do it half a day later
     /// assert!(lb.check_at(now + day).unwrap().is_compliant()); // Have to wait a day
-    /// assert!(lb.check_at(now + day * 2).unwrap().is_compliant()); // ...and then, a day after that.
+    /// // ...and then, a day after that.
+    /// assert!(lb.check_at(now + day * 2).unwrap().is_compliant());
     /// ```
     pub fn new(capacity: u32, per_duration: Duration) -> Result<LeakyBucket> {
         if capacity == 0 {

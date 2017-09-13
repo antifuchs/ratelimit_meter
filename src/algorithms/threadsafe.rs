@@ -27,7 +27,9 @@ impl<Impl> Threadsafe<Impl>
     }
 }
 
-impl<Impl> TypedDecider for Threadsafe<Impl> where Impl: TypedDecider + Decider + Sized + Clone {
+impl<Impl> TypedDecider for Threadsafe<Impl>
+    where Impl: TypedDecider + Decider + Sized + Clone
+{
     type T = Impl::T;
 }
 
@@ -39,16 +41,15 @@ impl<Impl> DeciderImpl for Threadsafe<Impl>
     }
 }
 
-impl <Impl> MultiDeciderImpl for Threadsafe<Impl> where Impl: MultiDeciderImpl + Decider + Sized + Clone {
+impl<Impl> MultiDeciderImpl for Threadsafe<Impl>
+    where Impl: MultiDeciderImpl + Decider + Sized + Clone
+{
     fn test_n_and_update(&mut self, n: u32, at: Instant) -> Result<Decision<Impl::T>> {
         self.sub.lock()?.test_n_and_update(n, at)
     }
 }
 
-impl<Impl> Decider for Threadsafe<Impl>
-    where Impl: Decider + Sized + Clone
-{
-}
+impl<Impl> Decider for Threadsafe<Impl> where Impl: Decider + Sized + Clone {}
 
 /// Allows converting from a GCRA builder directly into a threadsafe
 /// GCRA decider. For example:

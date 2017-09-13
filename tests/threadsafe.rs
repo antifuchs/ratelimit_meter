@@ -28,5 +28,5 @@ fn actual_threadsafety() {
         child.join().unwrap();
     }
     assert!(!lim.check_at(now).unwrap().is_compliant());
-    assert_eq!(Decision::Yes, lim.check_at(now+ms*1000).unwrap());
+    assert_eq!(Decision::Yes, lim.check_at(now + ms * 1000).unwrap());
 }

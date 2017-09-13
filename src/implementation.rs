@@ -4,7 +4,7 @@ use std::time::Instant;
 /// The trait that implementations of the metered rate-limiter
 /// interface have to implement. Users of this library should rely on
 /// [Decider](trait.Decider.html) for the external interface.
-pub trait DeciderImpl : TypedDecider {
+pub trait DeciderImpl: TypedDecider {
     /// Tests if a single cell can be accommodated in the rate limiter
     /// at the instant `at` and updates the rate-limiter to account
     /// for the weight of the cell.
