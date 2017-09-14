@@ -5,7 +5,7 @@ use std::time::Instant;
 impl Decider for Allower {}
 impl MultiDecider for Allower {}
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 /// The most naive implementation of a rate-limiter ever: Always
 /// allows every cell through.
 /// # Example
@@ -19,7 +19,7 @@ pub struct Allower {}
 
 impl Allower {
     pub fn new() -> Allower {
-        Allower {}
+        Allower::default()
     }
 }
 

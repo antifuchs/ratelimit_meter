@@ -22,7 +22,7 @@ fn allows_after_interval() {
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     gcra.check_at(now).unwrap();
-    gcra.check_at(now + ms * 1).unwrap();
+    gcra.check_at(now + ms).unwrap();
     gcra.check_at(now + ms * 2).unwrap();
     // should be ok again in 1s:
     let next = now + Duration::from_secs(1);
@@ -35,10 +35,15 @@ fn allows_n_after_interval() {
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     assert_eq!(Decision::Yes, gcra.check_n_at(2, now).unwrap());
-    assert!(!gcra.check_n_at(2, now+ms*1).unwrap().is_compliant());
+    assert!(!gcra.check_n_at(2, now + ms).unwrap().is_compliant());
     // should be ok again in 1.5s:
     let next = now + Duration::from_secs(1);
-    assert_eq!(Decision::Yes, gcra.check_n_at(2, next).unwrap(), "now: {:?}", next);
+    assert_eq!(
+        Decision::Yes,
+        gcra.check_n_at(2, next).unwrap(),
+        "now: {:?}",
+        next
+    );
 
     // should always accommodate 0 cells:
     assert_eq!(Decision::Yes, gcra.check_n_at(0, next).unwrap());
@@ -54,13 +59,11 @@ fn never_allows_more_than_capacity() {
     assert!(gcra.check_n_at(15, now).is_err());
 
     // After 3 and 20 seconds, it should not allow 15 on that bucket either:
-    assert!(gcra.check_n_at(15, now+(ms*3*1000)).is_err());
+    assert!(gcra.check_n_at(15, now + (ms * 3 * 1000)).is_err());
 
-    let result = gcra.check_n_at(15, now+(ms*20*1000));
+    let result = gcra.check_n_at(15, now + (ms * 20 * 1000));
     match result {
-        Err(Error(ErrorKind::InsufficientCapacity(n), _)) => {
-            assert_eq!(n, 15)
-        },
-        _ => panic!("Did not expect {:?}", result)
+        Err(Error(ErrorKind::InsufficientCapacity(n), _)) => assert_eq!(n, 15),
+        _ => panic!("Did not expect {:?}", result),
     }
 }

@@ -14,7 +14,7 @@ error_chain! {
         /// the capacity is 0, or the weight of a single cell is
         /// larger than the bucket's capacity.
         InconsistentCapacity(capacity: u32, weight: u32) {
-            display("bucket capacity {} is not enough to accommodate even a single cell with weight {}",
+            display("bucket capacity {}to small for a single cell with weight {}",
                     capacity, weight)
         }
 

@@ -97,7 +97,9 @@ impl Builder {
     /// bucket. Each cell fills the bucket by this much.
     pub fn cell_weight(&mut self, weight: u32) -> Result<&mut Builder> {
         if self.cell_weight > self.capacity {
-            return Err(ErrorKind::InconsistentCapacity(self.capacity, weight).into());
+            return Err(
+                ErrorKind::InconsistentCapacity(self.capacity, weight).into(),
+            );
         }
         self.cell_weight = weight;
         Ok(self)
@@ -251,7 +253,8 @@ impl<'a> Into<(Duration, Duration, Option<Instant>)> for &'a GCRA {
 }
 
 /// Allows converting the parameters returned from
-/// [`Into<(Duration, Duration, Option<Instant>)>`](#impl-Into<(Duration, Duration, Option<Instant>)>)
+/// [`Into<(Duration, Duration,
+/// Option<Instant>)>`](#impl-Into<(Duration, Duration, Option<Instant>)>)
 /// back into a GCRA.
 impl From<(Duration, Duration, Option<Instant>)> for GCRA {
     fn from(params: (Duration, Duration, Option<Instant>)) -> GCRA {
