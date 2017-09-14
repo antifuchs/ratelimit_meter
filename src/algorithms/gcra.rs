@@ -194,11 +194,14 @@ impl DeciderImpl for GCRA {
                 return Ok(Decision::No(tat));
             }
             if self.tat
-                .cas_and_ref(tat_there,
-                             Owned::new(cmp::max(tat, t0) + self.t),
-                             Release,
-                             &guard)
-                .is_ok() {
+                .cas_and_ref(
+                    tat_there,
+                    Owned::new(cmp::max(tat, t0) + self.t),
+                    Release,
+                    &guard,
+                )
+                .is_ok()
+            {
                 return Ok(Decision::Yes);
             }
         }
@@ -241,11 +244,14 @@ impl MultiDeciderImpl for GCRA {
                 _ => self.t * n,
             };
             if self.tat
-                .cas_and_ref(tat_there,
-                             Owned::new(cmp::max(tat, t0) + additional_weight),
-                             Release,
-                             &guard)
-                .is_ok() {
+                .cas_and_ref(
+                    tat_there,
+                    Owned::new(cmp::max(tat, t0) + additional_weight),
+                    Release,
+                    &guard,
+                )
+                .is_ok()
+            {
                 return Ok(Decision::Yes);
             }
         }
