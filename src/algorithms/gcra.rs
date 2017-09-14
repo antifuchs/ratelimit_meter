@@ -1,7 +1,7 @@
 use {TypedDecider, DeciderImpl, MultiDeciderImpl, Decider, MultiDecider, Decision, Result,
      ErrorKind};
 
-use std::sync::atomic::Ordering::{Relaxed, Release};
+use std::sync::atomic::Ordering::{Relaxed, Acquire, Release};
 use std::time::{Instant, Duration};
 use std::cmp;
 use std::sync::Arc;
@@ -184,7 +184,7 @@ impl DeciderImpl for GCRA {
     fn test_and_update(&mut self, t0: Instant) -> Result<Decision<Instant>> {
         let guard = epoch::pin();
         loop {
-            let tat_there = self.tat.load(Relaxed, &guard);
+            let tat_there = self.tat.load(Acquire, &guard);
             let tat = match tat_there {
                 Some(sh) => **sh,
                 None => t0,
@@ -218,7 +218,7 @@ impl MultiDeciderImpl for GCRA {
     fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<Decision<Instant>> {
         let guard = epoch::pin();
         loop {
-            let tat_there = self.tat.load(Relaxed, &guard);
+            let tat_there = self.tat.load(Acquire, &guard);
             let tat = match tat_there {
                 Some(sh) => **sh,
                 None => t0,

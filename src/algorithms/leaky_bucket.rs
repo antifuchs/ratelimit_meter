@@ -1,7 +1,7 @@
 use {TypedDecider, ImpliedDeciderImpl, MultiDeciderImpl, Decider, MultiDecider, Decision, Result,
      ErrorKind};
 
-use std::sync::atomic::Ordering::{Relaxed, Release};
+use std::sync::atomic::Ordering::{Acquire, Release};
 use std::time::{Instant, Duration};
 use std::cmp;
 use std::sync::Arc;
@@ -130,7 +130,7 @@ impl MultiDeciderImpl for LeakyBucket {
         let guard = epoch::pin();
 
         loop {
-            if let Some(state) = self.state.load(Relaxed, &guard) {
+            if let Some(state) = self.state.load(Acquire, &guard) {
                 let last = state.last_update.unwrap_or(t0);
                 // Prevent time travel: If any parallel calls get re-ordered,
                 // or any tests attempt silly things, make sure to answer from
