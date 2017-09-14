@@ -16,7 +16,7 @@ env:
     - CRATE_NAME=ratelimit_meter
     - DEPLOY_VERSION=stable
     - RUN_CLIPPY=false
-    - RUSTFMT_VERSION=v0.9.0
+    - RUSTFMT_VERSION=0.9.0
 
 matrix:
   fast_finish: true # Don't wait for the clippy build - it takes forever /:
