@@ -17,7 +17,7 @@ if [[ "${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}" != "master" ]]; then
 
     git checkout master
     cargo bench > benches-control
-    git checkout "${TRAVIS_COMMIT}"
+    git reset --hard "${TRAVIS_COMMIT}"
     cargo bench > benches-variable
     cargo benchcmp benches-control benches-variable
 fi
