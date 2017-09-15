@@ -16,6 +16,7 @@ env:
     - CRATE_NAME=ratelimit_meter
     - DEPLOY_VERSION=stable
     - RUN_CLIPPY=false
+    - RUN_BENCHMARKS=false
     - RUSTFMT_VERSION=0.9.0
 
 matrix:
@@ -23,36 +24,21 @@ matrix:
   include:
     - rust: nightly
       env: RUN_CLIPPY=true
+    - rust: nightly
+      env: RUN_BENCHMARKS=true
   allow_failures:
     - rust: nightly
       env: RUN_CLIPPY=true
 
 before_script:
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
-      cargo install --list > /tmp/installed_crates;
-      grep "^rustfmt $RUSTFMT_VERSION:" /tmp/installed_crates || cargo install rustfmt --vers $RUSTFMT_VERSION --force ;
-    fi'
-  - bash -c 'if [[ "$RUN_CLIPPY" == "true" ]]; then
-      rm -f ~/.cargo/bin/clippy;
-      cargo install clippy --force
-      ;
-    fi'
-
+  - ./ci/before.sh
 
 script:
-  - cargo test
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
-      cargo fmt -v -- --write-mode diff
-      ;
-    fi'
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
-      cargo bench
-      ;
-    fi'
-  - bash -c 'if [[ "$RUN_CLIPPY" == "true" ]]; then
-      cargo clippy -- -D warnings
-      ;
-    fi'
+  - ./ci/run-test.sh
+  - ./ci/run-clippy.sh
+
+after_success:
+  - ./ci/run-benchmarks.sh
 
 branches:
   only:
