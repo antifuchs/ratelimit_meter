@@ -36,9 +36,10 @@ before_script:
 script:
   - ./ci/run-test.sh
   - ./ci/run-clippy.sh
+  - ./ci/run-benchmark.sh
 
 after_success:
-  - ./ci/run-benchmarks.sh
+  - ./ci/run-benchcmp.sh
 
 branches:
   only:
