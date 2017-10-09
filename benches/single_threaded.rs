@@ -3,6 +3,7 @@
 extern crate test;
 extern crate ratelimit_meter;
 
+#[allow(deprecated)]
 use ratelimit_meter::{LeakyBucket, GCRA, Threadsafe, Decider, MultiDecider};
 use ratelimit_meter::example_algorithms::Allower;
 use std::time::{Instant, Duration};
@@ -70,6 +71,7 @@ fn bench_allower(b: &mut test::Bencher) {
     b.iter(|| allower.check().unwrap());
 }
 
+#[allow(deprecated)]
 #[bench]
 fn bench_threadsafe_gcra(b: &mut test::Bencher) {
     let mut gcra = GCRA::for_capacity(50)
@@ -98,6 +100,7 @@ fn bench_threadsafe_leaky_bucket(b: &mut test::Bencher) {
     });
 }
 
+#[allow(deprecated)]
 #[bench]
 fn bench_threadsafe_allower(b: &mut test::Bencher) {
     let allower_one = Allower::new();

@@ -25,7 +25,7 @@
 //! let mut lim = GCRA::for_capacity(50).unwrap() // Allow 50 units of work
 //!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
 //!     .cell_weight(1).unwrap() // Each cell is one unit of work "heavy".
-//!     .build(); // Construct a non-threadsafe GCRA decider.
+//!     .build(); // Construct a GCRA decider.
 //! assert_eq!(Decision::Yes, lim.check().unwrap());
 //! ```
 //!
@@ -87,32 +87,32 @@
 //!
 //! ## Thread-safe operation
 //!
-//! None of the stateful implementations in this crate can be used
-//! across threads by default. However, there is a wrapper struct
-//! [`Threadsafe`](algorithms/struct.Threadsafe.html), that wraps each
-//! implementation's hot path in an atomically reference-counted
-//! mutex. It still manages to be pretty fast (see the benchmarks
-//! above), but the lock comes with an overhead even in
-//! single-threaded operation.
+//! The implementations in this crate use compare-and-set to keep
+//! state, and are safe to share across threads..
 //!
 //! Example:
 //!
 //! ```
+//! use std::thread;
 //! use std::time::Duration;
 //! use ratelimit_meter::{Decider, GCRA, Decision};
 //!
 //! let mut lim = GCRA::for_capacity(50).unwrap() // Allow 50 units of work
 //!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
 //!     .cell_weight(1).unwrap() // Each cell is one unit of work "heavy".
-//!     .build_sync(); // Construct a threadsafe GCRA decider.
+//!     .build(); // Construct a GCRA decider.
+//! let mut thread_lim = lim.clone();
+//! thread::spawn(move || { assert_eq!(Decision::Yes, thread_lim.check().unwrap()); });
 //! assert_eq!(Decision::Yes, lim.check().unwrap());
 //! ```
 
 pub mod example_algorithms;
 pub mod errors;
+#[allow(deprecated)]
 pub mod algorithms;
 mod implementation;
 
+extern crate crossbeam;
 #[macro_use]
 extern crate error_chain;
 

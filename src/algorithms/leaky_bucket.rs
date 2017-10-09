@@ -1,8 +1,12 @@
-use {TypedDecider, ImpliedDeciderImpl, MultiDeciderImpl, Decider, MultiDecider, Decision,
-     Threadsafe, Result, ErrorKind};
+use {TypedDecider, ImpliedDeciderImpl, MultiDeciderImpl, Decider, MultiDecider, Decision, Result,
+     ErrorKind};
 
+use std::sync::atomic::Ordering::{Acquire, Release};
 use std::time::{Instant, Duration};
 use std::cmp;
+use std::sync::Arc;
+
+use crossbeam::epoch::{self, Atomic, Owned};
 
 impl Decider for LeakyBucket {}
 
@@ -40,6 +44,14 @@ impl TypedDecider for LeakyBucket {
 /// library must take care to apply positive jitter to these wait
 /// times.
 ///
+/// # Thread safety
+///
+/// This implementation uses lock-free techniques to safely update the
+/// bucket state in-place. This means the
+/// [`.threadsafe`](#method.threadsafe) method returns self & will be
+/// deprecated in a future release.
+///
+///
 /// # Example
 /// ``` rust
 /// # use ratelimit_meter::{Decider, LeakyBucket, Decision};
@@ -47,10 +59,15 @@ impl TypedDecider for LeakyBucket {
 /// assert_eq!(Decision::Yes, lb.check().unwrap());
 /// ```
 pub struct LeakyBucket {
-    last: Option<Instant>,
+    state: Arc<Atomic<BucketState>>,
     full: Duration,
-    current: Duration,
     token_interval: Duration,
+}
+
+#[derive(Debug, Clone)]
+struct BucketState {
+    level: Duration,
+    last_update: Option<Instant>,
 }
 
 impl LeakyBucket {
@@ -75,9 +92,12 @@ impl LeakyBucket {
             return Err(ErrorKind::InconsistentCapacity(capacity, 0).into());
         }
         let token_interval = per_duration / capacity;
+        let state = Atomic::new(BucketState {
+            level: Duration::new(0, 0),
+            last_update: None,
+        });
         Ok(LeakyBucket {
-            last: None,
-            current: Duration::new(0, 0),
+            state: Arc::new(state),
             token_interval: token_interval,
             full: per_duration,
         })
@@ -89,42 +109,53 @@ impl LeakyBucket {
         LeakyBucket::new(capacity, Duration::from_secs(1))
     }
 
-    /// Wraps the current leaky bucket in a
-    /// [`Threadsafe`](../struct.Threadsafe.html).
-    pub fn threadsafe(self) -> Threadsafe<LeakyBucket> {
-        Threadsafe::new(self)
+    /// Returns `self`, as this implementation is threadsafe
+    /// already. This method is deprecated and will be removed in a
+    /// future release.
+    pub fn threadsafe(self) -> LeakyBucket {
+        self
     }
 }
 
 impl MultiDeciderImpl for LeakyBucket {
     fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<Decision<Duration>> {
-        if self.token_interval * n > self.full {
+        let weight = self.token_interval * n;
+        if weight > self.full {
             return Err(ErrorKind::InsufficientCapacity(n).into());
         }
+        let mut new = Owned::new(BucketState {
+            last_update: Some(t0),
+            level: Duration::new(0, 0),
+        });
+        let guard = epoch::pin();
 
-        let current = self.current;
-        let last = match self.last {
-            None => {
-                self.last = Some(t0);
-                t0
+        loop {
+            if let Some(state) = self.state.load(Acquire, &guard) {
+                let last = state.last_update.unwrap_or(t0);
+                // Prevent time travel: If any parallel calls get re-ordered,
+                // or any tests attempt silly things, make sure to answer from
+                // the last query onwards instead.
+                let t0 = cmp::max(t0, last);
+                // Decrement the level by the amount the bucket
+                // has dripped in the meantime:
+                new.level = state.level - cmp::min(t0 - last, state.level);
+
+                // Determine if the cell fits & ensure it is recorded:
+                if weight + new.level <= self.full {
+                    new.level += weight;
+                    match self.state.cas_and_ref(Some(state), new, Release, &guard) {
+                        Ok(_) => {
+                            return Ok(Decision::Yes);
+                        }
+                        Err(owned) => {
+                            new = owned;
+                        }
+                    }
+                } else {
+                    let wait_period = (weight + new.level) - self.full;
+                    return Ok(Decision::No(wait_period));
+                }
             }
-            Some(t) => t,
-        };
-        // Prevent time travel: If any parallel calls get re-ordered,
-        // or any tests attempt silly things, make sure to answer from
-        // the last query onwards instead.
-        let t0 = cmp::max(t0, last);
-
-        self.current = current - cmp::min(t0 - last, current);
-        self.last = Some(t0);
-
-        let weight = self.token_interval * n;
-        if weight + self.current <= self.full {
-            self.current += weight;
-            Ok(Decision::Yes)
-        } else {
-            let wait_period = (weight + current) - self.full;
-            Ok(Decision::No(wait_period))
         }
     }
 }

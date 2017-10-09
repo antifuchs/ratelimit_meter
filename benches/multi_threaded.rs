@@ -7,7 +7,7 @@ use ratelimit_meter::{GCRA, LeakyBucket, Decider};
 use std::time::{Instant, Duration};
 use std::thread;
 
-
+#[allow(deprecated)]
 #[bench]
 fn bench_gcra_20threads(b: &mut test::Bencher) {
     let mut lim = GCRA::for_capacity(50)
@@ -41,6 +41,7 @@ fn bench_gcra_20threads(b: &mut test::Bencher) {
     }
 }
 
+#[allow(deprecated)]
 #[bench]
 fn bench_leaky_bucket_20threads(b: &mut test::Bencher) {
     let mut lim = LeakyBucket::per_second(50).unwrap().threadsafe();

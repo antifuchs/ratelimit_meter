@@ -1,6 +1,7 @@
 extern crate ratelimit_meter;
 
 use ratelimit_meter::{GCRA, MultiDecider, Decider, Decision, ErrorKind, Error};
+use std::thread;
 use std::time::{Instant, Duration};
 
 #[test]
@@ -66,4 +67,23 @@ fn never_allows_more_than_capacity() {
         Err(Error(ErrorKind::InsufficientCapacity(n), _)) => assert_eq!(n, 15),
         _ => panic!("Did not expect {:?}", result),
     }
+}
+
+#[test]
+fn actual_threadsafety() {
+    let mut lim = GCRA::for_capacity(20).unwrap().build();
+    let now = Instant::now();
+    let ms = Duration::from_millis(1);
+    let mut children = vec![];
+
+    lim.check_at(now).unwrap();
+    for _i in 0..20 {
+        let mut lim = lim.clone();
+        children.push(thread::spawn(move || { lim.check_at(now).unwrap(); }));
+    }
+    for child in children {
+        child.join().unwrap();
+    }
+    assert!(!lim.check_at(now + ms * 2).unwrap().is_compliant());
+    assert_eq!(Decision::Yes, lim.check_at(now + ms * 1000).unwrap());
 }
