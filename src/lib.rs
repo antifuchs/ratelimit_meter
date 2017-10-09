@@ -108,6 +108,7 @@
 
 pub mod example_algorithms;
 pub mod errors;
+#[allow(deprecated)]
 pub mod algorithms;
 mod implementation;
 
