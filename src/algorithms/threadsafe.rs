@@ -3,6 +3,7 @@ use {MultiDeciderImpl, DeciderImpl, TypedDecider, Decider, Decision, Result};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+#[deprecated = "all Deciders in this crate are threadsafe by default."]
 #[derive(Clone)]
 /// A wrapper that ensures operations in otherwise thread-unsafe
 /// rate-limiting decision algorithms are thread-safe.
@@ -10,6 +11,10 @@ use std::time::Instant;
 /// This is implemented by wrapping the actual Decider implementation
 /// in an atomically reference-counted mutex. It takes out a mutex
 /// whenever `.test_and_update()` is called.
+///
+/// ## Deprecation notice
+/// `Threadsafe` is deprecated, as all `Decider` implementations in
+/// this crate are threadsafe (and operate lock-free).
 pub struct Threadsafe<Impl>
 where
     Impl: Decider + Sized + Clone,
@@ -17,6 +22,7 @@ where
     sub: Arc<Mutex<Impl>>,
 }
 
+#[allow(deprecated)]
 impl<Impl> Threadsafe<Impl>
 where
     Impl: Decider + Sized + Clone,
@@ -28,6 +34,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 impl<Impl> TypedDecider for Threadsafe<Impl>
 where
     Impl: TypedDecider + Decider + Sized + Clone,
@@ -35,6 +42,7 @@ where
     type T = Impl::T;
 }
 
+#[allow(deprecated)]
 impl<Impl> DeciderImpl for Threadsafe<Impl>
 where
     Impl: Decider + Sized + Clone,
@@ -44,6 +52,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 impl<Impl> MultiDeciderImpl for Threadsafe<Impl>
 where
     Impl: MultiDeciderImpl + Decider + Sized + Clone,
@@ -53,6 +62,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 impl<Impl> Decider for Threadsafe<Impl>
 where
     Impl: Decider + Sized + Clone,

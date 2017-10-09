@@ -118,6 +118,7 @@ impl Builder {
         self
     }
 
+    #[deprecated = "GCRA is threadsafe by default, use .build()"]
     /// Builds and returns a lock-free, threadsafe GCRA decider. As
     /// there is no difference between this and the method
     /// [`build`](#method.build), this method is deprecated and will
