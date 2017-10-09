@@ -23,32 +23,45 @@ Find them [on docs.rs](https://docs.rs/ratelimit_meter/) for the latest version!
 Unlike some other token bucket algorithms, the GCRA one assumes that
 all units of work are of the same "weight", and so allows some
 optimizations which result in much more concise and fast code (it does
-not even use multiplication or division in the "hot" path).
+not even use multiplication or division in the "hot" path for a
+single-cell decision).
 
-The downside of this is that there is currently no support for
-assigning different weights to cells.
-
-On the other hand, look at those benchmarks:
+All rate-limiting algorithm implementations in this crate are
+thread-safe and lock-free. Here are some benchmarks for repeated
+decisions (run on my macbook pro, this will differ on your hardware,
+etc etc):
 
 ```
 $ cargo bench
-   Compiling ratelimit_meter v0.1.0 (file:///Users/asf/Hacks/ratelimit_meter)
-    Finished release [optimized] target(s) in 1.54 secs
-     Running /Users/asf/Hacks/ratelimit_meter/target/release/deps/ratelimit_meter-a024ab042ec7d80c
+   Compiling ratelimit_meter v0.4.1 (file:///Users/asf/Hacks/ratelimit_meter)
+    Finished release [optimized] target(s) in 1.71 secs
+     Running target/release/deps/ratelimit_meter-680be7c7547f40f9
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
-     Running /Users/asf/Hacks/ratelimit_meter/target/release/deps/benchmarks-c150c61d51206d3c
+     Running target/release/deps/multi_threaded-b206ea78b9fc87cc
 
-running 4 tests
-test bench_allower            ... bench:          22 ns/iter (+/- 4)
-test bench_gcra               ... bench:          65 ns/iter (+/- 10)
-test bench_threadsafe_allower ... bench:          49 ns/iter (+/- 10)
-test bench_threadsafe_gcra    ... bench:          84 ns/iter (+/- 36)
+running 2 tests
+test bench_gcra_20threads         ... bench:         185 ns/iter (+/- 71)
+test bench_leaky_bucket_20threads ... bench:         667 ns/iter (+/- 16,193)
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 4 measured; 0 filtered out
+test result: ok. 0 passed; 0 failed; 0 ignored; 2 measured; 0 filtered out
+
+     Running target/release/deps/single_threaded-18617cd4f9e09b0d
+
+running 8 tests
+test bench_allower                 ... bench:          26 ns/iter (+/- 4)
+test bench_gcra                    ... bench:         131 ns/iter (+/- 33)
+test bench_gcra_bulk               ... bench:         143 ns/iter (+/- 24)
+test bench_leaky_bucket            ... bench:         156 ns/iter (+/- 27)
+test bench_leaky_bucket_bulk       ... bench:         152 ns/iter (+/- 24)
+test bench_threadsafe_allower      ... bench:          50 ns/iter (+/- 8)
+test bench_threadsafe_gcra         ... bench:         133 ns/iter (+/- 21)
+test bench_threadsafe_leaky_bucket ... bench:         154 ns/iter (+/- 47)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 8 measured; 0 filtered out
 ```
 
 ## Contributions welcome!
