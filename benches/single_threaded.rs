@@ -1,12 +1,11 @@
 #![feature(test)]
 
-extern crate test;
 extern crate ratelimit_meter;
+extern crate test;
 
-#[allow(deprecated)]
-use ratelimit_meter::{LeakyBucket, GCRA, Threadsafe, Decider, MultiDecider};
+use ratelimit_meter::{Decider, LeakyBucket, MultiDecider, GCRA};
 use ratelimit_meter::example_algorithms::Allower;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 #[bench]
 fn bench_gcra(b: &mut test::Bencher) {
@@ -20,7 +19,7 @@ fn bench_gcra(b: &mut test::Bencher) {
     let mut i = 0;
     b.iter(|| {
         i += 1;
-        gcra.check_at(now + (ms * i)).unwrap();
+        gcra.check_at(now + (ms * i)).is_ok();
     });
 }
 
@@ -36,7 +35,7 @@ fn bench_gcra_bulk(b: &mut test::Bencher) {
     let mut i = 0;
     b.iter(|| {
         i += 1;
-        gcra.check_n_at(10, now + (ms * i)).unwrap();
+        gcra.check_n_at(10, now + (ms * i)).is_ok();
     });
 }
 
@@ -48,7 +47,7 @@ fn bench_leaky_bucket(b: &mut test::Bencher) {
     let mut i = 0;
     b.iter(|| {
         i += 1;
-        lb.check_at(now + (ms * i)).unwrap();
+        lb.check_at(now + (ms * i)).is_ok();
     });
 }
 
@@ -60,10 +59,9 @@ fn bench_leaky_bucket_bulk(b: &mut test::Bencher) {
     let mut i = 0;
     b.iter(|| {
         i += 1;
-        lb.check_n_at(10, now + (ms * i)).unwrap();
+        lb.check_n_at(10, now + (ms * i)).is_ok();
     });
 }
-
 
 #[bench]
 fn bench_allower(b: &mut test::Bencher) {
@@ -71,39 +69,14 @@ fn bench_allower(b: &mut test::Bencher) {
     b.iter(|| allower.check().unwrap());
 }
 
-#[allow(deprecated)]
-#[bench]
-fn bench_threadsafe_gcra(b: &mut test::Bencher) {
-    let mut gcra = GCRA::for_capacity(50)
-        .unwrap()
-        .cell_weight(1)
-        .unwrap()
-        .build_sync();
-    let now = Instant::now();
-    let ms = Duration::from_millis(20);
-    let mut i = 0;
-    b.iter(|| {
-        i += 1;
-        gcra.check_at(now + (ms * i)).unwrap();
-    });
-}
-
 #[bench]
 fn bench_threadsafe_leaky_bucket(b: &mut test::Bencher) {
-    let mut lb = LeakyBucket::per_second(50).unwrap().threadsafe();
+    let mut lb = LeakyBucket::per_second(50).unwrap();
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut i = 0;
     b.iter(|| {
         i += 1;
-        lb.check_at(now + (ms * i)).unwrap();
+        lb.check_at(now + (ms * i)).is_ok();
     });
-}
-
-#[allow(deprecated)]
-#[bench]
-fn bench_threadsafe_allower(b: &mut test::Bencher) {
-    let allower_one = Allower::new();
-    let mut threadsafe_allower = Threadsafe::new(allower_one);
-    b.iter(|| threadsafe_allower.check());
 }

@@ -1,4 +1,4 @@
-use {Decision, Result, TypedDecider};
+use {NonConforming, TypedDecider};
 use std::time::Instant;
 
 /// The trait that implementations of the metered rate-limiter
@@ -13,7 +13,7 @@ pub trait DeciderImpl: TypedDecider {
     /// the [Decider trait](trait.Decider.html). The default
     /// implementation only calls
     /// [`test_n_and_update`](#test_n_and_update).
-    fn test_and_update(&mut self, at: Instant) -> Result<Decision<Self::T>>;
+    fn test_and_update(&mut self, at: Instant) -> Result<(), NonConforming<Self::T>>;
 }
 
 /// The trait that a metered rate-limiter interface has to implement
@@ -29,7 +29,7 @@ pub trait MultiDeciderImpl: TypedDecider {
     ///
     /// This method is not meant to be called by users, see instead
     /// [the `Decider` trait](trait.Decider.html).
-    fn test_n_and_update(&mut self, n: u32, at: Instant) -> Result<Decision<Self::T>>;
+    fn test_n_and_update(&mut self, n: u32, at: Instant) -> Result<(), NonConforming<Self::T>>;
 }
 
 /// A trait that some implementations can opt into, to get a default
@@ -46,7 +46,7 @@ where
     /// [trait.DeciderImpl.html#tymethod.test_and_update]`test_and_update`,
     /// calling [`test_n_and_update`](tymethod.test_n_and_update) with
     /// `n=1`.
-    fn test_and_update(&mut self, at: Instant) -> Result<Decision<Self::T>> {
+    fn test_and_update(&mut self, at: Instant) -> Result<(), NonConforming<Self::T>> {
         self.test_n_and_update(1, at)
     }
 }

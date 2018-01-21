@@ -14,8 +14,9 @@ travis-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-error-chain = "0.11.0-rc.2"
 crossbeam = "0.3.0"
+failure = "0.1.1"
+failure_derive = "0.1.1"
 
 [package.metadata.release]
 sign-commit = false

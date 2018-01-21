@@ -20,13 +20,13 @@
 //!
 //! ``` rust
 //! use std::time::Duration;
-//! use ratelimit_meter::{Decider, GCRA, Decision};
+//! use ratelimit_meter::{Decider, GCRA};
 //!
 //! let mut lim = GCRA::for_capacity(50).unwrap() // Allow 50 units of work
 //!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
 //!     .cell_weight(1).unwrap() // Each cell is one unit of work "heavy".
 //!     .build(); // Construct a GCRA decider.
-//! assert_eq!(Decision::Yes, lim.check().unwrap());
+//! assert_eq!(Ok(()), lim.check());
 //! ```
 //!
 //! The rate-limiter interface is intentionally geared towards only
@@ -95,58 +95,31 @@
 //! ```
 //! use std::thread;
 //! use std::time::Duration;
-//! use ratelimit_meter::{Decider, GCRA, Decision};
+//! use ratelimit_meter::{Decider, GCRA};
 //!
 //! let mut lim = GCRA::for_capacity(50).unwrap() // Allow 50 units of work
 //!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
 //!     .cell_weight(1).unwrap() // Each cell is one unit of work "heavy".
 //!     .build(); // Construct a GCRA decider.
 //! let mut thread_lim = lim.clone();
-//! thread::spawn(move || { assert_eq!(Decision::Yes, thread_lim.check().unwrap()); });
-//! assert_eq!(Decision::Yes, lim.check().unwrap());
+//! thread::spawn(move || { assert_eq!(Ok(()), thread_lim.check());});
+//! assert_eq!(Ok(()), lim.check());
 //! ```
 
 pub mod example_algorithms;
-pub mod errors;
 #[allow(deprecated)]
 pub mod algorithms;
 mod implementation;
 
 extern crate crossbeam;
+extern crate failure;
 #[macro_use]
-extern crate error_chain;
+extern crate failure_derive;
 
 use std::time::Instant;
 
-pub use errors::*;
 pub use self::algorithms::*;
 use implementation::*;
-
-#[derive(PartialEq, Debug)]
-/// A decision on a single cell from the metered rate-limiter.
-pub enum Decision<T> {
-    /// The cell is conforming, allow it through.
-    Yes,
-
-    /// The cell is non-conforming. A rate-limiting algorithm
-    /// implementation may return additional information for the
-    /// caller, e.g. a time when the cell was expected to arrive.
-    No(T),
-}
-
-impl<T> Decision<T> {
-    /// Check if a decision on a cell indicates the cell is compliant
-    /// or not. Returns `true` iff the cell was compliant, i.e. the
-    /// decision was `Decision::Yes`.
-    ///
-    /// Note: This method is mostly useful in tests.
-    pub fn is_compliant(&self) -> bool {
-        match *self {
-            Decision::Yes => true,
-            Decision::No(_) => false,
-        }
-    }
-}
 
 /// A prerequisite for implementing any Decider trait. It provides the
 /// associated type for [`Decision`](enum.Decision.html)'s additional
@@ -156,36 +129,55 @@ pub trait TypedDecider {
     type T;
 }
 
+#[derive(Fail, Debug, PartialEq)]
+/// Returned in the non-conforming case. The rate-limiting algorithm
+/// may return additional information (e.g. time to wait until the
+/// next conforming cell can be allowed through).
+pub enum NonConforming<T> {
+    /// A single cell or a batch of cells is non-conforming and can
+    /// not be let through at this time. A `Decider` implementation
+    /// can provide additional information about when the next cell
+    /// might be let through again.
+    #[fail(display = "Rate-limited.")]
+    No(T),
+
+    /// The bucket's capacity is less than the number of cells that
+    /// try to fit into it. This error indicates that the request can
+    /// never be accomodated.
+    #[fail(display = "bucket does not have enough capacity to accomodate {} cells", _0)]
+    InsufficientCapacity(u32),
+}
+
 /// The main decision trait. It allows checking a single cell against
 /// the rate-limiter, either at the current time instant, or at a
 /// given instant in time, both destructively.
 pub trait Decider: DeciderImpl {
     /// Tests if a single cell can be accommodated at
     /// `Instant::now()`. See [`check_at`](#method.check_at).
-    fn check(&mut self) -> Result<Decision<Self::T>> {
+    fn check(&mut self) -> Result<(), NonConforming<Self::T>> {
         self.test_and_update(Instant::now())
     }
 
     /// Tests is a single cell can be accommodated at the given time
     /// stamp.
-    fn check_at(&mut self, at: Instant) -> Result<Decision<Self::T>> {
+    fn check_at(&mut self, at: Instant) -> Result<(), NonConforming<Self::T>> {
         self.test_and_update(at)
     }
 }
 
 pub trait MultiDecider: MultiDeciderImpl {
     /// Tests if `n` cells can be accommodated at the given time
-    /// stamp. An error [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html) is
+    /// stamp. An error [`NonConforming::InsufficientCapacity`](enum.NonConforming.html#variant.InsufficientCapacity) is
     /// returned if `n` exceeds the bucket capacity.
-    fn check_n_at(&mut self, n: u32, at: Instant) -> Result<Decision<Self::T>> {
+    fn check_n_at(&mut self, n: u32, at: Instant) -> Result<(), NonConforming<Self::T>> {
         self.test_n_and_update(n, at)
     }
 
     /// Tests if `n` cells can be accommodated at the current time
     /// (`Instant::now()`). An error
-    /// [`ErrorKind::InsufficientCapacity`](errors/enum.ErrorKind.html)
+    /// [`NonConforming::InsufficientCapacity`](enum.NonConforming.html#variant.InsufficientCapacity)
     /// is returned if `n` exceeds the bucket capacity.
-    fn check_n(&mut self, n: u32) -> Result<Decision<Self::T>> {
+    fn check_n(&mut self, n: u32) -> Result<(), NonConforming<Self::T>> {
         self.test_n_and_update(n, Instant::now())
     }
 }
