@@ -114,7 +114,7 @@ impl MultiDeciderImpl for LeakyBucket {
     fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<(), NonConforming<Duration>> {
         let weight = self.token_interval * n;
         if weight > self.full {
-            return Err(NonConforming::InsufficientCapacity(n).into());
+            return Err(NonConforming::InsufficientCapacity(n));
         }
         let mut new = Owned::new(BucketState {
             last_update: Some(t0),

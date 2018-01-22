@@ -91,8 +91,7 @@ fn actual_threadsafety() {
     for _i in 0..20 {
         let mut lim = lim.clone();
         children.push(thread::spawn(move || match lim.check_at(now) {
-            Ok(_) => {}
-            Err(NonConforming::No(_)) => {}
+            Ok(_) | Err(NonConforming::No(_)) => {}
             Err(e) => panic!("Unexpected error {:?}", e),
         }));
     }

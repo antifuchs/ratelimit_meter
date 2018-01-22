@@ -103,7 +103,7 @@ impl Builder {
         if self.cell_weight > self.capacity {
             return Err(InconsistentCapacity {
                 capacity: self.capacity,
-                weight: weight.into(),
+                weight: weight,
             });
         }
         self.cell_weight = weight;
@@ -222,7 +222,7 @@ impl MultiDeciderImpl for GCRA {
                     let weight = self.t * (n - 1);
                     if (weight + self.t) > self.tau {
                         // The bucket capacity can never accommodate this request
-                        return Err(NonConforming::InsufficientCapacity(n).into());
+                        return Err(NonConforming::InsufficientCapacity(n));
                     }
                     tat + weight
                 }
