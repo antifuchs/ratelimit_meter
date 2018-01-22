@@ -116,34 +116,90 @@ extern crate failure;
 #[macro_use]
 extern crate failure_derive;
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub use self::algorithms::*;
 use implementation::*;
 
-/// A prerequisite for implementing any Decider trait. It provides the
-/// associated type for [`Decision`](enum.Decision.html)'s additional
-/// information for negative decisions.
-pub trait TypedDecider {
-    /// The type for additional information on negative decisions.
-    type T;
+/// Provides additional information about non-conforming cells, most
+/// importantly the earliest time until the next cell could be
+/// considered conforming.
+///
+/// Since this does not account for effects like thundering herds,
+/// users should always add random jitter to the times given.
+#[derive(Fail, Debug, PartialEq)]
+#[fail(display = "rate-limited, wait at least {:?}", min_time)]
+pub struct NonConformance {
+    t0: Instant,
+    min_time: Duration,
 }
 
-#[derive(Fail, Debug, PartialEq)]
-/// Returned in the non-conforming case. The rate-limiting algorithm
-/// may return additional information (e.g. time to wait until the
-/// next conforming cell can be allowed through).
-pub enum NonConforming<T> {
-    /// A single cell or a batch of cells is non-conforming and can
-    /// not be let through at this time. A `Decider` implementation
-    /// can provide additional information about when the next cell
-    /// might be let through again.
-    #[fail(display = "Rate-limited.")]
-    No(T),
+impl NonConformance {
+    pub(crate) fn new(t0: Instant, min_time: Duration) -> NonConformance {
+        NonConformance {
+            t0: t0,
+            min_time: min_time,
+        }
+    }
+}
 
-    /// The bucket's capacity is less than the number of cells that
-    /// try to fit into it. This error indicates that the request can
-    /// never be accomodated.
+impl NonConformance {
+    /// Returns the earliest time at which a decision could be
+    /// conforming (excluding conforming decisions made by the Decider
+    /// that are made in the meantime).
+    pub fn earliest_possible(&self) -> Instant {
+        self.t0 + self.min_time
+    }
+
+    /// Returns the minimum amount of time from the time that the
+    /// decision was made (relative to the `at` argument in a
+    /// `Decider`'s `check_at` method) that must pass before a
+    /// decision can be conforming. Since Durations can not be
+    /// negative, a zero duration is returned if `from` is already
+    /// after that duration.
+    pub fn wait_time_from(&self, from: Instant) -> Duration {
+        if from == self.t0 {
+            self.min_time
+        } else if from < self.t0 + self.min_time {
+            (self.t0 + self.min_time).duration_since(from)
+        } else {
+            Duration::new(0, 0)
+        }
+    }
+
+    /// Returns the minimum amount of time (down to 0) that needs to
+    /// pass from the current instant for the Decider to consider a
+    /// cell conforming again.
+    pub fn wait_time(&self) -> Duration {
+        self.wait_time_from(Instant::now())
+    }
+}
+
+/// Gives additional information about the negative outcome of a batch
+/// cell decision.
+///
+/// Since batch queries can be made for batch sizes bigger than a
+/// Decider could accomodate, there are now two possible negative
+/// outcomes:
+///
+///   * `BatchNonConforming` - the query is valid but the Decider can
+///     not accomodate them.
+///
+///   * `InsufficientCapacity` - the Decider can never accomodate the
+///     cells queried for.
+#[derive(Fail, Debug, PartialEq)]
+pub enum NegativeMultiDecision {
+    /// A batch of cells (the first argument) is non-conforming and
+    /// can not be let through at this time. The second argument gives
+    /// information about when that batch of cells might be let
+    /// through again (not accounting for thundering herds and other,
+    /// simultaneous decisions).
+    #[fail(display = "{} cells: {}", _0, _1)]
+    BatchNonConforming(u32, NonConformance),
+
+    /// The number of cells tested (the first argument) is larger than
+    /// the bucket's capacity, which means the decision can never have
+    /// a conforming result.
     #[fail(display = "bucket does not have enough capacity to accomodate {} cells", _0)]
     InsufficientCapacity(u32),
 }
@@ -154,30 +210,43 @@ pub enum NonConforming<T> {
 pub trait Decider: DeciderImpl {
     /// Tests if a single cell can be accommodated at
     /// `Instant::now()`. See [`check_at`](#method.check_at).
-    fn check(&mut self) -> Result<(), NonConforming<Self::T>> {
+    fn check(&mut self) -> Result<(), NonConformance> {
         self.test_and_update(Instant::now())
     }
 
     /// Tests is a single cell can be accommodated at the given time
     /// stamp.
-    fn check_at(&mut self, at: Instant) -> Result<(), NonConforming<Self::T>> {
+    fn check_at(&mut self, at: Instant) -> Result<(), NonConformance> {
         self.test_and_update(at)
     }
 }
 
+/// The "batch" decision trait, allowing a Decider to make a decision
+/// about multiple cells at once.
 pub trait MultiDecider: MultiDeciderImpl {
     /// Tests if `n` cells can be accommodated at the given time
-    /// stamp. An error [`NonConforming::InsufficientCapacity`](enum.NonConforming.html#variant.InsufficientCapacity) is
+    /// stamp. An error [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity) is
     /// returned if `n` exceeds the bucket capacity.
-    fn check_n_at(&mut self, n: u32, at: Instant) -> Result<(), NonConforming<Self::T>> {
+    fn check_n_at(&mut self, n: u32, at: Instant) -> Result<(), NegativeMultiDecision> {
         self.test_n_and_update(n, at)
     }
 
     /// Tests if `n` cells can be accommodated at the current time
     /// (`Instant::now()`). An error
-    /// [`NonConforming::InsufficientCapacity`](enum.NonConforming.html#variant.InsufficientCapacity)
+    /// [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity)
     /// is returned if `n` exceeds the bucket capacity.
-    fn check_n(&mut self, n: u32) -> Result<(), NonConforming<Self::T>> {
+    fn check_n(&mut self, n: u32) -> Result<(), NegativeMultiDecision> {
         self.test_n_and_update(n, Instant::now())
     }
+}
+
+#[test]
+fn test_wait_time_from() {
+    let now = Instant::now();
+    let nc = NonConformance::new(now, Duration::from_secs(20));
+    assert_eq!(nc.wait_time_from(now), Duration::from_secs(20));
+    assert_eq!(
+        nc.wait_time_from(now + Duration::from_secs(5)),
+        Duration::from_secs(15)
+    );
 }

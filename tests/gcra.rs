@@ -1,6 +1,6 @@
 extern crate ratelimit_meter;
 
-use ratelimit_meter::{Decider, MultiDecider, NonConforming, GCRA};
+use ratelimit_meter::{Decider, MultiDecider, NegativeMultiDecision, GCRA};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -59,7 +59,7 @@ fn never_allows_more_than_capacity() {
 
     let result = gcra.check_n_at(15, now + (ms * 20 * 1000));
     match result {
-        Err(NonConforming::InsufficientCapacity(n)) => assert_eq!(n, 15),
+        Err(NegativeMultiDecision::InsufficientCapacity(n)) => assert_eq!(n, 15),
         _ => panic!("Did not expect {:?}", result),
     }
 }

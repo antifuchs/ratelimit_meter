@@ -1,6 +1,6 @@
 extern crate ratelimit_meter;
 
-use ratelimit_meter::{Decider, LeakyBucket, MultiDecider, NonConforming};
+use ratelimit_meter::{Decider, LeakyBucket, MultiDecider, NegativeMultiDecision};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -39,7 +39,7 @@ fn never_allows_more_than_capacity() {
 
     let result = lb.check_n_at(15, now + (ms * 20 * 1000));
     match result {
-        Err(NonConforming::InsufficientCapacity(n)) => assert_eq!(n, 15),
+        Err(NegativeMultiDecision::InsufficientCapacity(n)) => assert_eq!(n, 15),
         _ => panic!("Did not expect {:?}", result),
     }
 }
@@ -58,12 +58,11 @@ fn correct_wait_time() {
             Ok(()) => {
                 conforming += 1;
             }
-            Err(NonConforming::No(wait)) => {
-                now += wait;
+            Err(wait) => {
+                now += wait.wait_time_from(now);
                 assert!(lb.check_at(now).is_ok());
                 conforming += 1;
             }
-            _ => panic!("Unexpected result {:?}", res),
         }
     }
     assert_eq!(20, conforming);
@@ -90,10 +89,7 @@ fn actual_threadsafety() {
     lim.check_at(now).unwrap();
     for _i in 0..20 {
         let mut lim = lim.clone();
-        children.push(thread::spawn(move || match lim.check_at(now) {
-            Ok(_) | Err(NonConforming::No(_)) => {}
-            Err(e) => panic!("Unexpected error {:?}", e),
-        }));
+        children.push(thread::spawn(move || lim.check_at(now).is_ok()));
     }
     for child in children {
         child.join().unwrap();

@@ -1,4 +1,5 @@
-use {Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NonConforming, TypedDecider};
+use {Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision,
+     NonConformance};
 use algorithms::InconsistentCapacity;
 
 use std::sync::atomic::Ordering::{Acquire, Release};
@@ -11,15 +12,6 @@ use crossbeam::epoch::{self, Atomic, Owned};
 impl Decider for LeakyBucket {}
 
 impl MultiDecider for LeakyBucket {}
-
-impl TypedDecider for LeakyBucket {
-    /// The leaky bucket can provide an approximation for how long to
-    /// sleep until one token is available again. (This does not
-    /// account for multiple requests attempting to use the same
-    /// token; schedulers relying on this must account for phenomena
-    /// like thundering herds.)
-    type T = Duration;
-}
 
 #[derive(Debug, Clone)]
 /// Implements the industry-standard leaky bucket rate-limiting
@@ -111,10 +103,10 @@ impl LeakyBucket {
 }
 
 impl MultiDeciderImpl for LeakyBucket {
-    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<(), NonConforming<Duration>> {
+    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<(), NegativeMultiDecision> {
         let weight = self.token_interval * n;
         if weight > self.full {
-            return Err(NonConforming::InsufficientCapacity(n));
+            return Err(NegativeMultiDecision::InsufficientCapacity(n));
         }
         let mut new = Owned::new(BucketState {
             last_update: Some(t0),
@@ -146,7 +138,10 @@ impl MultiDeciderImpl for LeakyBucket {
                     }
                 } else {
                     let wait_period = (weight + new.level) - self.full;
-                    return Err(NonConforming::No(wait_period));
+                    return Err(NegativeMultiDecision::BatchNonConforming(
+                        n,
+                        NonConformance::new(t0, wait_period),
+                    ));
                 }
             }
         }

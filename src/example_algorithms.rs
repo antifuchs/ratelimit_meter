@@ -1,4 +1,4 @@
-use {Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NonConforming, TypedDecider};
+use {Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision};
 
 use std::time::Instant;
 
@@ -23,15 +23,9 @@ impl Allower {
     }
 }
 
-impl TypedDecider for Allower {
-    /// Allower never returns a negative answer, so negative answers
-    /// don't carry information.
-    type T = ();
-}
-
 impl MultiDeciderImpl for Allower {
     /// Allows all cells through unconditionally.
-    fn test_n_and_update(&mut self, _n: u32, _t0: Instant) -> Result<(), NonConforming<Self::T>> {
+    fn test_n_and_update(&mut self, _n: u32, _t0: Instant) -> Result<(), NegativeMultiDecision> {
         Ok(())
     }
 }
