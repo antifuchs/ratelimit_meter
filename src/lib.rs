@@ -207,18 +207,25 @@ pub enum NegativeMultiDecision {
 
 /// The main decision trait. It allows checking a single cell against
 /// the rate-limiter, either at the current time instant, or at a
-/// given instant in time, both destructively.
+/// given instant in time, updating the `Decider`'s internal state if
+/// the cell is conforming.
 pub trait Decider: DeciderImpl {
+    /// Tests is a single cell can be accommodated at the given time
+    /// stamp. If it can be, `check` updates the `Decider` to account
+    /// for the conforming cell and returns `Ok(())`.
+    ///
+    /// If the cell is non-conforming (i.e., it can't be accomodated
+    /// at this time stamp), `check_at` returns `Err` with information
+    /// about the earliest time at which a cell could be considered
+    /// conforming (see [`NonConformance`](struct.NonConformance.html)).
+    fn check_at(&mut self, at: Instant) -> Result<(), NonConformance> {
+        self.test_and_update(at)
+    }
+
     /// Tests if a single cell can be accommodated at
     /// `Instant::now()`. See [`check_at`](#method.check_at).
     fn check(&mut self) -> Result<(), NonConformance> {
         self.test_and_update(Instant::now())
-    }
-
-    /// Tests is a single cell can be accommodated at the given time
-    /// stamp.
-    fn check_at(&mut self, at: Instant) -> Result<(), NonConformance> {
-        self.test_and_update(at)
     }
 }
 
@@ -226,16 +233,26 @@ pub trait Decider: DeciderImpl {
 /// about multiple cells at once.
 pub trait MultiDecider: MultiDeciderImpl {
     /// Tests if `n` cells can be accommodated at the given time
-    /// stamp. An error [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity) is
-    /// returned if `n` exceeds the bucket capacity.
+    /// stamp. If (and only if) all cells in the batch can be
+    /// accomodated, the `MultiDecider` updates the internal state to
+    /// account for all cells and returns `Ok(())`.
+    ///
+    /// If the entire batch of cells would not be conforming but the
+    /// `MultiDecider` has the capacity to accomodate the cells at any
+    /// point in time, `check_n_at` returns error
+    /// [`NegativeMultiDecision::BatchNonConforming`](enum.NegativeMultiDecision.html#variant.BatchNonConforming),
+    /// holding the number of cells and
+    /// [`NonConformance`](struct.NonConformance.html) information.
+    ///
+    /// If `n` exceeds the bucket capacity, `check_n_at` returns
+    /// [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity),
+    /// indicating that a batch of this many cells can never succeed.
     fn check_n_at(&mut self, n: u32, at: Instant) -> Result<(), NegativeMultiDecision> {
         self.test_n_and_update(n, at)
     }
 
     /// Tests if `n` cells can be accommodated at the current time
-    /// (`Instant::now()`). An error
-    /// [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity)
-    /// is returned if `n` exceeds the bucket capacity.
+    /// (`Instant::now()`), using [`check_n_at`](#method.check_n_at)
     fn check_n(&mut self, n: u32) -> Result<(), NegativeMultiDecision> {
         self.test_n_and_update(n, Instant::now())
     }
