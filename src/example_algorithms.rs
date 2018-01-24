@@ -1,4 +1,4 @@
-use {MultiDeciderImpl, TypedDecider, ImpliedDeciderImpl, MultiDecider, Decider, Decision, Result};
+use {Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision};
 
 use std::time::Instant;
 
@@ -13,7 +13,7 @@ impl MultiDecider for Allower {}
 /// use ratelimit_meter::{Decider};
 /// use ratelimit_meter::example_algorithms::Allower;
 /// let mut allower = Allower::new();
-/// assert!(allower.check().unwrap().is_compliant());
+/// assert!(allower.check().is_ok());
 /// ```
 pub struct Allower {}
 
@@ -23,16 +23,10 @@ impl Allower {
     }
 }
 
-impl TypedDecider for Allower {
-    /// Allower never returns a negative answer, so negative answers
-    /// don't carry information.
-    type T = ();
-}
-
 impl MultiDeciderImpl for Allower {
     /// Allows all cells through unconditionally.
-    fn test_n_and_update(&mut self, _n: u32, _t0: Instant) -> Result<Decision<()>> {
-        Ok(Decision::Yes)
+    fn test_n_and_update(&mut self, _n: u32, _t0: Instant) -> Result<(), NegativeMultiDecision> {
+        Ok(())
     }
 }
 

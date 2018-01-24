@@ -1,8 +1,9 @@
-use {TypedDecider, ImpliedDeciderImpl, MultiDeciderImpl, Decider, MultiDecider, Decision, Result,
-     ErrorKind};
+use {Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision,
+     NonConformance};
+use algorithms::InconsistentCapacity;
 
 use std::sync::atomic::Ordering::{Acquire, Release};
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 use std::cmp;
 use std::sync::Arc;
 
@@ -11,15 +12,6 @@ use crossbeam::epoch::{self, Atomic, Owned};
 impl Decider for LeakyBucket {}
 
 impl MultiDecider for LeakyBucket {}
-
-impl TypedDecider for LeakyBucket {
-    /// The leaky bucket can provide an approximation for how long to
-    /// sleep until one token is available again. (This does not
-    /// account for multiple requests attempting to use the same
-    /// token; schedulers relying on this must account for phenomena
-    /// like thundering herds.)
-    type T = Duration;
-}
 
 #[derive(Debug, Clone)]
 /// Implements the industry-standard leaky bucket rate-limiting
@@ -47,16 +39,13 @@ impl TypedDecider for LeakyBucket {
 /// # Thread safety
 ///
 /// This implementation uses lock-free techniques to safely update the
-/// bucket state in-place. This means the
-/// [`.threadsafe`](#method.threadsafe) method returns self & will be
-/// deprecated in a future release.
-///
+/// bucket state in-place.
 ///
 /// # Example
 /// ``` rust
-/// # use ratelimit_meter::{Decider, LeakyBucket, Decision};
+/// # use ratelimit_meter::{Decider, LeakyBucket};
 /// let mut lb: LeakyBucket = LeakyBucket::per_second(2).unwrap();
-/// assert_eq!(Decision::Yes, lb.check().unwrap());
+/// assert_eq!(Ok(()), lb.check());
 /// ```
 pub struct LeakyBucket {
     state: Arc<Atomic<BucketState>>,
@@ -80,16 +69,19 @@ impl LeakyBucket {
     /// let now = Instant::now();
     /// let day = Duration::from_secs(86400);
     /// let mut lb = LeakyBucket::new(1, day).unwrap(); // 1 per day
-    /// assert!(lb.check_at(now).unwrap().is_compliant());
+    /// assert!(lb.check_at(now).is_ok());
     ///
-    /// assert!(!lb.check_at(now + day/2).unwrap().is_compliant()); // Can't do it half a day later
-    /// assert!(lb.check_at(now + day).unwrap().is_compliant()); // Have to wait a day
+    /// assert!(!lb.check_at(now + day/2).is_ok()); // Can't do it half a day later
+    /// assert!(lb.check_at(now + day).is_ok()); // Have to wait a day
     /// // ...and then, a day after that.
-    /// assert!(lb.check_at(now + day * 2).unwrap().is_compliant());
+    /// assert!(lb.check_at(now + day * 2).is_ok());
     /// ```
-    pub fn new(capacity: u32, per_duration: Duration) -> Result<LeakyBucket> {
+    pub fn new(capacity: u32, per_duration: Duration) -> Result<LeakyBucket, InconsistentCapacity> {
         if capacity == 0 {
-            return Err(ErrorKind::InconsistentCapacity(capacity, 0).into());
+            return Err(InconsistentCapacity {
+                capacity: capacity,
+                weight: 0,
+            });
         }
         let token_interval = per_duration / capacity;
         let state = Atomic::new(BucketState {
@@ -105,23 +97,16 @@ impl LeakyBucket {
 
     /// Constructs and returns a leaky-bucket rate-limiter allowing on
     /// average `capacity`/1s cells.
-    pub fn per_second(capacity: u32) -> Result<LeakyBucket> {
+    pub fn per_second(capacity: u32) -> Result<LeakyBucket, InconsistentCapacity> {
         LeakyBucket::new(capacity, Duration::from_secs(1))
-    }
-
-    /// Returns `self`, as this implementation is threadsafe
-    /// already. This method is deprecated and will be removed in a
-    /// future release.
-    pub fn threadsafe(self) -> LeakyBucket {
-        self
     }
 }
 
 impl MultiDeciderImpl for LeakyBucket {
-    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<Decision<Duration>> {
+    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<(), NegativeMultiDecision> {
         let weight = self.token_interval * n;
         if weight > self.full {
-            return Err(ErrorKind::InsufficientCapacity(n).into());
+            return Err(NegativeMultiDecision::InsufficientCapacity(n));
         }
         let mut new = Owned::new(BucketState {
             last_update: Some(t0),
@@ -145,7 +130,7 @@ impl MultiDeciderImpl for LeakyBucket {
                     new.level += weight;
                     match self.state.cas_and_ref(Some(state), new, Release, &guard) {
                         Ok(_) => {
-                            return Ok(Decision::Yes);
+                            return Ok(());
                         }
                         Err(owned) => {
                             new = owned;
@@ -153,7 +138,10 @@ impl MultiDeciderImpl for LeakyBucket {
                     }
                 } else {
                     let wait_period = (weight + new.level) - self.full;
-                    return Ok(Decision::No(wait_period));
+                    return Err(NegativeMultiDecision::BatchNonConforming(
+                        n,
+                        NonConformance::new(t0, wait_period),
+                    ));
                 }
             }
         }

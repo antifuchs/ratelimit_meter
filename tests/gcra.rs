@@ -1,13 +1,13 @@
 extern crate ratelimit_meter;
 
-use ratelimit_meter::{GCRA, MultiDecider, Decider, Decision, ErrorKind, Error};
+use ratelimit_meter::{Decider, MultiDecider, NegativeMultiDecision, GCRA};
 use std::thread;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 #[test]
 fn accepts_first_cell() {
     let mut gcra: GCRA = GCRA::for_capacity(5).unwrap().into();
-    assert_eq!(Decision::Yes, gcra.check().unwrap());
+    assert_eq!(Ok(()), gcra.check());
 }
 #[test]
 fn rejects_too_many() {
@@ -15,19 +15,20 @@ fn rejects_too_many() {
     let now = Instant::now();
     gcra.check_at(now).unwrap();
     gcra.check_at(now).unwrap();
-    assert_ne!(Decision::Yes, gcra.check_at(now).unwrap(), "{:?}", gcra);
+    assert_ne!(Ok(()), gcra.check_at(now), "{:?}", gcra);
 }
+
 #[test]
 fn allows_after_interval() {
     let mut gcra = GCRA::for_capacity(1).unwrap().build();
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     gcra.check_at(now).unwrap();
-    gcra.check_at(now + ms).unwrap();
-    gcra.check_at(now + ms * 2).unwrap();
+    assert_eq!(Ok(()), gcra.check_at(now + ms));
+    assert!(gcra.check_at(now + ms * 2).is_err());
     // should be ok again in 1s:
     let next = now + Duration::from_secs(1);
-    assert_eq!(Decision::Yes, gcra.check_at(next).unwrap());
+    assert_eq!(Ok(()), gcra.check_at(next));
 }
 
 #[test]
@@ -35,19 +36,26 @@ fn allows_n_after_interval() {
     let mut gcra = GCRA::for_capacity(2).unwrap().build();
     let now = Instant::now();
     let ms = Duration::from_millis(1);
-    assert_eq!(Decision::Yes, gcra.check_n_at(2, now).unwrap());
-    assert!(!gcra.check_n_at(2, now + ms).unwrap().is_compliant());
+    assert_eq!(Ok(()), gcra.check_n_at(2, now));
+    assert!(!gcra.check_n_at(2, now + ms).is_ok());
     // should be ok again in 1.5s:
     let next = now + Duration::from_secs(1);
-    assert_eq!(
-        Decision::Yes,
-        gcra.check_n_at(2, next).unwrap(),
-        "now: {:?}",
-        next
-    );
+    assert_eq!(Ok(()), gcra.check_n_at(2, next), "now: {:?}", next);
 
     // should always accommodate 0 cells:
-    assert_eq!(Decision::Yes, gcra.check_n_at(0, next).unwrap());
+    assert_eq!(Ok(()), gcra.check_n_at(0, next));
+}
+
+#[test]
+fn correctly_handles_per() {
+    let ms = Duration::from_millis(1);
+    let mut gcra = GCRA::for_capacity(1).unwrap().per(ms * 20).build();
+    let now = Instant::now();
+
+    assert_eq!(Ok(()), gcra.check_at(now));
+    assert_eq!(Ok(()), gcra.check_at(now + ms));
+    assert!(!gcra.check_at(now + ms * 10).is_ok());
+    assert_eq!(Ok(()), gcra.check_at(now + ms * 20));
 }
 
 #[test]
@@ -64,7 +72,7 @@ fn never_allows_more_than_capacity() {
 
     let result = gcra.check_n_at(15, now + (ms * 20 * 1000));
     match result {
-        Err(Error(ErrorKind::InsufficientCapacity(n), _)) => assert_eq!(n, 15),
+        Err(NegativeMultiDecision::InsufficientCapacity(n)) => assert_eq!(n, 15),
         _ => panic!("Did not expect {:?}", result),
     }
 }
@@ -79,11 +87,13 @@ fn actual_threadsafety() {
     lim.check_at(now).unwrap();
     for _i in 0..20 {
         let mut lim = lim.clone();
-        children.push(thread::spawn(move || { lim.check_at(now).unwrap(); }));
+        children.push(thread::spawn(move || {
+            lim.check_at(now).unwrap();
+        }));
     }
     for child in children {
         child.join().unwrap();
     }
-    assert!(!lim.check_at(now + ms * 2).unwrap().is_compliant());
-    assert_eq!(Decision::Yes, lim.check_at(now + ms * 1000).unwrap());
+    assert!(!lim.check_at(now + ms * 2).is_ok());
+    assert_eq!(Ok(()), lim.check_at(now + ms * 1000));
 }
