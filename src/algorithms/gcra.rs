@@ -1,5 +1,5 @@
-use {Decider, DeciderImpl, InconsistentCapacity, MultiDecider, MultiDeciderImpl,
-     NegativeMultiDecision, NonConformance};
+use {Decider, DeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision, NonConformance};
+use algorithms::InconsistentCapacity;
 
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 use std::time::{Duration, Instant};

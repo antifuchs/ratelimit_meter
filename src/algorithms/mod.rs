@@ -1,8 +1,8 @@
-pub mod gcra;
+mod gcra;
 mod leaky_bucket;
 
-pub use self::gcra::GCRA;
-pub use self::leaky_bucket::LeakyBucket;
+pub use self::gcra::*;
+pub use self::leaky_bucket::*;
 
 /// An error that is returned when initializing a bucket that is too
 /// small to let a single cell through.

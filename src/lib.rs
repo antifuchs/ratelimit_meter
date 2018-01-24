@@ -107,7 +107,6 @@
 //! ```
 
 pub mod example_algorithms;
-#[allow(deprecated)]
 pub mod algorithms;
 mod implementation;
 
@@ -118,8 +117,10 @@ extern crate failure_derive;
 
 use std::time::{Duration, Instant};
 
-pub use self::algorithms::*;
 use implementation::*;
+
+pub use self::algorithms::GCRA;
+pub use self::algorithms::LeakyBucket;
 
 /// Provides additional information about non-conforming cells, most
 /// importantly the earliest time until the next cell could be
