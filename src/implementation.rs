@@ -4,7 +4,7 @@ use std::time::Instant;
 /// The trait that implementations of the metered rate-limiter
 /// interface have to implement. Users of this library should rely on
 /// [Decider](trait.Decider.html) for the external interface.
-pub trait DeciderImpl {
+pub trait DeciderImpl: Send + Sync {
     /// Tests if a single cell can be accommodated in the rate limiter
     /// at the instant `at` and updates the rate-limiter to account
     /// for the weight of the cell.
@@ -18,7 +18,7 @@ pub trait DeciderImpl {
 
 /// The trait that a metered rate-limiter interface has to implement
 /// to support decisions on multiple cells in a batch.
-pub trait MultiDeciderImpl {
+pub trait MultiDeciderImpl: Send + Sync {
     /// Tests if `n` cells can be accommodated in the rate limiter at
     /// the instant `at` and updates the rate-limiter to account for
     /// the weight of the cells and updates the ratelimiter state.
