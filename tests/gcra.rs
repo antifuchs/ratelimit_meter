@@ -17,6 +17,7 @@ fn rejects_too_many() {
     gcra.check_at(now).unwrap();
     assert_ne!(Ok(()), gcra.check_at(now), "{:?}", gcra);
 }
+
 #[test]
 fn allows_after_interval() {
     let mut gcra = GCRA::for_capacity(1).unwrap().build();
@@ -43,6 +44,18 @@ fn allows_n_after_interval() {
 
     // should always accommodate 0 cells:
     assert_eq!(Ok(()), gcra.check_n_at(0, next));
+}
+
+#[test]
+fn correctly_handles_per() {
+    let ms = Duration::from_millis(1);
+    let mut gcra = GCRA::for_capacity(1).unwrap().per(ms * 20).build();
+    let now = Instant::now();
+
+    assert_eq!(Ok(()), gcra.check_at(now));
+    assert_eq!(Ok(()), gcra.check_at(now + ms));
+    assert!(!gcra.check_at(now + ms * 10).is_ok());
+    assert_eq!(Ok(()), gcra.check_at(now + ms * 20));
 }
 
 #[test]
