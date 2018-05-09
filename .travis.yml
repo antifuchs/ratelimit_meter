@@ -16,11 +16,13 @@ env:
     - CRATE_NAME=ratelimit_meter
     - DEPLOY_VERSION=stable
     - RUN_CLIPPY=false
-    - RUSTFMT_VERSION=0.3.6
+    - RUN_RUSTFMT=false
 
 matrix:
   fast_finish: true # Don't wait for the clippy build - it takes forever /:
   include:
+    - rust: stable
+      env: RUN_RUSTFMT=true
     - rust: nightly
       env: RUN_CLIPPY=true
   allow_failures:
@@ -28,9 +30,9 @@ matrix:
       env: RUN_CLIPPY=true
 
 before_script:
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
-      cargo install --list > /tmp/installed_crates;
-      grep "^rustfmt-nightly $RUSTFMT_VERSION:" /tmp/installed_crates || cargo install rustfmt-nightly --vers $RUSTFMT_VERSION --force ;
+  - bash -c 'if [[ "$RUN_RUSTFMT" == "true" ]]; then
+      rustup component add rustfmt-preview
+      ;
     fi'
   - bash -c 'if [[ "$RUN_CLIPPY" == "true" ]]; then
       rm -f ~/.cargo/bin/clippy;
@@ -41,7 +43,7 @@ before_script:
 
 script:
   - cargo test
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
+  - bash -c 'if [[ "$RUN_RUSTFMT" == "true" ]]; then
       cargo fmt -v -- --write-mode diff
       ;
     fi'
