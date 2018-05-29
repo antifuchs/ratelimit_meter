@@ -85,14 +85,14 @@ impl LeakyBucket {
     pub fn new(capacity: u32, per_duration: Duration) -> Result<LeakyBucket, InconsistentCapacity> {
         if capacity == 0 {
             return Err(InconsistentCapacity {
-                capacity: capacity,
+                capacity,
                 weight: 0,
             });
         }
         let token_interval = per_duration / capacity;
         Ok(LeakyBucket {
             state: ThreadsafeWrapper::new(BucketState::default()),
-            token_interval: token_interval,
+            token_interval,
             full: per_duration,
         })
     }

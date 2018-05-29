@@ -137,10 +137,7 @@ pub struct NonConformance {
 
 impl NonConformance {
     pub(crate) fn new(t0: Instant, min_time: Duration) -> NonConformance {
-        NonConformance {
-            t0: t0,
-            min_time: min_time,
-        }
+        NonConformance { t0, min_time }
     }
 }
 

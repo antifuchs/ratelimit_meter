@@ -111,7 +111,7 @@ impl Builder {
         if self.cell_weight > self.capacity {
             return Err(InconsistentCapacity {
                 capacity: self.capacity,
-                weight: weight,
+                weight,
             });
         }
         self.cell_weight = weight;
@@ -144,12 +144,12 @@ impl GCRA {
     pub fn for_capacity(capacity: u32) -> Result<Builder, InconsistentCapacity> {
         if capacity == 0 {
             return Err(InconsistentCapacity {
-                capacity: capacity,
+                capacity,
                 weight: 0,
             });
         }
         Ok(Builder {
-            capacity: capacity,
+            capacity,
             cell_weight: 1,
             time_unit: Duration::from_secs(1),
         })
@@ -162,8 +162,8 @@ impl GCRA {
     /// would accept another cell).
     pub fn with_parameters<T: Into<Option<Instant>>>(t: Duration, tau: Duration, tat: T) -> GCRA {
         GCRA {
-            t: t,
-            tau: tau,
+            t,
+            tau,
             tat: ThreadsafeWrapper::new(Tat(tat.into())),
         }
     }
