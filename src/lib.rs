@@ -119,8 +119,8 @@ use std::time::{Duration, Instant};
 
 use implementation::*;
 
-pub use self::algorithms::GCRA;
 pub use self::algorithms::LeakyBucket;
+pub use self::algorithms::GCRA;
 
 /// Provides additional information about non-conforming cells, most
 /// importantly the earliest time until the next cell could be
