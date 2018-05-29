@@ -5,7 +5,6 @@ extern crate ratelimit_meter;
 use ratelimit_meter::{Decider, GCRA};
 use ratelimit_meter::{LeakyBucket, MultiDecider};
 use std::thread;
-use std::time::{Duration, Instant};
 
 fn resident_memsize() -> i64 {
     let mut out: libc::rusage = unsafe { std::mem::zeroed() };
@@ -13,7 +12,7 @@ fn resident_memsize() -> i64 {
     out.ru_maxrss
 }
 
-const LEAK_TOLERANCE: i64 = 1024 * 100;
+const LEAK_TOLERANCE: i64 = 1024 * 1024 * 10;
 
 fn check_for_leaks(n_iter: usize, usage_before: i64) {
     let usage_after = resident_memsize();
