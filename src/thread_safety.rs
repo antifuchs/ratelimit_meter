@@ -2,6 +2,8 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
+/// Wraps the atomic operations on a Decider's state in a threadsafe
+/// fashion.
 pub(crate) struct ThreadsafeWrapper<T>
 where
     T: fmt::Debug + Default + Clone,
