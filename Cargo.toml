@@ -18,6 +18,9 @@ crossbeam = "0.3.0"
 failure = "0.1.1"
 failure_derive = "0.1.1"
 
+[dev_dependencies]
+libc = "0.2.41"
+
 [package.metadata.release]
 sign-commit = false
 upload-doc = false
