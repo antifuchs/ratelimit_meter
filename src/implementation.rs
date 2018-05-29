@@ -1,5 +1,5 @@
-use {NegativeMultiDecision, NonConformance};
 use std::time::Instant;
+use {NegativeMultiDecision, NonConformance};
 
 /// The trait that implementations of the metered rate-limiter
 /// interface have to implement. Users of this library should rely on

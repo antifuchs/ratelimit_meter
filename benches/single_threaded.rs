@@ -3,8 +3,8 @@
 extern crate ratelimit_meter;
 extern crate test;
 
-use ratelimit_meter::{Decider, LeakyBucket, MultiDecider, GCRA};
 use ratelimit_meter::example_algorithms::Allower;
+use ratelimit_meter::{Decider, LeakyBucket, MultiDecider, GCRA};
 use std::time::{Duration, Instant};
 
 #[bench]

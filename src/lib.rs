@@ -106,11 +106,11 @@
 //! assert_eq!(Ok(()), lim.check());
 //! ```
 
-pub mod example_algorithms;
 pub mod algorithms;
+pub mod example_algorithms;
 mod implementation;
+mod thread_safety;
 
-extern crate crossbeam;
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;

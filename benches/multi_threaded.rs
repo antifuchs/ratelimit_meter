@@ -4,8 +4,8 @@ extern crate ratelimit_meter;
 extern crate test;
 
 use ratelimit_meter::{Decider, LeakyBucket, GCRA};
-use std::time::{Duration, Instant};
 use std::thread;
+use std::time::{Duration, Instant};
 
 #[bench]
 fn bench_gcra_20threads(b: &mut test::Bencher) {
