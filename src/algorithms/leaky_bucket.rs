@@ -111,7 +111,7 @@ impl MultiDeciderImpl for LeakyBucket {
         if weight > self.full {
             return Err(NegativeMultiDecision::InsufficientCapacity(n));
         }
-        self.state.measure_and_replace_n(|state| {
+        self.state.measure_and_replace(|state| {
             let mut new = BucketState {
                 last_update: Some(t0),
                 level: Duration::new(0, 0),

@@ -1,6 +1,5 @@
 use std::fmt;
 use std::sync::{Arc, Mutex};
-use {NegativeMultiDecision, NonConformance};
 
 #[derive(Clone)]
 pub(crate) struct ThreadsafeWrapper<T>
@@ -51,31 +50,9 @@ where
     ///
     /// # Panics
     /// Panics if an error occurs in acquiring any locks.
-    pub(crate) fn measure_and_replace<F>(&mut self, f: F) -> Result<(), NonConformance>
+    pub(crate) fn measure_and_replace<F, E>(&mut self, f: F) -> Result<(), E>
     where
-        F: Fn(&T) -> (Result<(), NonConformance>, Option<T>),
-    {
-        let mut data = self.data.lock().unwrap();
-        let (decision, new_data) = f(&*data);
-        if let Some(new_data) = new_data {
-            *data = new_data;
-        }
-        decision
-    }
-
-    #[inline]
-    /// Wraps retrieving a bucket's data, calls a function to make a
-    /// decision on n elements and return a new state, and then tries
-    /// to set the state on the bucket.
-    ///
-    /// This function can loop and call the decision closure again if
-    /// the bucket state couldn't be set.
-    ///
-    /// # Panics
-    /// Panics if an error occurs in acquiring any locks.
-    pub(crate) fn measure_and_replace_n<F>(&mut self, f: F) -> Result<(), NegativeMultiDecision>
-    where
-        F: Fn(&T) -> (Result<(), NegativeMultiDecision>, Option<T>),
+        F: Fn(&T) -> (Result<(), E>, Option<T>),
     {
         let mut data = self.data.lock().unwrap();
         let (decision, new_data) = f(&*data);

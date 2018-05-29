@@ -198,7 +198,7 @@ impl MultiDeciderImpl for GCRA {
     fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<(), NegativeMultiDecision> {
         let tau = self.tau;
         let t = self.t;
-        self.tat.measure_and_replace_n(|tat| {
+        self.tat.measure_and_replace(|tat| {
             let tat = tat.0.unwrap_or(t0);
             let tat = match n {
                 0 => t0,
