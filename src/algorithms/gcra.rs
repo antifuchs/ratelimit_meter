@@ -1,12 +1,9 @@
-use {Decider, DeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision, NonConformance};
 use algorithms::InconsistentCapacity;
+use thread_safety::ThreadsafeWrapper;
+use {Decider, DeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision, NonConformance};
 
-use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
-use std::time::{Duration, Instant};
 use std::cmp;
-use std::sync::Arc;
-
-use crossbeam::epoch::{self, Atomic, Owned};
+use std::time::{Duration, Instant};
 
 impl Decider for GCRA {}
 
@@ -19,6 +16,24 @@ impl Decider for GCRA {}
 /// users of this trait on GCRA limiters should ensure that this is
 /// ok.
 impl MultiDecider for GCRA {}
+
+#[derive(Debug, PartialEq, Clone)]
+struct Tat(Option<Instant>);
+
+impl Default for Tat {
+    fn default() -> Self {
+        Tat(None)
+    }
+}
+
+impl<T> From<T> for Tat
+where
+    T: Into<Option<Instant>>,
+{
+    fn from(f: T) -> Self {
+        Tat(f.into())
+    }
+}
 
 #[derive(Debug, Clone)]
 /// Implements the virtual scheduling description of the Generic Cell
@@ -77,7 +92,7 @@ pub struct GCRA {
     tau: Duration,
 
     // The theoretical arrival time of the next packet.
-    tat: Arc<Atomic<Instant>>,
+    tat: ThreadsafeWrapper<Tat>,
 }
 
 /// A builder object that can be used to construct rate-limiters as
@@ -96,7 +111,7 @@ impl Builder {
         if self.cell_weight > self.capacity {
             return Err(InconsistentCapacity {
                 capacity: self.capacity,
-                weight: weight,
+                weight,
             });
         }
         self.cell_weight = weight;
@@ -117,7 +132,7 @@ impl Builder {
         GCRA {
             t: (self.time_unit / self.capacity) * self.cell_weight,
             tau: self.time_unit,
-            tat: Arc::new(Atomic::null()),
+            tat: ThreadsafeWrapper::<Tat>::default(),
         }
     }
 }
@@ -129,12 +144,12 @@ impl GCRA {
     pub fn for_capacity(capacity: u32) -> Result<Builder, InconsistentCapacity> {
         if capacity == 0 {
             return Err(InconsistentCapacity {
-                capacity: capacity,
+                capacity,
                 weight: 0,
             });
         }
         Ok(Builder {
-            capacity: capacity,
+            capacity,
             cell_weight: 1,
             time_unit: Duration::from_secs(1),
         })
@@ -145,18 +160,11 @@ impl GCRA {
     /// tau (τ, the number of cells that fit into this buffer), and an
     /// optional t_at (the earliest instant that the rate-limiter
     /// would accept another cell).
-    pub fn with_parameters(t: Duration, tau: Duration, tat: Option<Instant>) -> GCRA {
-        match tat {
-            Some(ts) => GCRA {
-                t: t,
-                tau: tau,
-                tat: Arc::new(Atomic::new(ts)),
-            },
-            None => GCRA {
-                t: t,
-                tau: tau,
-                tat: Arc::new(Atomic::null()),
-            },
+    pub fn with_parameters<T: Into<Option<Instant>>>(t: Duration, tau: Duration, tat: T) -> GCRA {
+        GCRA {
+            t,
+            tau,
+            tat: ThreadsafeWrapper::new(Tat(tat.into())),
         }
     }
 }
@@ -167,29 +175,16 @@ impl DeciderImpl for GCRA {
     /// of the method described directly in the GCRA algorithm, and is
     /// the fastest.
     fn test_and_update(&mut self, t0: Instant) -> Result<(), NonConformance> {
-        let guard = epoch::pin();
-        loop {
-            let tat_there = self.tat.load(Acquire, &guard);
-            let tat = match tat_there {
-                Some(sh) => **sh,
-                None => t0,
-            };
-
-            if t0 < tat - self.tau {
-                return Err(NonConformance::new(t0, tat - t0));
+        let tau = self.tau;
+        let t = self.t;
+        self.tat.measure_and_replace(|tat| {
+            let tat = tat.0.unwrap_or(t0);
+            if t0 < tat - tau {
+                (Err(NonConformance::new(t0, tat - t0)), None)
+            } else {
+                (Ok(()), Some(Tat(Some(cmp::max(tat, t0) + t))))
             }
-            if self.tat
-                .cas_and_ref(
-                    tat_there,
-                    Owned::new(cmp::max(tat, t0) + self.t),
-                    Release,
-                    &guard,
-                )
-                .is_ok()
-            {
-                return Ok(());
-            }
-        }
+        })
     }
 }
 
@@ -201,48 +196,43 @@ impl MultiDeciderImpl for GCRA {
     /// it is likely not as fast (and not as obviously "right") as the
     /// single-cell variant.
     fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<(), NegativeMultiDecision> {
-        let guard = epoch::pin();
-        loop {
-            let tat_there = self.tat.load(Acquire, &guard);
-            let tat = match tat_there {
-                Some(sh) => **sh,
-                None => t0,
-            };
+        let tau = self.tau;
+        let t = self.t;
+        self.tat.measure_and_replace(|tat| {
+            let tat = tat.0.unwrap_or(t0);
             let tat = match n {
                 0 => t0,
                 1 => tat,
                 _ => {
-                    let weight = self.t * (n - 1);
-                    if (weight + self.t) > self.tau {
+                    let weight = t * (n - 1);
+                    if (weight + t) > tau {
                         // The bucket capacity can never accommodate this request
-                        return Err(NegativeMultiDecision::InsufficientCapacity(n));
+                        return (Err(NegativeMultiDecision::InsufficientCapacity(n)), None);
                     }
                     tat + weight
                 }
             };
-            if t0 < tat - self.tau {
-                return Err(NegativeMultiDecision::BatchNonConforming(
-                    n,
-                    NonConformance::new(t0, tat - t0),
-                ));
-            }
+
             let additional_weight = match n {
                 0 => Duration::new(0, 0),
-                1 => self.t,
-                _ => self.t * n,
+                1 => t,
+                _ => t * n,
             };
-            if self.tat
-                .cas_and_ref(
-                    tat_there,
-                    Owned::new(cmp::max(tat, t0) + additional_weight),
-                    Release,
-                    &guard,
+            if t0 < tat - tau {
+                (
+                    Err(NegativeMultiDecision::BatchNonConforming(
+                        n,
+                        NonConformance::new(t0, tat - t0),
+                    )),
+                    None,
                 )
-                .is_ok()
-            {
-                return Ok(());
+            } else {
+                (
+                    Ok(()),
+                    Some(Tat(Some(cmp::max(tat, t0) + additional_weight))),
+                )
             }
-        }
+        })
     }
 }
 
@@ -286,11 +276,7 @@ impl<'a> From<&'a mut Builder> for GCRA {
 /// construct a copy of the GCRA rate-limiter.
 impl<'a> Into<(Duration, Duration, Option<Instant>)> for &'a GCRA {
     fn into(self) -> (Duration, Duration, Option<Instant>) {
-        let guard = epoch::pin();
-        let tat = match self.tat.load(Relaxed, &guard) {
-            None => None,
-            Some(sh) => Some(**sh),
-        };
+        let tat = self.tat.snapshot().0;
         (self.t, self.tau, tat)
     }
 }

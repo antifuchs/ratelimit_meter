@@ -1,13 +1,10 @@
+use algorithms::InconsistentCapacity;
+use thread_safety::ThreadsafeWrapper;
 use {Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision,
      NonConformance};
-use algorithms::InconsistentCapacity;
 
-use std::sync::atomic::Ordering::{Acquire, Release};
-use std::time::{Duration, Instant};
 use std::cmp;
-use std::sync::Arc;
-
-use crossbeam::epoch::{self, Atomic, Owned};
+use std::time::{Duration, Instant};
 
 impl Decider for LeakyBucket {}
 
@@ -48,7 +45,7 @@ impl MultiDecider for LeakyBucket {}
 /// assert_eq!(Ok(()), lb.check());
 /// ```
 pub struct LeakyBucket {
-    state: Arc<Atomic<BucketState>>,
+    state: ThreadsafeWrapper<BucketState>,
     full: Duration,
     token_interval: Duration,
 }
@@ -57,6 +54,15 @@ pub struct LeakyBucket {
 struct BucketState {
     level: Duration,
     last_update: Option<Instant>,
+}
+
+impl Default for BucketState {
+    fn default() -> Self {
+        BucketState {
+            level: Duration::new(0, 0),
+            last_update: None,
+        }
+    }
 }
 
 impl LeakyBucket {
@@ -79,18 +85,14 @@ impl LeakyBucket {
     pub fn new(capacity: u32, per_duration: Duration) -> Result<LeakyBucket, InconsistentCapacity> {
         if capacity == 0 {
             return Err(InconsistentCapacity {
-                capacity: capacity,
+                capacity,
                 weight: 0,
             });
         }
         let token_interval = per_duration / capacity;
-        let state = Atomic::new(BucketState {
-            level: Duration::new(0, 0),
-            last_update: None,
-        });
         Ok(LeakyBucket {
-            state: Arc::new(state),
-            token_interval: token_interval,
+            state: ThreadsafeWrapper::new(BucketState::default()),
+            token_interval,
             full: per_duration,
         })
     }
@@ -104,47 +106,38 @@ impl LeakyBucket {
 
 impl MultiDeciderImpl for LeakyBucket {
     fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<(), NegativeMultiDecision> {
+        let full = self.full;
         let weight = self.token_interval * n;
         if weight > self.full {
             return Err(NegativeMultiDecision::InsufficientCapacity(n));
         }
-        let mut new = Owned::new(BucketState {
-            last_update: Some(t0),
-            level: Duration::new(0, 0),
-        });
-        let guard = epoch::pin();
-
-        loop {
-            if let Some(state) = self.state.load(Acquire, &guard) {
-                let last = state.last_update.unwrap_or(t0);
-                // Prevent time travel: If any parallel calls get re-ordered,
-                // or any tests attempt silly things, make sure to answer from
-                // the last query onwards instead.
-                let t0 = cmp::max(t0, last);
-                // Decrement the level by the amount the bucket
-                // has dripped in the meantime:
-                new.level = state.level - cmp::min(t0 - last, state.level);
-
-                // Determine if the cell fits & ensure it is recorded:
-                if weight + new.level <= self.full {
-                    new.level += weight;
-                    match self.state.cas_and_ref(Some(state), new, Release, &guard) {
-                        Ok(_) => {
-                            return Ok(());
-                        }
-                        Err(owned) => {
-                            new = owned;
-                        }
-                    }
-                } else {
-                    let wait_period = (weight + new.level) - self.full;
-                    return Err(NegativeMultiDecision::BatchNonConforming(
+        self.state.measure_and_replace(|state| {
+            let mut new = BucketState {
+                last_update: Some(t0),
+                level: Duration::new(0, 0),
+            };
+            let last = state.last_update.unwrap_or(t0);
+            // Prevent time travel: If any parallel calls get re-ordered,
+            // or any tests attempt silly things, make sure to answer from
+            // the last query onwards instead.
+            let t0 = cmp::max(t0, last);
+            // Decrement the level by the amount the bucket
+            // has dripped in the meantime:
+            new.level = state.level - cmp::min(t0 - last, state.level);
+            if weight + new.level <= full {
+                new.level += weight;
+                (Ok(()), Some(new))
+            } else {
+                let wait_period = (weight + new.level) - full;
+                (
+                    Err(NegativeMultiDecision::BatchNonConforming(
                         n,
                         NonConformance::new(t0, wait_period),
-                    ));
-                }
+                    )),
+                    None,
+                )
             }
-        }
+        })
     }
 }
 

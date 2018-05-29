@@ -106,11 +106,11 @@
 //! assert_eq!(Ok(()), lim.check());
 //! ```
 
-pub mod example_algorithms;
 pub mod algorithms;
+pub mod example_algorithms;
 mod implementation;
+mod thread_safety;
 
-extern crate crossbeam;
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
@@ -119,8 +119,8 @@ use std::time::{Duration, Instant};
 
 use implementation::*;
 
-pub use self::algorithms::GCRA;
 pub use self::algorithms::LeakyBucket;
+pub use self::algorithms::GCRA;
 
 /// Provides additional information about non-conforming cells, most
 /// importantly the earliest time until the next cell could be
@@ -137,10 +137,7 @@ pub struct NonConformance {
 
 impl NonConformance {
     pub(crate) fn new(t0: Instant, min_time: Duration) -> NonConformance {
-        NonConformance {
-            t0: t0,
-            min_time: min_time,
-        }
+        NonConformance { t0, min_time }
     }
 }
 
