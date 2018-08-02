@@ -1,7 +1,9 @@
 use algorithms::InconsistentCapacity;
 use thread_safety::ThreadsafeWrapper;
-use {Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision,
-     NonConformance};
+use {
+    Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision,
+    NonConformance,
+};
 
 use std::cmp;
 use std::time::{Duration, Instant};
