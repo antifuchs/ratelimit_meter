@@ -44,7 +44,7 @@ before_script:
 script:
   - cargo test
   - bash -c 'if [[ "$RUN_RUSTFMT" == "true" ]]; then
-      cargo fmt -v -- --write-mode diff
+      cargo fmt -v -- --check
       ;
     fi'
   - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
