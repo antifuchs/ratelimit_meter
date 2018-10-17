@@ -20,7 +20,7 @@ env:
     - RUN_TEST=true
 
 matrix:
-  fast_finish: true # Don't wait for the clippy build - it takes forever /:
+  fast_finish: true # Don't wait for the utility builds
   include:
     - rust: stable
       env:
@@ -30,11 +30,7 @@ matrix:
       env:
         - RUN_CLIPPY=true
         - RUN_TEST=false
-  allow_failures:
-    - rust: nightly
-      env:
-        - RUN_CLIPPY=true
-        - RUN_TEST=false
+  allow_failures: []
 
 before_script:
   - bash -c 'if [[ "$RUN_RUSTFMT" == "true" ]]; then
