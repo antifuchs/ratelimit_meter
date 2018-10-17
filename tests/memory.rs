@@ -4,6 +4,7 @@ extern crate ratelimit_meter;
 
 use ratelimit_meter::{Decider, GCRA};
 use ratelimit_meter::{LeakyBucket, MultiDecider};
+use std::num::NonZeroU32;
 use std::thread;
 
 fn resident_memsize() -> i64 {
@@ -65,7 +66,7 @@ fn memleak_gcra_threaded() {
 #[test]
 fn memleak_leakybucket() {
     const N_ITER: usize = 500_000;
-    let mut bucket = LeakyBucket::per_second(1_000_000).unwrap();
+    let mut bucket = LeakyBucket::per_second(NonZeroU32::new(1_000_000).unwrap());
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {
@@ -77,7 +78,7 @@ fn memleak_leakybucket() {
 #[test]
 fn memleak_leakybucket_threaded() {
     const N_ITER: usize = 5_000;
-    let bucket = LeakyBucket::per_second(1_000_000).unwrap();
+    let bucket = LeakyBucket::per_second(NonZeroU32::new(1_000_000).unwrap());
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {

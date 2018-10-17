@@ -1,4 +1,4 @@
-use algorithms::InconsistentCapacity;
+use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
 use {
     Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision,
@@ -42,8 +42,9 @@ impl MultiDecider for LeakyBucket {}
 ///
 /// # Example
 /// ``` rust
+/// # use std::num::NonZeroU32;
 /// # use ratelimit_meter::{Decider, LeakyBucket};
-/// let mut lb: LeakyBucket = LeakyBucket::per_second(2).unwrap();
+/// let mut lb: LeakyBucket = LeakyBucket::per_second(NonZeroU32::new(2).unwrap());
 /// assert_eq!(Ok(()), lb.check());
 /// ```
 pub struct LeakyBucket {
@@ -72,11 +73,12 @@ impl LeakyBucket {
     /// many cells on average as the given capacity per time duration.
     /// ## Example
     /// ``` rust
+    /// # use std::num::NonZeroU32;
     /// # use ratelimit_meter::{Decider, LeakyBucket};
     /// # use std::time::{Duration, Instant};
     /// let now = Instant::now();
     /// let day = Duration::from_secs(86400);
-    /// let mut lb = LeakyBucket::new(1, day).unwrap(); // 1 per day
+    /// let mut lb = LeakyBucket::new(NonZeroU32::new(1).unwrap(), day); // 1 per day
     /// assert!(lb.check_at(now).is_ok());
     ///
     /// assert!(!lb.check_at(now + day/2).is_ok()); // Can't do it half a day later
@@ -84,24 +86,18 @@ impl LeakyBucket {
     /// // ...and then, a day after that.
     /// assert!(lb.check_at(now + day * 2).is_ok());
     /// ```
-    pub fn new(capacity: u32, per_duration: Duration) -> Result<LeakyBucket, InconsistentCapacity> {
-        if capacity == 0 {
-            return Err(InconsistentCapacity {
-                capacity,
-                weight: 0,
-            });
-        }
-        let token_interval = per_duration / capacity;
-        Ok(LeakyBucket {
+    pub fn new(capacity: NonZeroU32, per_duration: Duration) -> LeakyBucket {
+        let token_interval = per_duration / capacity.get();
+        LeakyBucket {
             state: ThreadsafeWrapper::new(BucketState::default()),
             token_interval,
             full: per_duration,
-        })
+        }
     }
 
     /// Constructs and returns a leaky-bucket rate-limiter allowing on
     /// average `capacity`/1s cells.
-    pub fn per_second(capacity: u32) -> Result<LeakyBucket, InconsistentCapacity> {
+    pub fn per_second(capacity: NonZeroU32) -> LeakyBucket {
         LeakyBucket::new(capacity, Duration::from_secs(1))
     }
 }

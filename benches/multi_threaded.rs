@@ -4,6 +4,7 @@ extern crate ratelimit_meter;
 extern crate test;
 
 use ratelimit_meter::{Decider, LeakyBucket, GCRA};
+use std::num::NonZeroU32;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -42,7 +43,7 @@ fn bench_gcra_20threads(b: &mut test::Bencher) {
 
 #[bench]
 fn bench_leaky_bucket_20threads(b: &mut test::Bencher) {
-    let mut lim = LeakyBucket::per_second(50).unwrap();
+    let mut lim = LeakyBucket::per_second(NonZeroU32::new(50).unwrap());
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut children = vec![];
