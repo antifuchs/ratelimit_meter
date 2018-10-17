@@ -17,6 +17,7 @@ env:
     - DEPLOY_VERSION=stable
     - RUN_CLIPPY=false
     - RUN_RUSTFMT=false
+    - RUN_BENCH=false
     - RUN_TEST=true
 
 matrix:
@@ -30,7 +31,16 @@ matrix:
       env:
         - RUN_CLIPPY=true
         - RUN_TEST=false
-  allow_failures: []
+    - rust: nightly
+      env:
+        - RUN_BENCH=true
+        - RUN_TEST=false
+  allow_failures:
+    - rust: nightly
+      env:
+        - RUN_BENCH=true
+        - RUN_TEST=false
+
 
 before_script:
   - bash -c 'if [[ "$RUN_RUSTFMT" == "true" ]]; then
@@ -53,7 +63,7 @@ script:
       cargo fmt -v -- --check
       ;
     fi'
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
+  - bash -c 'if [[ "$RUN_BENCH" == "true" ]]; then
       cargo bench
       ;
     fi'
