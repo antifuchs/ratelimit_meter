@@ -17,17 +17,24 @@ env:
     - DEPLOY_VERSION=stable
     - RUN_CLIPPY=false
     - RUN_RUSTFMT=false
+    - RUN_TEST=true
 
 matrix:
   fast_finish: true # Don't wait for the clippy build - it takes forever /:
   include:
     - rust: stable
-      env: RUN_RUSTFMT=true
+      env:
+        - RUN_RUSTFMT=true
+        - RUN_TEST=false
     - rust: nightly
-      env: RUN_CLIPPY=true
+      env:
+        - RUN_CLIPPY=true
+        - RUN_TEST=false
   allow_failures:
     - rust: nightly
-      env: RUN_CLIPPY=true
+      env:
+        - RUN_CLIPPY=true
+        - RUN_TEST=false
 
 before_script:
   - bash -c 'if [[ "$RUN_RUSTFMT" == "true" ]]; then
@@ -42,7 +49,10 @@ before_script:
 
 
 script:
-  - cargo test
+  - bash -c 'if [[ "$RUN_TEST" == "true" ]]; then
+      cargo test
+      ;
+    fi'
   - bash -c 'if [[ "$RUN_RUSTFMT" == "true" ]]; then
       cargo fmt -v -- --check
       ;
