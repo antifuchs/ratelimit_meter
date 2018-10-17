@@ -7,7 +7,11 @@ pub use self::leaky_bucket::*;
 /// An error that is returned when initializing a bucket that is too
 /// small to let a single cell through.
 #[derive(Fail, Debug)]
-#[fail(display = "bucket capacity {} too small for a single cell with weight {}", capacity, weight)]
+#[fail(
+    display = "bucket capacity {} too small for a single cell with weight {}",
+    capacity,
+    weight
+)]
 pub struct InconsistentCapacity {
     capacity: u32,
     weight: u32,

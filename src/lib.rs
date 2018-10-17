@@ -198,7 +198,10 @@ pub enum NegativeMultiDecision {
     /// The number of cells tested (the first argument) is larger than
     /// the bucket's capacity, which means the decision can never have
     /// a conforming result.
-    #[fail(display = "bucket does not have enough capacity to accomodate {} cells", _0)]
+    #[fail(
+        display = "bucket does not have enough capacity to accomodate {} cells",
+        _0
+    )]
     InsufficientCapacity(u32),
 }
 
