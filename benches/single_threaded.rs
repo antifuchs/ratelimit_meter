@@ -5,6 +5,7 @@ extern crate test;
 
 use ratelimit_meter::example_algorithms::Allower;
 use ratelimit_meter::{Decider, LeakyBucket, MultiDecider, GCRA};
+use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
 #[bench]
@@ -41,7 +42,7 @@ fn bench_gcra_bulk(b: &mut test::Bencher) {
 
 #[bench]
 fn bench_leaky_bucket(b: &mut test::Bencher) {
-    let mut lb = LeakyBucket::per_second(50).unwrap();
+    let mut lb = LeakyBucket::per_second(NonZeroU32::new(50).unwrap());
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut i = 0;
@@ -53,7 +54,7 @@ fn bench_leaky_bucket(b: &mut test::Bencher) {
 
 #[bench]
 fn bench_leaky_bucket_bulk(b: &mut test::Bencher) {
-    let mut lb = LeakyBucket::per_second(500).unwrap();
+    let mut lb = LeakyBucket::per_second(NonZeroU32::new(500).unwrap());
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut i = 0;
@@ -71,7 +72,7 @@ fn bench_allower(b: &mut test::Bencher) {
 
 #[bench]
 fn bench_threadsafe_leaky_bucket(b: &mut test::Bencher) {
-    let mut lb = LeakyBucket::per_second(50).unwrap();
+    let mut lb = LeakyBucket::per_second(NonZeroU32::new(50).unwrap());
     let now = Instant::now();
     let ms = Duration::from_millis(20);
     let mut i = 0;
