@@ -1,4 +1,5 @@
-# TemplateCIConfig { bench: BenchEntry { run: true, version: "nightly", allow_failure: false }, clippy: ClippyEntry { run: true, version: "nightly", allow_failure: false }, rustfmt: RustfmtEntry { run: true, version: "stable", allow_failure: false }, os: "linux", dist: "xenial", versions: ["stable", "beta", "nightly"] }os:
+# TemplateCIConfig { bench: BenchEntry { run: true, version: "nightly", allow_failure: false }, clippy: ClippyEntry { run: true, version: "nightly", allow_failure: false }, rustfmt: RustfmtEntry { run: true, version: "stable", allow_failure: false }, os: "linux", dist: "xenial", versions: ["stable", "beta", "nightly"] }
+os:
   - "linux"
 dist: "xenial"
 
