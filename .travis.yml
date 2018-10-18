@@ -1,4 +1,7 @@
-dist: trusty
+# TemplateCIConfig { bench: BenchEntry { run: true, version: "nightly", allow_failure: false }, clippy: ClippyEntry { run: true, version: "nightly", allow_failure: false }, rustfmt: RustfmtEntry { run: true, version: "stable", allow_failure: false }, os: "linux", dist: "xenial", versions: ["stable", "beta", "nightly"] }os:
+  - "linux"
+dist: "xenial"
+
 language: rust
 sudo: required
 cache: cargo
@@ -8,39 +11,31 @@ rust:
   - beta
   - nightly
 
-os:
-  - linux
-
 env:
   global:
-    - CRATE_NAME=ratelimit_meter
-    - DEPLOY_VERSION=stable
-    - RUN_CLIPPY=false
-    - RUN_RUSTFMT=false
-    - RUN_BENCH=false
     - RUN_TEST=true
+    - RUN_CLIPPY=false
+    - RUN_BENCH=false
 
 matrix:
-  fast_finish: true # Don't wait for the utility builds
+  fast_finish: true
   include:
-    - rust: stable
+    - &rustfmt_build
+      rust: "stable"
       env:
         - RUN_RUSTFMT=true
         - RUN_TEST=false
-    - rust: nightly
+    - &bench_build
+      rust: "nightly"
+      env:
+        - RUN_BENCHMARK=true
+        - RUN_TEST=false
+    - &clippy_build
+      rust: "nightly"
       env:
         - RUN_CLIPPY=true
         - RUN_TEST=false
-    - rust: nightly
-      env:
-        - RUN_BENCH=true
-        - RUN_TEST=false
-  allow_failures:
-    - rust: nightly
-      env:
-        - RUN_BENCH=true
-        - RUN_TEST=false
-
+  allow_failures: []
 
 before_script:
   - bash -c 'if [[ "$RUN_RUSTFMT" == "true" ]]; then
@@ -52,7 +47,6 @@ before_script:
       rustup component add clippy-preview
       ;
     fi'
-
 
 script:
   - bash -c 'if [[ "$RUN_TEST" == "true" ]]; then
