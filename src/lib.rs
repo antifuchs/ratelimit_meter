@@ -11,7 +11,7 @@
 //! [GCRA](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm)
 //! and a [Leaky
 //! Bucket](https://en.wikipedia.org/wiki/Leaky_bucket#As_a_meter). An
-//! "unserious" implementation is provided also, the
+//! "unserious" implementation is provided also: The
 //! [`Allower`](example_algorithms/struct.Allower.html), which returns
 //! "Yes" to all rate-limiting queries.
 //!
@@ -28,15 +28,17 @@
 //!
 //! The rate-limiter interface is intentionally geared towards only
 //! providing callers with the information they need to make decisions
-//! about what to do with each cell. Whenever possible, additional
-//! information about why a cell should be denied - the `GCRA`
-//! implementation will return a `time::Instant` alongside the decision to
-//! allow callers to e.g. provide better error messages to users.
+//! about what to do with each cell. Deciders return additional
+//! information about why a cell should be denied alongside the
+//! decision. This allows callers to e.g. provide better error
+//! messages to users.
 //!
-//! Due to this, the `ratelimit_meter` crate does not provide any facility
-//! to wait until a cell would be allowed - if you require this, you
-//! should use the `Instant` returned with negative decisions and wait
-//! in your own, e.g. event loop.
+//! As a consequence, the `ratelimit_meter` crate does not provide any
+//! facility to wait until a cell would be allowed - if you require
+//! this, you should use the
+//! [`NonConformance`](struct.NonConformance.html) returned with
+//! negative decisions and have the program wait using the method best
+//! suited for this, e.g. an event loop.
 //!
 //! ## Rate-limiting Algorithms
 //!
