@@ -29,7 +29,7 @@ matrix:
     - &bench_build
       rust: "stable"
       env:
-        - RUN_BENCHMARK=true
+        - RUN_BENCH=true
         - RUN_TEST=false
     - &clippy_build
       rust: "nightly"
