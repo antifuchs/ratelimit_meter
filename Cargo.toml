@@ -9,6 +9,9 @@ readme = "README.md"
 description = "A leaky-bucket-as-a-meter rate-limiting implementation in Rust"
 documentation = "https://docs.rs/ratelimit_meter"
 
+# We use criterion, don't infer benchmark files.
+autobenches = false
+
 [badges]
 travis-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
 maintenance = { status = "passively-maintained" }
@@ -28,9 +31,14 @@ allow_failure = false
 [package.metadata.template_ci.bench]
 run = true
 
+[[bench]]
+name = "criterion"
+harness = false
+
 [dependencies]
-failure = "0.1.1"
-failure_derive = "0.1.1"
+failure = "0.1.2"
+failure_derive = "0.1.2"
+criterion = "0.2.5"
 
 [dev_dependencies]
 libc = "0.2.41"
