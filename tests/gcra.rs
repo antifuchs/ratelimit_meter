@@ -1,17 +1,22 @@
 extern crate ratelimit_meter;
 
-use ratelimit_meter::{Decider, MultiDecider, NegativeMultiDecision, GCRA};
+use ratelimit_meter::{build_with_capacity, Decider, MultiDecider, NegativeMultiDecision, GCRA};
+use std::num::NonZeroU32;
 use std::thread;
 use std::time::{Duration, Instant};
 
 #[test]
 fn accepts_first_cell() {
-    let mut gcra: GCRA = GCRA::for_capacity(5).unwrap().into();
+    let mut gcra: GCRA = build_with_capacity::<GCRA>(NonZeroU32::new(5).unwrap())
+        .build()
+        .unwrap();
     assert_eq!(Ok(()), gcra.check());
 }
 #[test]
 fn rejects_too_many() {
-    let mut gcra = GCRA::for_capacity(1).unwrap().build();
+    let mut gcra = build_with_capacity::<GCRA>(NonZeroU32::new(1).unwrap())
+        .build()
+        .unwrap();
     let now = Instant::now();
     gcra.check_at(now).unwrap();
     gcra.check_at(now).unwrap();
@@ -20,7 +25,9 @@ fn rejects_too_many() {
 
 #[test]
 fn allows_after_interval() {
-    let mut gcra = GCRA::for_capacity(1).unwrap().build();
+    let mut gcra = build_with_capacity::<GCRA>(NonZeroU32::new(1).unwrap())
+        .build()
+        .unwrap();
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     gcra.check_at(now).unwrap();
@@ -33,7 +40,9 @@ fn allows_after_interval() {
 
 #[test]
 fn allows_n_after_interval() {
-    let mut gcra = GCRA::for_capacity(2).unwrap().build();
+    let mut gcra = build_with_capacity::<GCRA>(NonZeroU32::new(2).unwrap())
+        .build()
+        .unwrap();
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     assert_eq!(Ok(()), gcra.check_n_at(2, now));
@@ -49,7 +58,10 @@ fn allows_n_after_interval() {
 #[test]
 fn correctly_handles_per() {
     let ms = Duration::from_millis(1);
-    let mut gcra = GCRA::for_capacity(1).unwrap().per(ms * 20).build();
+    let mut gcra = build_with_capacity::<GCRA>(NonZeroU32::new(1).unwrap())
+        .per(ms * 20)
+        .build()
+        .unwrap();
     let now = Instant::now();
 
     assert_eq!(Ok(()), gcra.check_at(now));
@@ -60,7 +72,9 @@ fn correctly_handles_per() {
 
 #[test]
 fn never_allows_more_than_capacity() {
-    let mut gcra = GCRA::for_capacity(5).unwrap().build();
+    let mut gcra = build_with_capacity::<GCRA>(NonZeroU32::new(5).unwrap())
+        .build()
+        .unwrap();
     let now = Instant::now();
     let ms = Duration::from_millis(1);
 
@@ -79,7 +93,9 @@ fn never_allows_more_than_capacity() {
 
 #[test]
 fn actual_threadsafety() {
-    let mut lim = GCRA::for_capacity(20).unwrap().build();
+    let mut lim = build_with_capacity::<GCRA>(NonZeroU32::new(20).unwrap())
+        .build()
+        .unwrap();
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     let mut children = vec![];

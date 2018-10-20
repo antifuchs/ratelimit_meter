@@ -1,8 +1,8 @@
 use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
 use {
-    Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision,
-    NonConformance,
+    Decider, ImpliedDeciderImpl, InconsistentCapacity, MultiDecider, MultiDeciderImpl,
+    NegativeMultiDecision, NewImpl, NonConformance,
 };
 
 use std::cmp;
@@ -35,11 +35,6 @@ impl MultiDecider for LeakyBucket {}
 /// library must take care to apply positive jitter to these wait
 /// times.
 ///
-/// # Thread safety
-///
-/// This implementation uses lock-free techniques to safely update the
-/// bucket state in-place.
-///
 /// # Example
 /// ``` rust
 /// # use std::num::NonZeroU32;
@@ -51,6 +46,27 @@ pub struct LeakyBucket {
     state: ThreadsafeWrapper<BucketState>,
     full: Duration,
     token_interval: Duration,
+}
+
+impl NewImpl for LeakyBucket {
+    fn from_construction_parameters(
+        capacity: NonZeroU32,
+        cell_weight: NonZeroU32,
+        per_time_unit: Duration,
+    ) -> Result<Self, InconsistentCapacity> {
+        if capacity < cell_weight {
+            return Err(InconsistentCapacity {
+                capacity,
+                cell_weight,
+            });
+        }
+        let token_interval = (per_time_unit * cell_weight.get()) / capacity.get();
+        Ok(LeakyBucket {
+            state: ThreadsafeWrapper::new(BucketState::default()),
+            full: per_time_unit,
+            token_interval,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
