@@ -15,11 +15,13 @@ macro_rules! run_with_variants {
     ($variant:expr, $var:ident, $code:block) => {
         match $variant {
             $crate::variants::Variant::GCRA => {
-                let mut $var = ::ratelimit_meter::GCRA::for_capacity(50).unwrap().build();
+                let mut $var = ::ratelimit_meter::per_second::<::ratelimit_meter::GCRA>(
+                    ::std::num::NonZeroU32::new(50).unwrap(),
+                );
                 $code
             }
             $crate::variants::Variant::LeakyBucket => {
-                let mut $var = ::ratelimit_meter::LeakyBucket::per_second(
+                let mut $var = ::ratelimit_meter::per_second::<::ratelimit_meter::LeakyBucket>(
                     ::std::num::NonZeroU32::new(50).unwrap(),
                 );
                 $code

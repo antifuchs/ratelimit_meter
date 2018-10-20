@@ -1,8 +1,11 @@
-use algorithms::InconsistentCapacity;
 use thread_safety::ThreadsafeWrapper;
-use {Decider, DeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision, NonConformance};
+use {
+    Decider, DeciderImpl, InconsistentCapacity, MultiDecider, MultiDeciderImpl,
+    NegativeMultiDecision, NewImpl, NonConformance,
+};
 
 use std::cmp;
+use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
 impl Decider for GCRA {}
@@ -69,9 +72,10 @@ where
 /// to the GCRA parameters τ=1s, T=50ms (that's 1s / 20 cells).
 ///
 /// ```
-/// # use ratelimit_meter::{Decider, GCRA};
+/// # use ratelimit_meter::{Decider, GCRA, per_second};
+/// # use std::num::NonZeroU32;
 /// # use std::time::{Instant, Duration};
-/// let mut limiter = GCRA::for_capacity(20).unwrap().cell_weight(1).unwrap().build();
+/// let mut limiter = per_second::<GCRA>(NonZeroU32::new(20).unwrap());
 /// let now = Instant::now();
 /// let ms = Duration::from_millis(1);
 /// assert_eq!(Ok(()), limiter.check_at(now)); // the first cell is free
@@ -95,66 +99,7 @@ pub struct GCRA {
     tat: ThreadsafeWrapper<Tat>,
 }
 
-/// A builder object that can be used to construct rate-limiters as
-/// meters.
-pub struct Builder {
-    capacity: u32,
-    cell_weight: u32,
-    time_unit: Duration,
-}
-
-/// Constructs a concrete GCRA instance.
-impl Builder {
-    /// Sets the "weight" of each cell being checked against the
-    /// bucket. Each cell fills the bucket by this much.
-    pub fn cell_weight(&mut self, weight: u32) -> Result<&mut Builder, InconsistentCapacity> {
-        if self.cell_weight > self.capacity {
-            return Err(InconsistentCapacity {
-                capacity: self.capacity,
-                weight,
-            });
-        }
-        self.cell_weight = weight;
-        Ok(self)
-    }
-
-    /// Sets the "unit of time" within which the bucket drains.
-    ///
-    /// The assumption is that in a period of `time_unit` (if no cells
-    /// are being checked), the bucket is fully drained.
-    pub fn per(&mut self, time_unit: Duration) -> &mut Builder {
-        self.time_unit = time_unit;
-        self
-    }
-
-    /// Builds a lock-free, threadsafe GCRA decider.
-    pub fn build(&self) -> GCRA {
-        GCRA {
-            t: (self.time_unit / self.capacity) * self.cell_weight,
-            tau: self.time_unit,
-            tat: ThreadsafeWrapper::<Tat>::default(),
-        }
-    }
-}
-
 impl GCRA {
-    /// Constructs a builder object for a GCRA rate-limiter with the
-    /// given capacity per second, at cell weight=1. See
-    /// [`Builder`](struct.Builder.html) for options.
-    pub fn for_capacity(capacity: u32) -> Result<Builder, InconsistentCapacity> {
-        if capacity == 0 {
-            return Err(InconsistentCapacity {
-                capacity,
-                weight: 0,
-            });
-        }
-        Ok(Builder {
-            capacity,
-            cell_weight: 1,
-            time_unit: Duration::from_secs(1),
-        })
-    }
-
     /// Constructs a GCRA rate-limiter with the parameters T (the
     /// minimum amount of time that single cells are spaced apart),
     /// tau (τ, the number of cells that fit into this buffer), and an
@@ -166,6 +111,26 @@ impl GCRA {
             tau,
             tat: ThreadsafeWrapper::new(Tat(tat.into())),
         }
+    }
+}
+
+impl NewImpl for GCRA {
+    fn from_construction_parameters(
+        capacity: NonZeroU32,
+        cell_weight: NonZeroU32,
+        per_time_unit: Duration,
+    ) -> Result<Self, InconsistentCapacity> {
+        if capacity < cell_weight {
+            return Err(InconsistentCapacity {
+                capacity,
+                cell_weight,
+            });
+        }
+        Ok(GCRA {
+            t: (per_time_unit / capacity.get()) * cell_weight.get(),
+            tau: per_time_unit,
+            tat: ThreadsafeWrapper::<Tat>::default(),
+        })
     }
 }
 
@@ -233,35 +198,6 @@ impl MultiDeciderImpl for GCRA {
                 )
             }
         })
-    }
-}
-
-/// Allows converting from a GCRA builder directly into a
-/// GCRA decider. Same as
-/// [the borrowed implementation](#impl-From%3C%26%27a%20mut%20Builder%3E), except for
-/// owned `Builder`s.
-/// # Example:
-/// ```
-/// use ratelimit_meter::{GCRA, Decider, NonConformance};
-/// let mut gcra: GCRA = GCRA::for_capacity(50).unwrap().into();
-/// assert_eq!(Ok(()), gcra.check());
-/// ```
-impl From<Builder> for GCRA {
-    fn from(b: Builder) -> Self {
-        b.build()
-    }
-}
-
-/// Allows converting a GCRA builder directly into a GCRA decider.
-/// # Example:
-/// ```
-/// use ratelimit_meter::{GCRA, Decider, NonConformance};
-/// let mut gcra: GCRA = GCRA::for_capacity(50).unwrap().cell_weight(2).unwrap().into();
-/// assert_eq!(Ok(()), gcra.check());
-/// ```
-impl<'a> From<&'a mut Builder> for GCRA {
-    fn from(b: &'a mut Builder) -> Self {
-        b.build()
     }
 }
 

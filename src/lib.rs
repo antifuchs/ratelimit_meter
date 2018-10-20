@@ -19,13 +19,14 @@
 //! from the [`GCRA`](algorithms/gcra/struct.GCRA.html) struct:
 //!
 //! ``` rust
+//! use std::num::NonZeroU32;
 //! use std::time::Duration;
-//! use ratelimit_meter::{Decider, GCRA};
+//! use ratelimit_meter::{Decider, GCRA, build_with_capacity};
 //!
-//! let mut lim = GCRA::for_capacity(50).unwrap() // Allow 50 units of work
+//! let mut lim = build_with_capacity::<GCRA>(NonZeroU32::new(50).unwrap()) // Allow 50 units of work
 //!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
-//!     .cell_weight(1).unwrap() // Each cell is one unit of work "heavy".
-//!     .build(); // Construct a GCRA decider.
+//!     .cell_weight(NonZeroU32::new(1).unwrap()).unwrap() // Each cell is one unit of work "heavy".
+//!     .build().unwrap(); // Construct a GCRA decider.
 //! assert_eq!(Ok(()), lim.check());
 //! ```
 //!
@@ -94,13 +95,14 @@
 //!
 //! ```
 //! use std::thread;
+//! use std::num::NonZeroU32;
 //! use std::time::Duration;
-//! use ratelimit_meter::{Decider, GCRA};
+//! use ratelimit_meter::{Decider, GCRA, build_with_capacity};
 //!
-//! let mut lim = GCRA::for_capacity(50).unwrap() // Allow 50 units of work
+//! let mut lim = build_with_capacity::<GCRA>(NonZeroU32::new(50).unwrap()) // Allow 50 units of work
 //!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
-//!     .cell_weight(1).unwrap() // Each cell is one unit of work "heavy".
-//!     .build(); // Construct a GCRA decider.
+//!     .cell_weight(NonZeroU32::new(1).unwrap()).unwrap() // Each cell is one unit of work "heavy".
+//!     .build().unwrap(); // Construct a GCRA decider.
 //! let mut thread_lim = lim.clone();
 //! thread::spawn(move || { assert_eq!(Ok(()), thread_lim.check());});
 //! assert_eq!(Ok(()), lim.check());
@@ -116,6 +118,8 @@ extern crate failure;
 extern crate failure_derive;
 extern crate parking_lot;
 
+use std::marker::PhantomData;
+use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
 use implementation::*;
@@ -210,23 +214,89 @@ pub enum NegativeMultiDecision {
 /// the rate-limiter, either at the current time instant, or at a
 /// given instant in time, updating the `Decider`'s internal state if
 /// the cell is conforming.
-pub trait Decider: DeciderImpl {
-    /// Tests is a single cell can be accommodated at the given time
-    /// stamp. If it can be, `check` updates the `Decider` to account
-    /// for the conforming cell and returns `Ok(())`.
+pub trait Decider: Sized + DeciderImpl {
+    /// Tests if a single cell can be accommodated at
+    /// `Instant::now()`. If it can be, `check` updates the `Decider`
+    /// to account for the conforming cell and returns `Ok(())`.
     ///
     /// If the cell is non-conforming (i.e., it can't be accomodated
     /// at this time stamp), `check_at` returns `Err` with information
     /// about the earliest time at which a cell could be considered
     /// conforming (see [`NonConformance`](struct.NonConformance.html)).
+    fn check(&mut self) -> Result<(), NonConformance> {
+        self.test_and_update(Instant::now())
+    }
+
+    /// Tests whether a single cell can be accommodated at the given
+    /// time stamp. See [`check`](#method.check).
     fn check_at(&mut self, at: Instant) -> Result<(), NonConformance> {
         self.test_and_update(at)
     }
+}
 
-    /// Tests if a single cell can be accommodated at
-    /// `Instant::now()`. See [`check_at`](#method.check_at).
-    fn check(&mut self) -> Result<(), NonConformance> {
-        self.test_and_update(Instant::now())
+/// Construct a new Decider that allows `capacity` cells per time
+/// unit through.
+/// # Examples
+/// You can construct a GCRA decider like so:
+/// ```
+/// # use std::num::NonZeroU32;
+/// # use std::time::Duration;
+/// use ratelimit_meter::GCRA;
+/// let _gcra = ratelimit_meter::new::<GCRA>(NonZeroU32::new(100).unwrap(),
+///                                          Duration::from_secs(5));
+/// ```
+///
+/// and similarly, for a leaky bucket:
+/// ```
+/// # use std::num::NonZeroU32;
+/// # use std::time::Duration;
+/// use ratelimit_meter::LeakyBucket;
+/// let _lb = ratelimit_meter::new::<LeakyBucket>(NonZeroU32::new(100).unwrap(),
+///                                               Duration::from_secs(5));
+/// ```
+pub fn new<T>(capacity: NonZeroU32, per_time_unit: Duration) -> T
+where
+    T: Sized + NewImpl,
+{
+    T::from_construction_parameters(capacity, NonZeroU32::new(1).unwrap(), per_time_unit).unwrap()
+}
+
+/// Construct a new Decider that allows `capacity` cells per
+/// second.
+/// # Examples
+/// Constructing a GCRA decider that lets through 100 cells per second:
+/// ```
+/// # use std::num::NonZeroU32;
+/// # use std::time::Duration;
+/// use ratelimit_meter::GCRA;
+/// let _gcra = ratelimit_meter::per_second::<GCRA>(NonZeroU32::new(100).unwrap());
+/// ```
+///
+/// and a leaky bucket:
+/// ```
+/// # use std::num::NonZeroU32;
+/// # use std::time::Duration;
+/// use ratelimit_meter::LeakyBucket;
+/// let _gcra = ratelimit_meter::per_second::<LeakyBucket>(NonZeroU32::new(100).unwrap());
+/// ```
+pub fn per_second<T>(capacity: NonZeroU32) -> T
+where
+    T: Sized + NewImpl,
+{
+    new::<T>(capacity, Duration::from_secs(1))
+}
+
+/// Return a builder that can be used to construct a Decider using
+/// the parameters passed to the Builder.
+pub fn build_with_capacity<T>(capacity: NonZeroU32) -> Builder<T>
+where
+    T: Sized + NewImpl,
+{
+    Builder {
+        capacity,
+        cell_weight: NonZeroU32::new(1).unwrap(),
+        time_unit: Duration::from_secs(1),
+        end_result: PhantomData,
     }
 }
 
@@ -256,6 +326,65 @@ pub trait MultiDecider: MultiDeciderImpl {
     /// (`Instant::now()`), using [`check_n_at`](#method.check_n_at)
     fn check_n(&mut self, n: u32) -> Result<(), NegativeMultiDecision> {
         self.test_n_and_update(n, Instant::now())
+    }
+}
+
+/// An error that is returned when initializing a Decider that is too
+/// small to let a single cell through.
+#[derive(Fail, Debug)]
+#[fail(
+    display = "bucket capacity {} too small for a single cell with weight {}",
+    capacity,
+    cell_weight
+)]
+pub struct InconsistentCapacity {
+    capacity: NonZeroU32,
+    cell_weight: NonZeroU32,
+}
+
+/// An object that allows incrementally constructing Decider objects.
+pub struct Builder<T>
+where
+    T: NewImpl + Sized,
+{
+    capacity: NonZeroU32,
+    cell_weight: NonZeroU32,
+    time_unit: Duration,
+    end_result: PhantomData<T>,
+}
+
+impl<T> Builder<T>
+where
+    T: NewImpl + Sized,
+{
+    /// Sets the "weight" of each cell being checked against the
+    /// bucket. Each cell fills the bucket by this much.
+    pub fn cell_weight(
+        &mut self,
+        weight: NonZeroU32,
+    ) -> Result<&mut Builder<T>, InconsistentCapacity> {
+        if self.cell_weight > self.capacity {
+            return Err(InconsistentCapacity {
+                capacity: self.capacity,
+                cell_weight: self.cell_weight,
+            });
+        }
+        self.cell_weight = weight;
+        Ok(self)
+    }
+
+    /// Sets the "unit of time" within which the bucket drains.
+    ///
+    /// The assumption is that in a period of `time_unit` (if no cells
+    /// are being checked), the bucket is fully drained.
+    pub fn per(&mut self, time_unit: Duration) -> &mut Builder<T> {
+        self.time_unit = time_unit;
+        self
+    }
+
+    /// Builds a decider of the specified type.
+    pub fn build(&self) -> Result<T, InconsistentCapacity> {
+        T::from_construction_parameters(self.capacity, self.cell_weight, self.time_unit)
     }
 }
 
