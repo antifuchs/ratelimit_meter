@@ -2,11 +2,10 @@
 pub enum Variant {
     GCRA,
     LeakyBucket,
-    Allower,
 }
 
 impl Variant {
-    pub const ALL: &'static [Variant; 3] = &[Variant::GCRA, Variant::LeakyBucket, Variant::Allower];
+    pub const ALL: &'static [Variant; 2] = &[Variant::GCRA, Variant::LeakyBucket];
 }
 
 // I really wish I could just have a function that returns an impl
@@ -23,10 +22,6 @@ macro_rules! run_with_variants {
                 let mut $var = ::ratelimit_meter::LeakyBucket::per_second(
                     ::std::num::NonZeroU32::new(50).unwrap(),
                 );
-                $code
-            }
-            $crate::variants::Variant::Allower => {
-                let mut $var = ::ratelimit_meter::example_algorithms::Allower::new();
                 $code
             }
         }
