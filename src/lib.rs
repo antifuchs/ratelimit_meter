@@ -20,13 +20,9 @@
 //!
 //! ``` rust
 //! use std::num::NonZeroU32;
-//! use std::time::Duration;
-//! use ratelimit_meter::{Decider, GCRA, build_with_capacity};
+//! use ratelimit_meter::{Decider, GCRA, per_second};
 //!
-//! let mut lim = build_with_capacity::<GCRA>(NonZeroU32::new(50).unwrap()) // Allow 50 units of work
-//!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
-//!     .cell_weight(NonZeroU32::new(1).unwrap()).unwrap() // Each cell is one unit of work "heavy".
-//!     .build().unwrap(); // Construct a GCRA decider.
+//! let mut lim = per_second::<GCRA>(NonZeroU32::new(50).unwrap()); // Allow 50 units per second
 //! assert_eq!(Ok(()), lim.check());
 //! ```
 //!
@@ -97,12 +93,10 @@
 //! use std::thread;
 //! use std::num::NonZeroU32;
 //! use std::time::Duration;
-//! use ratelimit_meter::{Decider, GCRA, build_with_capacity};
+//! use ratelimit_meter::{Decider, GCRA, per_second};
 //!
-//! let mut lim = build_with_capacity::<GCRA>(NonZeroU32::new(50).unwrap()) // Allow 50 units of work
-//!     .per(Duration::from_secs(1)) // We calculate per-second (this is the default).
-//!     .cell_weight(NonZeroU32::new(1).unwrap()).unwrap() // Each cell is one unit of work "heavy".
-//!     .build().unwrap(); // Construct a GCRA decider.
+//! // Allow 50 units/second across all threads:
+//! let mut lim = per_second::<GCRA>(NonZeroU32::new(50).unwrap());
 //! let mut thread_lim = lim.clone();
 //! thread::spawn(move || { assert_eq!(Ok(()), thread_lim.check());});
 //! assert_eq!(Ok(()), lim.check());
