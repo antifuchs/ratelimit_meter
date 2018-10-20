@@ -136,9 +136,8 @@ impl NewImpl for GCRA {
 
 impl DeciderImpl for GCRA {
     /// Tests if a single cell can be accommodated by the
-    /// rate-limiter. This is a threadsafe, lock-free implementation
-    /// of the method described directly in the GCRA algorithm, and is
-    /// the fastest.
+    /// rate-limiter. This is a threadsafe implementation of the
+    /// method described directly in the GCRA algorithm.
     fn test_and_update(&mut self, t0: Instant) -> Result<(), NonConformance> {
         let tau = self.tau;
         let t = self.t;

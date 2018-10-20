@@ -35,11 +35,6 @@ impl MultiDecider for LeakyBucket {}
 /// library must take care to apply positive jitter to these wait
 /// times.
 ///
-/// # Thread safety
-///
-/// This implementation uses lock-free techniques to safely update the
-/// bucket state in-place.
-///
 /// # Example
 /// ``` rust
 /// # use std::num::NonZeroU32;
