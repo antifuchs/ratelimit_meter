@@ -1,5 +1,6 @@
+use parking_lot::Mutex;
 use std::fmt;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Clone)]
 /// Wraps the atomic operations on a Decider's state in a threadsafe
@@ -56,7 +57,7 @@ where
     where
         F: Fn(&T) -> (Result<(), E>, Option<T>),
     {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock();
         let (decision, new_data) = f(&*data);
         if let Some(new_data) = new_data {
             *data = new_data;
@@ -76,7 +77,7 @@ where
     /// # Panics
     /// Panics if an error occurs in acquiring any locks.
     pub(crate) fn snapshot(&self) -> T {
-        let data = self.data.lock().unwrap();
+        let data = self.data.lock();
         data.clone()
     }
 }

@@ -114,6 +114,7 @@ mod thread_safety;
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
+extern crate parking_lot;
 
 use std::time::{Duration, Instant};
 
