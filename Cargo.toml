@@ -30,6 +30,7 @@ allow_failure = false
 
 [package.metadata.template_ci.bench]
 run = true
+version = "stable"
 
 [[bench]]
 name = "criterion"
