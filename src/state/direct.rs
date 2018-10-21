@@ -21,10 +21,10 @@ impl<A> DirectRateLimiter<A>
 where
     A: Algorithm,
 {
-    /// Construct a new Decider that allows `capacity` cells per time
-    /// unit through.
+    /// Construct a new rate limiter that allows `capacity` cells per
+    /// time unit through.
     /// # Examples
-    /// You can construct a GCRA decider like so:
+    /// You can construct a GCRA rate limiter like so:
     /// ```
     /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
@@ -53,10 +53,10 @@ where
         }
     }
 
-    /// Construct a new Decider that allows `capacity` cells per
+    /// Construct a new rate limiter that allows `capacity` cells per
     /// second.
     /// # Examples
-    /// Constructing a GCRA decider that lets through 100 cells per second:
+    /// Constructing a GCRA rate limiter that lets through 100 cells per second:
     /// ```
     /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
@@ -75,7 +75,7 @@ where
         Self::new(capacity, Duration::from_secs(1))
     }
 
-    /// Return a builder that can be used to construct a Decider using
+    /// Return a builder that can be used to construct a rate limiter using
     /// the parameters passed to the Builder.
     pub fn build_with_capacity(capacity: NonZeroU32) -> Builder<A> {
         Builder {
@@ -87,8 +87,9 @@ where
     }
 
     /// Tests if a single cell can be accommodated at
-    /// `Instant::now()`. If it can be, `check` updates the `Decider`
-    /// to account for the conforming cell and returns `Ok(())`.
+    /// `Instant::now()`. If it can be, `check` updates the rate
+    /// limiter state to account for the conforming cell and returns
+    /// `Ok(())`.
     ///
     /// If the cell is non-conforming (i.e., it can't be accomodated
     /// at this time stamp), `check_at` returns `Err` with information
@@ -104,7 +105,7 @@ where
     /// account for all cells and returns `Ok(())`.
     ///
     /// If the entire batch of cells would not be conforming but the
-    /// `MultiDecider` has the capacity to accomodate the cells at any
+    /// rate limiter has the capacity to accomodate the cells at any
     /// point in time, `check_n_at` returns error
     /// [`NegativeMultiDecision::BatchNonConforming`](enum.NegativeMultiDecision.html#variant.BatchNonConforming),
     /// holding the number of cells and
@@ -130,7 +131,8 @@ where
     }
 }
 
-/// An object that allows incrementally constructing Decider objects.
+/// An object that allows incrementally constructing rate Limiter
+/// objects.
 pub struct Builder<T>
 where
     T: Algorithm + Sized,
@@ -170,7 +172,7 @@ where
         self
     }
 
-    /// Builds a decider of the specified type.
+    /// Builds a rate limiter of the specified type.
     pub fn build(&self) -> Result<DirectRateLimiter<A>, InconsistentCapacity> {
         Ok(DirectRateLimiter {
             algorithm: PhantomData,

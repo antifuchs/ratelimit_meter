@@ -4,6 +4,8 @@ use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
 use {algorithms::Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
+use evmap::ShallowCopy;
+
 use std::cmp;
 use std::time::{Duration, Instant};
 
@@ -40,19 +42,25 @@ use std::time::{Duration, Instant};
 pub struct LeakyBucket {}
 
 /// Represents the state of a single history of decisions.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Eq, PartialEq, Clone)]
 pub struct State(ThreadsafeWrapper<BucketState>);
+
+impl ShallowCopy for State {
+    unsafe fn shallow_copy(&mut self) -> Self {
+        State(self.0.shallow_copy())
+    }
+}
 
 /// Represents the parameters affecting all decisions made using a
 /// single rate limiter - the total capacity of the bucket, and the
 /// interval during which a full new token's "volume" drips out.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Params {
     full: Duration,
     token_interval: Duration,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct BucketState {
     level: Duration,
     last_update: Option<Instant>,

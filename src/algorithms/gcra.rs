@@ -3,15 +3,23 @@
 use thread_safety::ThreadsafeWrapper;
 use {algorithms::Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
+use evmap::ShallowCopy;
+
 use std::cmp;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
 /// The GCRA's state about a single rate limiting history.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Eq, PartialEq, Default, Clone)]
 pub struct State(ThreadsafeWrapper<Tat>);
 
-#[derive(Debug, PartialEq, Clone)]
+impl ShallowCopy for State {
+    unsafe fn shallow_copy(&mut self) -> Self {
+        State(self.0.shallow_copy())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Tat(Option<Instant>);
 
 impl Default for Tat {

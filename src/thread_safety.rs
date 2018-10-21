@@ -1,3 +1,4 @@
+use evmap::ShallowCopy;
 use parking_lot::Mutex;
 use std::fmt;
 use std::sync::Arc;
@@ -7,14 +8,14 @@ use std::sync::Arc;
 /// fashion.
 pub(crate) struct ThreadsafeWrapper<T>
 where
-    T: fmt::Debug + Default + Clone,
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
     data: Arc<Mutex<T>>,
 }
 
 impl<T> Default for ThreadsafeWrapper<T>
 where
-    T: fmt::Debug + Default + Clone,
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
     fn default() -> Self {
         ThreadsafeWrapper {
@@ -23,9 +24,28 @@ where
     }
 }
 
+impl<T> PartialEq<Self> for ThreadsafeWrapper<T>
+where
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        let mine = self.data.lock();
+        let other = other.data.lock();
+        *other == *mine
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        let mine = self.data.lock();
+        let other = other.data.lock();
+        *other != *mine
+    }
+}
+
+impl<T> Eq for ThreadsafeWrapper<T> where T: fmt::Debug + Default + Clone + PartialEq + Eq {}
+
 impl<T> fmt::Debug for ThreadsafeWrapper<T>
 where
-    T: fmt::Debug + Default + Clone,
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let data = self.data.lock();
@@ -33,9 +53,20 @@ where
     }
 }
 
+impl<T> ShallowCopy for ThreadsafeWrapper<T>
+where
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
+{
+    unsafe fn shallow_copy(&mut self) -> Self {
+        ThreadsafeWrapper {
+            data: self.data.shallow_copy(),
+        }
+    }
+}
+
 impl<T> ThreadsafeWrapper<T>
 where
-    T: fmt::Debug + Default + Clone,
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
     #[inline]
     /// Wraps retrieving a bucket's data, calls a function to make a
