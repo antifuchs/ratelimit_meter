@@ -1,6 +1,6 @@
 use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
-use {DeciderImpl, InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use {Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
 use std::cmp;
 use std::time::{Duration, Instant};
@@ -63,7 +63,7 @@ impl Default for BucketState {
     }
 }
 
-impl DeciderImpl for LeakyBucket {
+impl Algorithm for LeakyBucket {
     type BucketState = State;
     type BucketParams = Params;
 

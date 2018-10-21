@@ -1,5 +1,5 @@
 use thread_safety::ThreadsafeWrapper;
-use {DeciderImpl, InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use {Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
 use std::cmp;
 use std::num::NonZeroU32;
@@ -80,7 +80,7 @@ pub struct Params {
 /// assert_eq!(Ok(()), limiter.check_at(now + ms*50));
 pub struct GCRA {}
 
-impl DeciderImpl for GCRA {
+impl Algorithm for GCRA {
     type BucketState = State;
 
     type BucketParams = Params;

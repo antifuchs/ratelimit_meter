@@ -210,7 +210,7 @@ pub enum NegativeMultiDecision {
 /// decisions. This kind of rate limiter can be used to regulate the
 /// number of packets per connection.
 #[derive(Debug, Clone)]
-pub struct DirectRateLimiter<A: DeciderImpl> {
+pub struct DirectRateLimiter<A: Algorithm> {
     algorithm: PhantomData<A>,
     state: A::BucketState,
     params: A::BucketParams,
@@ -221,7 +221,7 @@ pub struct DirectRateLimiter<A: DeciderImpl> {
 /// number of packets per connection.
 impl<A> DirectRateLimiter<A>
 where
-    A: DeciderImpl,
+    A: Algorithm,
 {
     /// Construct a new Decider that allows `capacity` cells per time
     /// unit through.
@@ -246,8 +246,8 @@ where
     pub fn new(capacity: NonZeroU32, per_time_unit: Duration) -> Self {
         DirectRateLimiter {
             algorithm: PhantomData,
-            state: <A as DeciderImpl>::BucketState::default(),
-            params: <A as DeciderImpl>::params_from_constructor(
+            state: <A as Algorithm>::BucketState::default(),
+            params: <A as Algorithm>::params_from_constructor(
                 capacity,
                 NonZeroU32::new(1).unwrap(),
                 per_time_unit,
@@ -297,7 +297,7 @@ where
     /// about the earliest time at which a cell could be considered
     /// conforming (see [`NonConformance`](struct.NonConformance.html)).
     pub fn check(&mut self) -> Result<(), NonConformance> {
-        <A as DeciderImpl>::test_and_update(&mut self.state, &self.params, Instant::now())
+        <A as Algorithm>::test_and_update(&mut self.state, &self.params, Instant::now())
     }
 
     /// Tests if `n` cells can be accommodated at the current time
@@ -316,19 +316,19 @@ where
     /// [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity),
     /// indicating that a batch of this many cells can never succeed.
     pub fn check_n(&mut self, n: u32) -> Result<(), NegativeMultiDecision> {
-        <A as DeciderImpl>::test_n_and_update(&mut self.state, &self.params, n, Instant::now())
+        <A as Algorithm>::test_n_and_update(&mut self.state, &self.params, n, Instant::now())
     }
 
     /// Tests whether a single cell can be accommodated at the given
     /// time stamp. See [`check`](#method.check).
     pub fn check_at(&mut self, at: Instant) -> Result<(), NonConformance> {
-        <A as DeciderImpl>::test_and_update(&mut self.state, &self.params, at)
+        <A as Algorithm>::test_and_update(&mut self.state, &self.params, at)
     }
 
     /// Tests if `n` cells can be accommodated at the given time
     /// (`Instant::now()`), using [`check_n`](#method.check_n)
     pub fn check_n_at(&mut self, n: u32, at: Instant) -> Result<(), NegativeMultiDecision> {
-        <A as DeciderImpl>::test_n_and_update(&mut self.state, &self.params, n, at)
+        <A as Algorithm>::test_n_and_update(&mut self.state, &self.params, n, at)
     }
 }
 
@@ -348,7 +348,7 @@ pub struct InconsistentCapacity {
 /// An object that allows incrementally constructing Decider objects.
 pub struct Builder<T>
 where
-    T: DeciderImpl + Sized,
+    T: Algorithm + Sized,
 {
     capacity: NonZeroU32,
     cell_weight: NonZeroU32,
@@ -358,7 +358,7 @@ where
 
 impl<A> Builder<A>
 where
-    A: DeciderImpl + Sized,
+    A: Algorithm + Sized,
 {
     /// Sets the "weight" of each cell being checked against the
     /// bucket. Each cell fills the bucket by this much.
@@ -389,8 +389,8 @@ where
     pub fn build(&self) -> Result<DirectRateLimiter<A>, InconsistentCapacity> {
         Ok(DirectRateLimiter {
             algorithm: PhantomData,
-            state: <A as DeciderImpl>::BucketState::default(),
-            params: <A as DeciderImpl>::params_from_constructor(
+            state: <A as Algorithm>::BucketState::default(),
+            params: <A as Algorithm>::params_from_constructor(
                 self.capacity,
                 self.cell_weight,
                 self.time_unit,

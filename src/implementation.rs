@@ -2,10 +2,14 @@ use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 use {InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
-/// The trait that implementations of the metered rate-limiter
-/// interface have to implement. Users of this library should rely on
-/// [Decider](trait.Decider.html) for the external interface instead.
-pub trait DeciderImpl {
+/// The trait that implementations of metered rate-limiter algorithms
+/// have to implement.
+///
+/// This is a stateless trait, which should allow for a variety of
+/// rate-limiting schemes, like Redis or keyed vs. un-keyed
+/// rate-limiting (one bucket per user vs. one bucket for the entire
+/// API).
+pub trait Algorithm {
     /// The state of a single rate limiting bucket.
     type BucketState: Default + Send + Sync;
 
@@ -26,9 +30,6 @@ pub trait DeciderImpl {
     /// The update is all or nothing: Unless all n cells can be
     /// accommodated, the state of the rate limiter will not be
     /// updated.
-    ///
-    /// This method is not meant to be called by users, see instead
-    /// [the `Decider` trait](trait.Decider.html).
     fn test_n_and_update(
         state: &mut Self::BucketState,
         params: &Self::BucketParams,
@@ -40,10 +41,8 @@ pub trait DeciderImpl {
     /// at the instant `at` and updates the rate-limiter to account
     /// for the weight of the cell.
     ///
-    /// This method is not meant to be called by users, see instead
-    /// the [Decider trait](trait.Decider.html). The default
-    /// implementation only calls
-    /// [`test_n_and_update`](#test_n_and_update).
+    /// This method is provided by default, using the `n` test&update
+    /// method.
     fn test_and_update(
         state: &mut Self::BucketState,
         params: &Self::BucketParams,

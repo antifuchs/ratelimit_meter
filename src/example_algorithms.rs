@@ -1,6 +1,6 @@
 use failure::_core::time::Duration;
 use std::num::NonZeroU32;
-use {DeciderImpl, DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision};
+use {Algorithm, DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision};
 
 use std::time::Instant;
 
@@ -25,7 +25,7 @@ impl Allower {
     }
 }
 
-impl DeciderImpl for Allower {
+impl Algorithm for Allower {
     type BucketState = ();
     type BucketParams = ();
 
