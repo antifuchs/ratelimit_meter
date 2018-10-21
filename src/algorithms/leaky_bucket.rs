@@ -1,3 +1,5 @@
+//! A classic leaky bucket algorithm
+
 use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
 use {Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
@@ -41,7 +43,9 @@ pub struct LeakyBucket {}
 #[derive(Debug, Default, Clone)]
 pub struct State(ThreadsafeWrapper<BucketState>);
 
-/// Represents the parameters of all decisions.
+/// Represents the parameters affecting all decisions made using a
+/// single rate limiter - the total capacity of the bucket, and the
+/// interval during which a full new token's "volume" drips out.
 #[derive(Debug, Clone)]
 pub struct Params {
     full: Duration,

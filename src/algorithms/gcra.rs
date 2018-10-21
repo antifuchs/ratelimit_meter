@@ -1,3 +1,5 @@
+//! The Generic Cell Rate Algorithm
+
 use thread_safety::ThreadsafeWrapper;
 use {Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
@@ -18,6 +20,9 @@ impl Default for Tat {
     }
 }
 
+/// Represents the parameters affecting all decisions that a
+/// GCRA-using rate limiter makes - the weight of a single cell, and
+/// the capacity of the bucket.
 #[derive(Debug, Clone)]
 pub struct Params {
     // The "weight" of a single packet in units of time.
