@@ -52,46 +52,46 @@ where
         }
     }
 
-    pub fn check_at(&mut self, key: K, at: Instant) -> Result<(), NonConformance> {
+    fn check_and_update_key<E, F>(&self, key: K, update: F) -> Result<(), E>
+    where
+        F: Fn(&A::BucketState) -> Result<(), E>,
+    {
         self.map_reader
             .get_and(&key, |v| {
                 // we have at least one element (owing to the nature of
                 // the evmap, it says there could be >1
                 // entries, but we'll only ever add one):
-                let state = v.get(0).unwrap().clone();
-                <A as Algorithm>::test_and_update(state, &self.params, at)
+                let state = v.get(0).unwrap();
+                update(state)
             }).unwrap_or_else(|| {
                 // entry does not exist, let's add one.
                 let mut w = self.map_writer.lock();
                 let state: A::BucketState = Default::default();
-                let result = <A as Algorithm>::test_and_update(&state, &self.params, at);
+                let result = update(&state);
                 w.update(key, state);
                 w.flush();
                 result
             })
     }
 
+    pub fn check_at(&mut self, key: K, at: Instant) -> Result<(), NonConformance> {
+        self.check_and_update_key(key, |state| {
+            <A as Algorithm>::test_and_update(state, &self.params, at)
+        })
+    }
+
     pub fn check_n_at(&mut self, key: K, n: u32, at: Instant) -> Result<(), NegativeMultiDecision> {
-        self.map_reader
-            .get_and(&key, |v| {
-                // we have at least one element (owing to the nature of
-                // the evmap, it says there could be >1
-                // entries, but we'll only ever add one):
-                let state = v.get(0).unwrap().clone();
-                <A as Algorithm>::test_n_and_update(state, &self.params, n, at)
-            }).unwrap_or_else(|| {
-                // entry does not exist, let's add one.
-                let mut w = self.map_writer.lock();
-                let state: A::BucketState = Default::default();
-                let result = <A as Algorithm>::test_n_and_update(&state, &self.params, n, at);
-                w.update(key, state);
-                w.flush();
-                result
-            })
+        self.check_and_update_key(key, |state| {
+            <A as Algorithm>::test_n_and_update(state, &self.params, n, at)
+        })
     }
 
     pub fn check(&mut self, key: K) -> Result<(), NonConformance> {
         self.check_at(key, Instant::now())
+    }
+
+    pub fn check_n(&mut self, key: K, n: u32) -> Result<(), NegativeMultiDecision> {
+        self.check_n_at(key, n, Instant::now())
     }
 }
 
