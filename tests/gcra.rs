@@ -32,7 +32,7 @@ fn allows_after_interval() {
     let ms = Duration::from_millis(1);
     gcra.check_at(now).unwrap();
     assert_eq!(Ok(()), gcra.check_at(now + ms));
-    assert!(gcra.check_at(now + ms * 2).is_err());
+    assert_ne!(Ok(()), gcra.check_at(now + ms * 2));
     // should be ok again in 1s:
     let next = now + Duration::from_secs(1);
     assert_eq!(Ok(()), gcra.check_at(next));

@@ -39,7 +39,7 @@ impl Algorithm for Allower {
 
     /// Allows all cells through unconditionally.
     fn test_n_and_update(
-        _state: &mut Self::BucketState,
+        _state: &Self::BucketState,
         _params: &Self::BucketParams,
         _n: u32,
         _t0: Instant,

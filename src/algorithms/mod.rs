@@ -38,7 +38,7 @@ pub trait Algorithm {
     /// accommodated, the state of the rate limiter will not be
     /// updated.
     fn test_n_and_update(
-        state: &mut Self::BucketState,
+        state: &Self::BucketState,
         params: &Self::BucketParams,
         n: u32,
         at: Instant,
@@ -51,7 +51,7 @@ pub trait Algorithm {
     /// This method is provided by default, using the `n` test&update
     /// method.
     fn test_and_update(
-        state: &mut Self::BucketState,
+        state: &Self::BucketState,
         params: &Self::BucketParams,
         at: Instant,
     ) -> Result<(), NonConformance> {

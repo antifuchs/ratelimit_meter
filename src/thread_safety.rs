@@ -78,7 +78,7 @@ where
     ///
     /// # Panics
     /// Panics if an error occurs in acquiring any locks.
-    pub(crate) fn measure_and_replace<F, E>(&mut self, f: F) -> Result<(), E>
+    pub(crate) fn measure_and_replace<F, E>(&self, f: F) -> Result<(), E>
     where
         F: Fn(&T) -> (Result<(), E>, Option<T>),
     {

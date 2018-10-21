@@ -119,7 +119,7 @@ impl Algorithm for GCRA {
     /// rate-limiter. This is a threadsafe implementation of the
     /// method described directly in the GCRA algorithm.
     fn test_and_update(
-        state: &mut Self::BucketState,
+        state: &Self::BucketState,
         params: &Self::BucketParams,
         t0: Instant,
     ) -> Result<(), NonConformance> {
@@ -142,7 +142,7 @@ impl Algorithm for GCRA {
     /// it is likely not as fast (and not as obviously "right") as the
     /// single-cell variant.
     fn test_n_and_update(
-        state: &mut Self::BucketState,
+        state: &Self::BucketState,
         params: &Self::BucketParams,
         n: u32,
         t0: Instant,

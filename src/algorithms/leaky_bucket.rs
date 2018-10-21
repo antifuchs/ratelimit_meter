@@ -98,7 +98,7 @@ impl Algorithm for LeakyBucket {
     }
 
     fn test_n_and_update(
-        state: &mut Self::BucketState,
+        state: &Self::BucketState,
         params: &Self::BucketParams,
         n: u32,
         t0: Instant,
