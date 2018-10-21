@@ -11,13 +11,15 @@ use std::time::Instant;
 /// ```
 /// use ratelimit_meter::DirectRateLimiter;
 /// use ratelimit_meter::example_algorithms::Allower;
-/// let mut allower = Allower::new();
+/// let mut allower = Allower::ratelimiter();
 /// assert!(allower.check().is_ok());
 /// ```
 pub struct Allower {}
 
 impl Allower {
-    pub fn new() -> DirectRateLimiter<Allower> {
+    /// Return a rate-limiter that lies, i.e. that allows all requests
+    /// through.
+    pub fn ratelimiter() -> DirectRateLimiter<Allower> {
         // These numbers are fake, but we make them up for convenience:
         DirectRateLimiter::per_second(NonZeroU32::new(1).unwrap())
     }
