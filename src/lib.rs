@@ -86,8 +86,9 @@
 //!
 //! ## Thread-safe operation
 //!
-//! The implementations in this crate use compare-and-set to keep
-//! state, and are safe to share across threads..
+//! The in-memory implementations in this crate use parking_lot
+//! mutexes to ensure rate-limiting operations can happen safely
+//! across threads.
 //!
 //! Example:
 //!
@@ -106,7 +107,6 @@
 
 pub mod algorithms;
 pub mod example_algorithms;
-mod implementation;
 pub mod state;
 mod thread_safety;
 
@@ -117,8 +117,6 @@ extern crate parking_lot;
 
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
-
-use implementation::*;
 
 pub use self::algorithms::LeakyBucket;
 pub use self::algorithms::GCRA;

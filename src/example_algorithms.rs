@@ -1,6 +1,6 @@
 use failure::_core::time::Duration;
 use std::num::NonZeroU32;
-use {Algorithm, DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision};
+use {algorithms::Algorithm, DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision};
 
 use std::time::Instant;
 

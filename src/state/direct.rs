@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
-use {Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use {algorithms::Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
 /// An in-memory rate limiter that makes direct (un-keyed) rate-limiting
 /// decisions. This kind of rate limiter can be used to regulate the

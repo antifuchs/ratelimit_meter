@@ -1,7 +1,7 @@
 //! The Generic Cell Rate Algorithm
 
 use thread_safety::ThreadsafeWrapper;
-use {Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use {algorithms::Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
 use std::cmp;
 use std::num::NonZeroU32;

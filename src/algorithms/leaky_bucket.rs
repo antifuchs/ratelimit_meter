@@ -2,7 +2,7 @@
 
 use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
-use {Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use {algorithms::Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
 use std::cmp;
 use std::time::{Duration, Instant};
