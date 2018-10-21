@@ -55,21 +55,21 @@ fn allows_after_interval() {
     assert_eq!(Ok(()), gcra.check_at("foo", next));
 }
 
-// #[test]
-// fn allows_n_after_interval() {
-//     let mut gcra =
-//         KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(2).unwrap(), Duration::from_secs(1));
-//     let now = Instant::now();
-//     let ms = Duration::from_millis(1);
-//     assert_eq!(Ok(()), gcra.check_n_at(2, now));
-//     assert!(!gcra.check_n_at(2, now + ms).is_ok());
-//     // should be ok again in 1.5s:
-//     let next = now + Duration::from_secs(1);
-//     assert_eq!(Ok(()), gcra.check_n_at(2, next), "now: {:?}", next);
+#[test]
+fn allows_n_after_interval() {
+    let mut gcra =
+        KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(2).unwrap(), Duration::from_secs(1));
+    let now = Instant::now();
+    let ms = Duration::from_millis(1);
+    assert_eq!(Ok(()), gcra.check_n_at("foo", 2, now));
+    assert!(!gcra.check_n_at("foo", 2, now + ms).is_ok());
+    // should be ok again in 1.5s:
+    let next = now + Duration::from_secs(1);
+    assert_eq!(Ok(()), gcra.check_n_at("foo", 2, next), "now: {:?}", next);
 
-//     // should always accommodate 0 cells:
-//     assert_eq!(Ok(()), gcra.check_n_at(0, next));
-// }
+    // should always accommodate 0 cells:
+    assert_eq!(Ok(()), gcra.check_n_at("foo", 0, next));
+}
 
 #[test]
 fn correctly_handles_per() {
@@ -83,25 +83,25 @@ fn correctly_handles_per() {
     assert_eq!(Ok(()), gcra.check_at("foo", now + ms * 20));
 }
 
-// #[test]
-// fn never_allows_more_than_capacity() {
-//     let mut gcra =
-//         KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(5).unwrap(), Duration::from_secs(1));
-//     let now = Instant::now();
-//     let ms = Duration::from_millis(1);
+#[test]
+fn never_allows_more_than_capacity() {
+    let mut gcra =
+        KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(5).unwrap(), Duration::from_secs(1));
+    let now = Instant::now();
+    let ms = Duration::from_millis(1);
 
-//     // Should not allow the first 15 cells on a capacity 5 bucket:
-//     assert!(gcra.check_n_at(15, now).is_err());
+    // Should not allow the first 15 cells on a capacity 5 bucket:
+    assert!(gcra.check_n_at("foo", 15, now).is_err());
 
-//     // After 3 and 20 seconds, it should not allow 15 on that bucket either:
-//     assert!(gcra.check_n_at(15, now + (ms * 3 * 1000)).is_err());
+    // After 3 and 20 seconds, it should not allow 15 on that bucket either:
+    assert!(gcra.check_n_at("foo", 15, now + (ms * 3 * 1000)).is_err());
 
-//     let result = gcra.check_n_at(15, now + (ms * 20 * 1000));
-//     match result {
-//         Err(NegativeMultiDecision::InsufficientCapacity(n)) => assert_eq!(n, 15),
-//         _ => panic!("Did not expect {:?}", result),
-//     }
-// }
+    let result = gcra.check_n_at("foo", 15, now + (ms * 20 * 1000));
+    match result {
+        Err(NegativeMultiDecision::InsufficientCapacity(n)) => assert_eq!(n, 15),
+        _ => panic!("Did not expect {:?}", result),
+    }
+}
 
 #[test]
 fn actual_threadsafety() {
