@@ -123,6 +123,7 @@ pub use self::algorithms::LeakyBucket;
 pub use self::algorithms::GCRA;
 
 pub use self::state::DirectRateLimiter;
+pub use self::state::KeyedRateLimiter;
 
 /// Provides additional information about non-conforming cells, most
 /// importantly the earliest time until the next cell could be

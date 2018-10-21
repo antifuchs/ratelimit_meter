@@ -5,6 +5,7 @@ pub use self::gcra::*;
 pub use self::leaky_bucket::*;
 
 use evmap::ShallowCopy;
+use std::fmt;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 use {InconsistentCapacity, NegativeMultiDecision, NonConformance};
@@ -18,11 +19,11 @@ use {InconsistentCapacity, NegativeMultiDecision, NonConformance};
 /// API).
 pub trait Algorithm {
     /// The state of a single rate limiting bucket.
-    type BucketState: Default + Send + Sync + Eq + ShallowCopy;
+    type BucketState: Default + Send + Sync + Eq + ShallowCopy + fmt::Debug;
 
     /// The immutable parameters of the rate limiting bucket (e.g.,
     /// maximum capacity).
-    type BucketParams: Send + Sync;
+    type BucketParams: Send + Sync + fmt::Debug;
 
     fn params_from_constructor(
         capacity: NonZeroU32,
