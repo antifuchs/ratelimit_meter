@@ -1,7 +1,6 @@
 use std::time::{Duration, Instant};
 
 use ratelimit_meter::example_algorithms::Allower;
-use ratelimit_meter::{Decider, MultiDecider};
 
 use criterion::{black_box, Criterion};
 

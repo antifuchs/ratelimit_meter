@@ -1,7 +1,5 @@
 use std::time::{Duration, Instant};
 
-use ratelimit_meter::{Decider, MultiDecider};
-
 use super::variants::Variant;
 
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};

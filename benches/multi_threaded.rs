@@ -3,7 +3,6 @@ use std::time::{Duration, Instant};
 
 use super::variants::Variant;
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
-use ratelimit_meter::Decider;
 
 pub fn bench_all(c: &mut Criterion) {
     let id = "multi_threaded/20_threads";
