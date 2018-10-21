@@ -1,15 +1,15 @@
-use {Decider, DeciderImpl, DirectDeciderImpl, NegativeMultiDecision};
+use failure::_core::time::Duration;
+use std::num::NonZeroU32;
+use {DeciderImpl, DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision};
 
 use std::time::Instant;
-
-impl<'a> Decider<'a> for Allower {}
 
 #[derive(Default, Copy, Clone)]
 /// The most naive implementation of a rate-limiter ever: Always
 /// allows every cell through.
 /// # Example
 /// ```
-/// use ratelimit_meter::{Decider};
+/// use ratelimit_meter::DirectRateLimiter;
 /// use ratelimit_meter::example_algorithms::Allower;
 /// let mut allower = Allower::new();
 /// assert!(allower.check().is_ok());
@@ -17,14 +17,23 @@ impl<'a> Decider<'a> for Allower {}
 pub struct Allower {}
 
 impl Allower {
-    pub fn new() -> Allower {
-        Allower::default()
+    pub fn new() -> DirectRateLimiter<Allower> {
+        // These numbers are fake, but we make them up for convenience:
+        DirectRateLimiter::per_second(NonZeroU32::new(1).unwrap())
     }
 }
 
 impl DeciderImpl for Allower {
     type BucketState = ();
     type BucketParams = ();
+
+    fn params_from_constructor(
+        _capacity: NonZeroU32,
+        _cell_weight: NonZeroU32,
+        _per_time_unit: Duration,
+    ) -> Result<Self::BucketParams, InconsistentCapacity> {
+        Ok(())
+    }
 
     /// Allows all cells through unconditionally.
     fn test_n_and_update(
@@ -34,16 +43,5 @@ impl DeciderImpl for Allower {
         _t0: Instant,
     ) -> Result<(), NegativeMultiDecision> {
         Ok(())
-    }
-}
-
-impl<'a> DirectDeciderImpl<'a> for Allower {
-    fn bucket_state(
-        &mut self,
-    ) -> (
-        &'a mut <Self as DeciderImpl>::BucketState,
-        &'a <Self as DeciderImpl>::BucketParams,
-    ) {
-        (&mut (), &())
     }
 }

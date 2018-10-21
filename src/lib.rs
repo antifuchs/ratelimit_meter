@@ -105,7 +105,7 @@
 //! ```
 
 pub mod algorithms;
-// pub mod example_algorithms; // TODO: refactor this
+pub mod example_algorithms;
 mod implementation;
 mod thread_safety;
 
