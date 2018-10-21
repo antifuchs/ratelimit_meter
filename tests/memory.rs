@@ -2,7 +2,7 @@
 extern crate libc;
 extern crate ratelimit_meter;
 
-use ratelimit_meter::{build_with_capacity, per_second, Decider, LeakyBucket, MultiDecider, GCRA};
+use ratelimit_meter::{DirectRateLimiter, LeakyBucket, GCRA};
 use std::num::NonZeroU32;
 use std::thread;
 
@@ -28,9 +28,10 @@ fn check_for_leaks(n_iter: usize, usage_before: i64) {
 #[test]
 fn memleak_gcra() {
     const N_ITER: usize = 500_000;
-    let mut bucket = build_with_capacity::<GCRA>(NonZeroU32::new(1_000_000).unwrap())
-        .build()
-        .unwrap();
+    let mut bucket =
+        DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(1_000_000).unwrap())
+            .build()
+            .unwrap();
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {
@@ -42,9 +43,10 @@ fn memleak_gcra() {
 #[test]
 fn memleak_gcra_multi() {
     const N_ITER: usize = 500_000;
-    let mut bucket = build_with_capacity::<GCRA>(NonZeroU32::new(1_000_000).unwrap())
-        .build()
-        .unwrap();
+    let mut bucket =
+        DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(1_000_000).unwrap())
+            .build()
+            .unwrap();
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {
@@ -56,9 +58,10 @@ fn memleak_gcra_multi() {
 #[test]
 fn memleak_gcra_threaded() {
     const N_ITER: usize = 5_000;
-    let bucket = build_with_capacity::<GCRA>(NonZeroU32::new(1_000_000).unwrap())
-        .build()
-        .unwrap();
+    let bucket =
+        DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(1_000_000).unwrap())
+            .build()
+            .unwrap();
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {
@@ -71,7 +74,8 @@ fn memleak_gcra_threaded() {
 #[test]
 fn memleak_leakybucket() {
     const N_ITER: usize = 500_000;
-    let mut bucket = per_second::<LeakyBucket>(NonZeroU32::new(1_000_000).unwrap());
+    let mut bucket =
+        DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(1_000_000).unwrap());
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {
@@ -83,7 +87,7 @@ fn memleak_leakybucket() {
 #[test]
 fn memleak_leakybucket_threaded() {
     const N_ITER: usize = 5_000;
-    let bucket = per_second::<LeakyBucket>(NonZeroU32::new(1_000_000).unwrap());
+    let bucket = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(1_000_000).unwrap());
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {

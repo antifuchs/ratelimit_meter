@@ -1,24 +1,13 @@
 use thread_safety::ThreadsafeWrapper;
-use {
-    Decider, DeciderImpl, InconsistentCapacity, MultiDecider, MultiDeciderImpl,
-    NegativeMultiDecision, NewImpl, NonConformance,
-};
+use {DeciderImpl, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
 use std::cmp;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
-impl Decider for GCRA {}
-
-/// This crate's GCRA implementation also allows checking multiple
-/// cells at once, assuming that (counter the traffic-shaping
-/// properties of GCRA) if a sufficiently long pause (`n*t`) has
-/// occurred between cells, the algorithm can accommodate `n` cells.
-///
-/// As this assumption does not necessarily hold in all circumstances,
-/// users of this trait on GCRA limiters should ensure that this is
-/// ok.
-impl MultiDecider for GCRA {}
+/// The GCRA's state about a single rate limiting history.
+#[derive(Debug, Default, Clone)]
+pub struct State(ThreadsafeWrapper<Tat>);
 
 #[derive(Debug, PartialEq, Clone)]
 struct Tat(Option<Instant>);
@@ -29,13 +18,13 @@ impl Default for Tat {
     }
 }
 
-impl<T> From<T> for Tat
-where
-    T: Into<Option<Instant>>,
-{
-    fn from(f: T) -> Self {
-        Tat(f.into())
-    }
+#[derive(Debug, Clone)]
+pub struct Params {
+    // The "weight" of a single packet in units of time.
+    t: Duration,
+
+    // The "capacity" of the bucket.
+    tau: Duration,
 }
 
 #[derive(Debug, Clone)]
@@ -57,6 +46,7 @@ where
 /// *consumers* of attention, e.g. distributing outgoing emails across
 /// a day.
 ///
+/// # A note about batch decisions
 /// In a blatant side-stepping of the above traffic-shaping criteria,
 /// this implementation of GCRA comes with an extension that allows
 /// measuring multiple cells at once, assuming that if a pause of
@@ -88,60 +78,41 @@ where
 ///
 /// // After a sufficient time period, cells are allowed again:
 /// assert_eq!(Ok(()), limiter.check_at(now + ms*50));
-pub struct GCRA {
-    // The "weight" of a single packet in units of time.
-    t: Duration,
+pub struct GCRA {}
 
-    // The "capacity" of the bucket.
-    tau: Duration,
+impl DeciderImpl for GCRA {
+    type BucketState = State;
 
-    // The theoretical arrival time of the next packet.
-    tat: ThreadsafeWrapper<Tat>,
-}
+    type BucketParams = Params;
 
-impl GCRA {
-    /// Constructs a GCRA rate-limiter with the parameters T (the
-    /// minimum amount of time that single cells are spaced apart),
-    /// tau (τ, the number of cells that fit into this buffer), and an
-    /// optional t_at (the earliest instant that the rate-limiter
-    /// would accept another cell).
-    pub fn with_parameters<T: Into<Option<Instant>>>(t: Duration, tau: Duration, tat: T) -> GCRA {
-        GCRA {
-            t,
-            tau,
-            tat: ThreadsafeWrapper::new(Tat(tat.into())),
-        }
-    }
-}
-
-impl NewImpl for GCRA {
-    fn from_construction_parameters(
+    fn params_from_constructor(
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
         per_time_unit: Duration,
-    ) -> Result<Self, InconsistentCapacity> {
+    ) -> Result<Self::BucketParams, InconsistentCapacity> {
         if capacity < cell_weight {
             return Err(InconsistentCapacity {
                 capacity,
                 cell_weight,
             });
         }
-        Ok(GCRA {
+        Ok(Params {
             t: (per_time_unit / capacity.get()) * cell_weight.get(),
             tau: per_time_unit,
-            tat: ThreadsafeWrapper::<Tat>::default(),
         })
     }
-}
 
-impl DeciderImpl for GCRA {
     /// Tests if a single cell can be accommodated by the
     /// rate-limiter. This is a threadsafe implementation of the
     /// method described directly in the GCRA algorithm.
-    fn test_and_update(&mut self, t0: Instant) -> Result<(), NonConformance> {
-        let tau = self.tau;
-        let t = self.t;
-        self.tat.measure_and_replace(|tat| {
+    fn test_and_update(
+        state: &mut Self::BucketState,
+        params: &Self::BucketParams,
+        t0: Instant,
+    ) -> Result<(), NonConformance> {
+        let tau = params.tau;
+        let t = params.t;
+        state.0.measure_and_replace(|tat| {
             let tat = tat.0.unwrap_or(t0);
             if t0 < tat - tau {
                 (Err(NonConformance::new(t0, tat - t0)), None)
@@ -150,19 +121,22 @@ impl DeciderImpl for GCRA {
             }
         })
     }
-}
 
-impl MultiDeciderImpl for GCRA {
     /// Tests if `n` cells can be accommodated by the rate-limiter
     /// and updates rate limiter state iff they can be.
     ///
     /// As this method is an extension of GCRA (using multiplication),
     /// it is likely not as fast (and not as obviously "right") as the
     /// single-cell variant.
-    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<(), NegativeMultiDecision> {
-        let tau = self.tau;
-        let t = self.t;
-        self.tat.measure_and_replace(|tat| {
+    fn test_n_and_update(
+        state: &mut Self::BucketState,
+        params: &Self::BucketParams,
+        n: u32,
+        t0: Instant,
+    ) -> Result<(), NegativeMultiDecision> {
+        let tau = params.tau;
+        let t = params.t;
+        state.0.measure_and_replace(|tat| {
             let tat = tat.0.unwrap_or(t0);
             let tat = match n {
                 0 => t0,
@@ -197,32 +171,5 @@ impl MultiDeciderImpl for GCRA {
                 )
             }
         })
-    }
-}
-
-/// Allows converting a GCRA into a tuple containing its T (the
-/// minimum amount of time that single cells are spaced apart), tau
-/// (τ, the number of cells that fit into this buffer), and an
-/// optional `t_at` (the earliest instant that the rate-limiter would
-/// accept another cell).
-///
-/// These parameters can be used with
-/// [`.with_parameters`](#method.with_parameters) to persist and
-/// construct a copy of the GCRA rate-limiter.
-impl<'a> Into<(Duration, Duration, Option<Instant>)> for &'a GCRA {
-    fn into(self) -> (Duration, Duration, Option<Instant>) {
-        let tat = self.tat.snapshot().0;
-        (self.t, self.tau, tat)
-    }
-}
-
-/// Allows converting the parameters returned from
-/// [`Into<(Duration, Duration,
-/// Option<Instant>)>`](#impl-Into<(Duration, Duration, Option<Instant>)>)
-/// back into a GCRA.
-impl From<(Duration, Duration, Option<Instant>)> for GCRA {
-    fn from(params: (Duration, Duration, Option<Instant>)) -> GCRA {
-        let (t, tau, tat) = params;
-        GCRA::with_parameters(t, tau, tat)
     }
 }

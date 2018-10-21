@@ -1,9 +1,8 @@
-use {Decider, ImpliedDeciderImpl, MultiDecider, MultiDeciderImpl, NegativeMultiDecision};
+use {Decider, DeciderImpl, DirectDeciderImpl, NegativeMultiDecision};
 
 use std::time::Instant;
 
-impl Decider for Allower {}
-impl MultiDecider for Allower {}
+impl<'a> Decider<'a> for Allower {}
 
 #[derive(Default, Copy, Clone)]
 /// The most naive implementation of a rate-limiter ever: Always
@@ -23,11 +22,28 @@ impl Allower {
     }
 }
 
-impl MultiDeciderImpl for Allower {
+impl DeciderImpl for Allower {
+    type BucketState = ();
+    type BucketParams = ();
+
     /// Allows all cells through unconditionally.
-    fn test_n_and_update(&mut self, _n: u32, _t0: Instant) -> Result<(), NegativeMultiDecision> {
+    fn test_n_and_update(
+        _state: &mut Self::BucketState,
+        _params: &Self::BucketParams,
+        _n: u32,
+        _t0: Instant,
+    ) -> Result<(), NegativeMultiDecision> {
         Ok(())
     }
 }
 
-impl ImpliedDeciderImpl for Allower {}
+impl<'a> DirectDeciderImpl<'a> for Allower {
+    fn bucket_state(
+        &mut self,
+    ) -> (
+        &'a mut <Self as DeciderImpl>::BucketState,
+        &'a <Self as DeciderImpl>::BucketParams,
+    ) {
+        (&mut (), &())
+    }
+}

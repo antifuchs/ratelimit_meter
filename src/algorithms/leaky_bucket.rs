@@ -1,16 +1,9 @@
 use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
-use {
-    Decider, ImpliedDeciderImpl, InconsistentCapacity, MultiDecider, MultiDeciderImpl,
-    NegativeMultiDecision, NewImpl, NonConformance,
-};
+use {DeciderImpl, InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
 use std::cmp;
 use std::time::{Duration, Instant};
-
-impl Decider for LeakyBucket {}
-
-impl MultiDecider for LeakyBucket {}
 
 #[derive(Debug, Clone)]
 /// Implements the industry-standard leaky bucket rate-limiting
@@ -42,31 +35,17 @@ impl MultiDecider for LeakyBucket {}
 /// let mut lb: LeakyBucket = LeakyBucket::per_second(NonZeroU32::new(2).unwrap());
 /// assert_eq!(Ok(()), lb.check());
 /// ```
-pub struct LeakyBucket {
-    state: ThreadsafeWrapper<BucketState>,
+pub struct LeakyBucket {}
+
+/// Represents the state of a single history of decisions.
+#[derive(Debug, Default, Clone)]
+pub struct State(ThreadsafeWrapper<BucketState>);
+
+/// Represents the parameters of all decisions.
+#[derive(Debug, Clone)]
+pub struct Params {
     full: Duration,
     token_interval: Duration,
-}
-
-impl NewImpl for LeakyBucket {
-    fn from_construction_parameters(
-        capacity: NonZeroU32,
-        cell_weight: NonZeroU32,
-        per_time_unit: Duration,
-    ) -> Result<Self, InconsistentCapacity> {
-        if capacity < cell_weight {
-            return Err(InconsistentCapacity {
-                capacity,
-                cell_weight,
-            });
-        }
-        let token_interval = (per_time_unit * cell_weight.get()) / capacity.get();
-        Ok(LeakyBucket {
-            state: ThreadsafeWrapper::new(BucketState::default()),
-            full: per_time_unit,
-            token_interval,
-        })
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -84,48 +63,40 @@ impl Default for BucketState {
     }
 }
 
-impl LeakyBucket {
-    /// Constructs and returns a leaky-bucket rate-limiter allowing as
-    /// many cells on average as the given capacity per time duration.
-    /// ## Example
-    /// ``` rust
-    /// # use std::num::NonZeroU32;
-    /// # use ratelimit_meter::{Decider, LeakyBucket};
-    /// # use std::time::{Duration, Instant};
-    /// let now = Instant::now();
-    /// let day = Duration::from_secs(86400);
-    /// let mut lb = LeakyBucket::new(NonZeroU32::new(1).unwrap(), day); // 1 per day
-    /// assert!(lb.check_at(now).is_ok());
-    ///
-    /// assert!(!lb.check_at(now + day/2).is_ok()); // Can't do it half a day later
-    /// assert!(lb.check_at(now + day).is_ok()); // Have to wait a day
-    /// // ...and then, a day after that.
-    /// assert!(lb.check_at(now + day * 2).is_ok());
-    /// ```
-    pub fn new(capacity: NonZeroU32, per_duration: Duration) -> LeakyBucket {
-        let token_interval = per_duration / capacity.get();
-        LeakyBucket {
-            state: ThreadsafeWrapper::new(BucketState::default()),
-            token_interval,
-            full: per_duration,
+impl DeciderImpl for LeakyBucket {
+    type BucketState = State;
+    type BucketParams = Params;
+
+    fn params_from_constructor(
+        capacity: NonZeroU32,
+        cell_weight: NonZeroU32,
+        per_time_unit: Duration,
+    ) -> Result<Self::BucketParams, InconsistentCapacity> {
+        if capacity < cell_weight {
+            return Err(InconsistentCapacity {
+                capacity,
+                cell_weight,
+            });
         }
+        let token_interval = (per_time_unit * cell_weight.get()) / capacity.get();
+        Ok(Params {
+            full: per_time_unit,
+            token_interval,
+        })
     }
 
-    /// Constructs and returns a leaky-bucket rate-limiter allowing on
-    /// average `capacity`/1s cells.
-    pub fn per_second(capacity: NonZeroU32) -> LeakyBucket {
-        LeakyBucket::new(capacity, Duration::from_secs(1))
-    }
-}
-
-impl MultiDeciderImpl for LeakyBucket {
-    fn test_n_and_update(&mut self, n: u32, t0: Instant) -> Result<(), NegativeMultiDecision> {
-        let full = self.full;
-        let weight = self.token_interval * n;
-        if weight > self.full {
+    fn test_n_and_update(
+        state: &mut Self::BucketState,
+        params: &Self::BucketParams,
+        n: u32,
+        t0: Instant,
+    ) -> Result<(), NegativeMultiDecision> {
+        let full = params.full;
+        let weight = params.token_interval * n;
+        if weight > params.full {
             return Err(NegativeMultiDecision::InsufficientCapacity(n));
         }
-        self.state.measure_and_replace(|state| {
+        state.0.measure_and_replace(|state| {
             let mut new = BucketState {
                 last_update: Some(t0),
                 level: Duration::new(0, 0),
@@ -154,5 +125,3 @@ impl MultiDeciderImpl for LeakyBucket {
         })
     }
 }
-
-impl ImpliedDeciderImpl for LeakyBucket {}

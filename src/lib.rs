@@ -105,7 +105,7 @@
 //! ```
 
 pub mod algorithms;
-pub mod example_algorithms;
+// pub mod example_algorithms; // TODO: refactor this
 mod implementation;
 mod thread_safety;
 
@@ -206,11 +206,88 @@ pub enum NegativeMultiDecision {
     InsufficientCapacity(u32),
 }
 
-/// The main decision trait. It allows checking a single cell against
-/// the rate-limiter, either at the current time instant, or at a
-/// given instant in time, updating the `Decider`'s internal state if
-/// the cell is conforming.
-pub trait Decider: Sized + DeciderImpl {
+/// A rate-limiter that makes direct (un-keyed) rate-limiting
+/// decisions. This kind of rate limiter can be used to regulate the
+/// number of packets per connection.
+#[derive(Debug, Clone)]
+pub struct DirectRateLimiter<A: DeciderImpl> {
+    algorithm: PhantomData<A>,
+    state: A::BucketState,
+    params: A::BucketParams,
+}
+
+/// A rate-limiter that makes direct (un-keyed) rate-limiting
+/// decisions. This kind of rate limiter can be used to regulate the
+/// number of packets per connection.
+impl<A> DirectRateLimiter<A>
+where
+    A: DeciderImpl,
+{
+    /// Construct a new Decider that allows `capacity` cells per time
+    /// unit through.
+    /// # Examples
+    /// You can construct a GCRA decider like so:
+    /// ```
+    /// # use std::num::NonZeroU32;
+    /// # use std::time::Duration;
+    /// use ratelimit_meter::GCRA;
+    /// let _gcra = ratelimit_meter::new::<GCRA>(NonZeroU32::new(100).unwrap(),
+    ///                                          Duration::from_secs(5));
+    /// ```
+    ///
+    /// and similarly, for a leaky bucket:
+    /// ```
+    /// # use std::num::NonZeroU32;
+    /// # use std::time::Duration;
+    /// use ratelimit_meter::LeakyBucket;
+    /// let _lb = ratelimit_meter::new::<LeakyBucket>(NonZeroU32::new(100).unwrap(),
+    ///                                               Duration::from_secs(5));
+    /// ```
+    pub fn new(capacity: NonZeroU32, per_time_unit: Duration) -> Self {
+        DirectRateLimiter {
+            algorithm: PhantomData,
+            state: <A as DeciderImpl>::BucketState::default(),
+            params: <A as DeciderImpl>::params_from_constructor(
+                capacity,
+                NonZeroU32::new(1).unwrap(),
+                per_time_unit,
+            ).unwrap(),
+        }
+    }
+
+    /// Construct a new Decider that allows `capacity` cells per
+    /// second.
+    /// # Examples
+    /// Constructing a GCRA decider that lets through 100 cells per second:
+    /// ```
+    /// # use std::num::NonZeroU32;
+    /// # use std::time::Duration;
+    /// use ratelimit_meter::GCRA;
+    /// let _gcra = ratelimit_meter::per_second::<GCRA>(NonZeroU32::new(100).unwrap());
+    /// ```
+    ///
+    /// and a leaky bucket:
+    /// ```
+    /// # use std::num::NonZeroU32;
+    /// # use std::time::Duration;
+    /// use ratelimit_meter::LeakyBucket;
+    /// let _gcra = ratelimit_meter::per_second::<LeakyBucket>(NonZeroU32::new(100).unwrap());
+    /// ```
+    pub fn per_second(capacity: NonZeroU32) -> Self {
+        Self::new(capacity, Duration::from_secs(1))
+    }
+
+    /// Return a builder that can be used to construct a Decider using
+    /// the parameters passed to the Builder.
+    pub fn build_with_capacity(capacity: NonZeroU32) -> Builder<A> {
+        Builder {
+            capacity,
+            cell_weight: NonZeroU32::new(1).unwrap(),
+            time_unit: Duration::from_secs(1),
+            end_result: PhantomData,
+        }
+    }
+
     /// Tests if a single cell can be accommodated at
     /// `Instant::now()`. If it can be, `check` updates the `Decider`
     /// to account for the conforming cell and returns `Ok(())`.
@@ -219,87 +296,11 @@ pub trait Decider: Sized + DeciderImpl {
     /// at this time stamp), `check_at` returns `Err` with information
     /// about the earliest time at which a cell could be considered
     /// conforming (see [`NonConformance`](struct.NonConformance.html)).
-    fn check(&mut self) -> Result<(), NonConformance> {
-        self.test_and_update(Instant::now())
+    pub fn check(&mut self) -> Result<(), NonConformance> {
+        <A as DeciderImpl>::test_and_update(&mut self.state, &self.params, Instant::now())
     }
 
-    /// Tests whether a single cell can be accommodated at the given
-    /// time stamp. See [`check`](#method.check).
-    fn check_at(&mut self, at: Instant) -> Result<(), NonConformance> {
-        self.test_and_update(at)
-    }
-}
-
-/// Construct a new Decider that allows `capacity` cells per time
-/// unit through.
-/// # Examples
-/// You can construct a GCRA decider like so:
-/// ```
-/// # use std::num::NonZeroU32;
-/// # use std::time::Duration;
-/// use ratelimit_meter::GCRA;
-/// let _gcra = ratelimit_meter::new::<GCRA>(NonZeroU32::new(100).unwrap(),
-///                                          Duration::from_secs(5));
-/// ```
-///
-/// and similarly, for a leaky bucket:
-/// ```
-/// # use std::num::NonZeroU32;
-/// # use std::time::Duration;
-/// use ratelimit_meter::LeakyBucket;
-/// let _lb = ratelimit_meter::new::<LeakyBucket>(NonZeroU32::new(100).unwrap(),
-///                                               Duration::from_secs(5));
-/// ```
-pub fn new<T>(capacity: NonZeroU32, per_time_unit: Duration) -> T
-where
-    T: Sized + NewImpl,
-{
-    T::from_construction_parameters(capacity, NonZeroU32::new(1).unwrap(), per_time_unit).unwrap()
-}
-
-/// Construct a new Decider that allows `capacity` cells per
-/// second.
-/// # Examples
-/// Constructing a GCRA decider that lets through 100 cells per second:
-/// ```
-/// # use std::num::NonZeroU32;
-/// # use std::time::Duration;
-/// use ratelimit_meter::GCRA;
-/// let _gcra = ratelimit_meter::per_second::<GCRA>(NonZeroU32::new(100).unwrap());
-/// ```
-///
-/// and a leaky bucket:
-/// ```
-/// # use std::num::NonZeroU32;
-/// # use std::time::Duration;
-/// use ratelimit_meter::LeakyBucket;
-/// let _gcra = ratelimit_meter::per_second::<LeakyBucket>(NonZeroU32::new(100).unwrap());
-/// ```
-pub fn per_second<T>(capacity: NonZeroU32) -> T
-where
-    T: Sized + NewImpl,
-{
-    new::<T>(capacity, Duration::from_secs(1))
-}
-
-/// Return a builder that can be used to construct a Decider using
-/// the parameters passed to the Builder.
-pub fn build_with_capacity<T>(capacity: NonZeroU32) -> Builder<T>
-where
-    T: Sized + NewImpl,
-{
-    Builder {
-        capacity,
-        cell_weight: NonZeroU32::new(1).unwrap(),
-        time_unit: Duration::from_secs(1),
-        end_result: PhantomData,
-    }
-}
-
-/// The "batch" decision trait, allowing a Decider to make a decision
-/// about multiple cells at once.
-pub trait MultiDecider: MultiDeciderImpl {
-    /// Tests if `n` cells can be accommodated at the given time
+    /// Tests if `n` cells can be accommodated at the current time
     /// stamp. If (and only if) all cells in the batch can be
     /// accomodated, the `MultiDecider` updates the internal state to
     /// account for all cells and returns `Ok(())`.
@@ -314,14 +315,20 @@ pub trait MultiDecider: MultiDeciderImpl {
     /// If `n` exceeds the bucket capacity, `check_n_at` returns
     /// [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity),
     /// indicating that a batch of this many cells can never succeed.
-    fn check_n_at(&mut self, n: u32, at: Instant) -> Result<(), NegativeMultiDecision> {
-        self.test_n_and_update(n, at)
+    pub fn check_n(&mut self, n: u32) -> Result<(), NegativeMultiDecision> {
+        <A as DeciderImpl>::test_n_and_update(&mut self.state, &self.params, n, Instant::now())
     }
 
-    /// Tests if `n` cells can be accommodated at the current time
-    /// (`Instant::now()`), using [`check_n_at`](#method.check_n_at)
-    fn check_n(&mut self, n: u32) -> Result<(), NegativeMultiDecision> {
-        self.test_n_and_update(n, Instant::now())
+    /// Tests whether a single cell can be accommodated at the given
+    /// time stamp. See [`check`](#method.check).
+    pub fn check_at(&mut self, at: Instant) -> Result<(), NonConformance> {
+        <A as DeciderImpl>::test_and_update(&mut self.state, &self.params, at)
+    }
+
+    /// Tests if `n` cells can be accommodated at the given time
+    /// (`Instant::now()`), using [`check_n`](#method.check_n)
+    pub fn check_n_at(&mut self, n: u32, at: Instant) -> Result<(), NegativeMultiDecision> {
+        <A as DeciderImpl>::test_n_and_update(&mut self.state, &self.params, n, at)
     }
 }
 
@@ -341,7 +348,7 @@ pub struct InconsistentCapacity {
 /// An object that allows incrementally constructing Decider objects.
 pub struct Builder<T>
 where
-    T: NewImpl + Sized,
+    T: DeciderImpl + Sized,
 {
     capacity: NonZeroU32,
     cell_weight: NonZeroU32,
@@ -349,16 +356,16 @@ where
     end_result: PhantomData<T>,
 }
 
-impl<T> Builder<T>
+impl<A> Builder<A>
 where
-    T: NewImpl + Sized,
+    A: DeciderImpl + Sized,
 {
     /// Sets the "weight" of each cell being checked against the
     /// bucket. Each cell fills the bucket by this much.
     pub fn cell_weight(
         &mut self,
         weight: NonZeroU32,
-    ) -> Result<&mut Builder<T>, InconsistentCapacity> {
+    ) -> Result<&mut Builder<A>, InconsistentCapacity> {
         if self.cell_weight > self.capacity {
             return Err(InconsistentCapacity {
                 capacity: self.capacity,
@@ -373,14 +380,22 @@ where
     ///
     /// The assumption is that in a period of `time_unit` (if no cells
     /// are being checked), the bucket is fully drained.
-    pub fn per(&mut self, time_unit: Duration) -> &mut Builder<T> {
+    pub fn per(&mut self, time_unit: Duration) -> &mut Builder<A> {
         self.time_unit = time_unit;
         self
     }
 
     /// Builds a decider of the specified type.
-    pub fn build(&self) -> Result<T, InconsistentCapacity> {
-        T::from_construction_parameters(self.capacity, self.cell_weight, self.time_unit)
+    pub fn build(&self) -> Result<DirectRateLimiter<A>, InconsistentCapacity> {
+        Ok(DirectRateLimiter {
+            algorithm: PhantomData,
+            state: <A as DeciderImpl>::BucketState::default(),
+            params: <A as DeciderImpl>::params_from_constructor(
+                self.capacity,
+                self.cell_weight,
+                self.time_unit,
+            )?,
+        })
     }
 }
 
