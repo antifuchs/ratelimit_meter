@@ -20,9 +20,9 @@
 //!
 //! ``` rust
 //! use std::num::NonZeroU32;
-//! use ratelimit_meter::{Decider, GCRA, per_second};
+//! use ratelimit_meter::{DirectRateLimiter, GCRA};
 //!
-//! let mut lim = per_second::<GCRA>(NonZeroU32::new(50).unwrap()); // Allow 50 units per second
+//! let mut lim = DirectRateLimiter::<GCRA>::per_second(NonZeroU32::new(50).unwrap()); // Allow 50 units per second
 //! assert_eq!(Ok(()), lim.check());
 //! ```
 //!
@@ -95,10 +95,10 @@
 //! use std::thread;
 //! use std::num::NonZeroU32;
 //! use std::time::Duration;
-//! use ratelimit_meter::{Decider, GCRA, per_second};
+//! use ratelimit_meter::{DirectRateLimiter, GCRA};
 //!
 //! // Allow 50 units/second across all threads:
-//! let mut lim = per_second::<GCRA>(NonZeroU32::new(50).unwrap());
+//! let mut lim = DirectRateLimiter::<GCRA>::per_second(NonZeroU32::new(50).unwrap());
 //! let mut thread_lim = lim.clone();
 //! thread::spawn(move || { assert_eq!(Ok(()), thread_lim.check());});
 //! assert_eq!(Ok(()), lim.check());
@@ -230,8 +230,8 @@ where
     /// ```
     /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
-    /// use ratelimit_meter::GCRA;
-    /// let _gcra = ratelimit_meter::new::<GCRA>(NonZeroU32::new(100).unwrap(),
+    /// use ratelimit_meter::{DirectRateLimiter, GCRA};
+    /// let _gcra = DirectRateLimiter::<GCRA>::new(NonZeroU32::new(100).unwrap(),
     ///                                          Duration::from_secs(5));
     /// ```
     ///
@@ -239,8 +239,8 @@ where
     /// ```
     /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
-    /// use ratelimit_meter::LeakyBucket;
-    /// let _lb = ratelimit_meter::new::<LeakyBucket>(NonZeroU32::new(100).unwrap(),
+    /// use ratelimit_meter::{DirectRateLimiter, LeakyBucket};
+    /// let _lb = DirectRateLimiter::<LeakyBucket>::new(NonZeroU32::new(100).unwrap(),
     ///                                               Duration::from_secs(5));
     /// ```
     pub fn new(capacity: NonZeroU32, per_time_unit: Duration) -> Self {
@@ -262,16 +262,16 @@ where
     /// ```
     /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
-    /// use ratelimit_meter::GCRA;
-    /// let _gcra = ratelimit_meter::per_second::<GCRA>(NonZeroU32::new(100).unwrap());
+    /// use ratelimit_meter::{DirectRateLimiter, GCRA};
+    /// let _gcra = DirectRateLimiter::<GCRA>::per_second(NonZeroU32::new(100).unwrap());
     /// ```
     ///
     /// and a leaky bucket:
     /// ```
     /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
-    /// use ratelimit_meter::LeakyBucket;
-    /// let _gcra = ratelimit_meter::per_second::<LeakyBucket>(NonZeroU32::new(100).unwrap());
+    /// use ratelimit_meter::{DirectRateLimiter, LeakyBucket};
+    /// let _gcra = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(100).unwrap());
     /// ```
     pub fn per_second(capacity: NonZeroU32) -> Self {
         Self::new(capacity, Duration::from_secs(1))

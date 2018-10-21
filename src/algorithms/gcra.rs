@@ -62,10 +62,10 @@ pub struct Params {
 /// to the GCRA parameters τ=1s, T=50ms (that's 1s / 20 cells).
 ///
 /// ```
-/// # use ratelimit_meter::{Decider, GCRA, per_second};
+/// # use ratelimit_meter::{DirectRateLimiter, GCRA};
 /// # use std::num::NonZeroU32;
 /// # use std::time::{Instant, Duration};
-/// let mut limiter = per_second::<GCRA>(NonZeroU32::new(20).unwrap());
+/// let mut limiter = DirectRateLimiter::<GCRA>::per_second(NonZeroU32::new(20).unwrap());
 /// let now = Instant::now();
 /// let ms = Duration::from_millis(1);
 /// assert_eq!(Ok(()), limiter.check_at(now)); // the first cell is free
