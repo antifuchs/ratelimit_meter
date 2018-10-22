@@ -9,19 +9,19 @@ use std::time::{Duration, Instant};
 use evmap::{self, ReadHandle, WriteHandle};
 
 use {
-    algorithms::{Algorithm, RateLimitState},
+    algorithms::{Algorithm, DefaultAlgorithm, RateLimitState},
     InconsistentCapacity, NegativeMultiDecision, NonConformance,
 };
 
 #[derive(Clone)]
-pub struct KeyedRateLimiter<A: Algorithm, K: Eq + Hash + Clone> {
+pub struct KeyedRateLimiter<K: Eq + Hash + Clone, A: Algorithm = DefaultAlgorithm> {
     algorithm: PhantomData<A>,
     params: A::BucketParams,
     map_reader: ReadHandle<K, A::BucketState>,
     map_writer: Arc<Mutex<WriteHandle<K, A::BucketState>>>,
 }
 
-impl<A, K> fmt::Debug for KeyedRateLimiter<A, K>
+impl<A, K> fmt::Debug for KeyedRateLimiter<K, A>
 where
     A: Algorithm,
     K: Eq + Hash + Clone,
@@ -31,7 +31,7 @@ where
     }
 }
 
-impl<A, K> KeyedRateLimiter<A, K>
+impl<A, K> KeyedRateLimiter<K, A>
 where
     A: Algorithm,
     K: Eq + Hash + Clone,
@@ -101,7 +101,7 @@ where
     ///
     /// To be eligible for expiration, a key's rate limiter state must
     /// be at least `min_age` past its last relevance (see
-    /// [`RateLimitState.last_touched`](trait.RateLimitState.html#method.last_touched)).
+    /// [`RateLimitState.last_touched`](../../algorithms/trait.RateLimitState.html#method.last_touched)).
     ///
     /// This method works in two parts, but both parts block new keys
     /// from getting added while they're running:

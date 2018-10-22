@@ -10,6 +10,15 @@ use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 use {InconsistentCapacity, NegativeMultiDecision, NonConformance};
 
+/// The default rate limiting algorithm in this crate: The ["leaky
+/// bucket"](leaky_bucket/struct.LeakyBucket.html).
+///
+/// The leaky bucket algorithm is fairly easy to understand and has
+/// decent performance in most cases. If better threaded performance
+/// is needed, this crate also offers the
+/// [`GCRA`](gcra/struct.GCRA.html) algorithm.
+pub type DefaultAlgorithm = LeakyBucket;
+
 /// The trait that implementations of metered rate-limiter algorithms
 /// have to implement.
 ///

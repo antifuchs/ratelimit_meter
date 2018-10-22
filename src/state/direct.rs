@@ -5,13 +5,16 @@ use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
-use {algorithms::Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use {
+    algorithms::{Algorithm, DefaultAlgorithm},
+    InconsistentCapacity, NegativeMultiDecision, NonConformance,
+};
 
 /// An in-memory rate limiter that makes direct (un-keyed) rate-limiting
 /// decisions. This kind of rate limiter can be used to regulate the
 /// number of packets per connection.
 #[derive(Debug, Clone)]
-pub struct DirectRateLimiter<A: Algorithm> {
+pub struct DirectRateLimiter<A: Algorithm = DefaultAlgorithm> {
     algorithm: PhantomData<A>,
     state: A::BucketState,
     params: A::BucketParams,

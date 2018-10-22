@@ -1,6 +1,6 @@
 extern crate ratelimit_meter;
 
-use ratelimit_meter::{KeyedRateLimiter, LeakyBucket, NegativeMultiDecision, GCRA};
+use ratelimit_meter::{KeyedRateLimiter, NegativeMultiDecision, GCRA};
 use std::num::NonZeroU32;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -8,16 +8,14 @@ use std::time::{Duration, Instant};
 #[test]
 fn accepts_first_cell() {
     let mut gcra =
-        KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(5).unwrap(), Duration::from_secs(1));
+        KeyedRateLimiter::<&str>::new(NonZeroU32::new(5).unwrap(), Duration::from_secs(1));
     assert_eq!(Ok(()), gcra.check("foo"));
 }
 
 #[test]
 fn rejects_too_many() {
-    let mut lim = KeyedRateLimiter::<LeakyBucket, &str>::new(
-        NonZeroU32::new(1).unwrap(),
-        Duration::from_secs(1),
-    );
+    let mut lim =
+        KeyedRateLimiter::<&str>::new(NonZeroU32::new(1).unwrap(), Duration::from_secs(1));
     let ms = Duration::from_millis(1);
     let now = Instant::now();
     lim.check_at("foo", now + ms).unwrap();
@@ -26,10 +24,8 @@ fn rejects_too_many() {
 
 #[test]
 fn different_states_per_key() {
-    let mut lim = KeyedRateLimiter::<LeakyBucket, &str>::new(
-        NonZeroU32::new(1).unwrap(),
-        Duration::from_secs(1),
-    );
+    let mut lim =
+        KeyedRateLimiter::<&str>::new(NonZeroU32::new(1).unwrap(), Duration::from_secs(1));
     let ms = Duration::from_millis(1);
     let now = Instant::now();
     assert_eq!(Ok(()), lim.check_at("foo", now + ms));
@@ -44,7 +40,7 @@ fn different_states_per_key() {
 #[test]
 fn allows_after_interval() {
     let mut gcra =
-        KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(1).unwrap(), Duration::from_secs(1));
+        KeyedRateLimiter::<&str, GCRA>::new(NonZeroU32::new(1).unwrap(), Duration::from_secs(1));
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     gcra.check_at("foo", now).unwrap();
@@ -58,7 +54,7 @@ fn allows_after_interval() {
 #[test]
 fn allows_n_after_interval() {
     let mut gcra =
-        KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(2).unwrap(), Duration::from_secs(1));
+        KeyedRateLimiter::<&str>::new(NonZeroU32::new(2).unwrap(), Duration::from_secs(1));
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     assert_eq!(Ok(()), gcra.check_n_at("foo", 2, now));
@@ -72,21 +68,9 @@ fn allows_n_after_interval() {
 }
 
 #[test]
-fn correctly_handles_per() {
-    let ms = Duration::from_millis(1);
-    let mut gcra = KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(1).unwrap(), ms * 20);
-    let now = Instant::now();
-
-    assert_eq!(Ok(()), gcra.check_at("foo", now));
-    assert_eq!(Ok(()), gcra.check_at("foo", now + ms));
-    assert!(!gcra.check_at("foo", now + ms * 10).is_ok());
-    assert_eq!(Ok(()), gcra.check_at("foo", now + ms * 20));
-}
-
-#[test]
 fn never_allows_more_than_capacity() {
     let mut gcra =
-        KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(5).unwrap(), Duration::from_secs(1));
+        KeyedRateLimiter::<&str>::new(NonZeroU32::new(5).unwrap(), Duration::from_secs(1));
     let now = Instant::now();
     let ms = Duration::from_millis(1);
 
@@ -106,7 +90,7 @@ fn never_allows_more_than_capacity() {
 #[test]
 fn actual_threadsafety() {
     let mut lim =
-        KeyedRateLimiter::<GCRA, &str>::new(NonZeroU32::new(20).unwrap(), Duration::from_secs(1));
+        KeyedRateLimiter::<&str, GCRA>::new(NonZeroU32::new(20).unwrap(), Duration::from_secs(1));
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     let mut children = vec![];
