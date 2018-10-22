@@ -15,15 +15,19 @@
 //! [`Allower`](example_algorithms/struct.Allower.html), which returns
 //! "Yes" to all rate-limiting queries.
 //!
-//! The Generic Cell Rate Algorithm can be used by creating a builder
-//! from the [`GCRA`](algorithms/gcra/struct.GCRA.html) struct:
+//! The Generic Cell Rate Algorithm can be used by in an in-memory
+//! rate limiter like so:
 //!
 //! ``` rust
 //! use std::num::NonZeroU32;
 //! use ratelimit_meter::{DirectRateLimiter, GCRA};
 //!
-//! let mut lim = DirectRateLimiter::<GCRA>::per_second(NonZeroU32::new(50).unwrap()); // Allow 50 units per second
+//! # #[macro_use] extern crate nonzero_ext;
+//! # extern crate ratelimit_meter;
+//! # fn main () {
+//! let mut lim = DirectRateLimiter::<GCRA>::per_second(nonzero!(50u32)); // Allow 50 units per second
 //! assert_eq!(Ok(()), lim.check());
+//! # }
 //! ```
 //!
 //! The rate-limiter interface is intentionally geared towards only
@@ -40,6 +44,15 @@
 //! negative decisions and have the program wait using the method best
 //! suited for this, e.g. an event loop.
 //!
+//! ## Using this crate effectively
+//!
+//! Many of the parameters in use by this crate are `NonZeroU32` -
+//! since they are not very ergonomic to construct from constants
+//! using stdlib means, I recommend using the
+//! [nonzero_ext](https://crates.io/crates/nonzero_ext) crate, which
+//! comes with a macro `nonzero!()`. This macro makes it far easier to
+//! construct rate limiters without cluttering your code.
+//! 
 //! ## Rate-limiting Algorithms
 //!
 //! ### Design and implementation of GCRA
@@ -98,11 +111,15 @@
 //! use std::time::Duration;
 //! use ratelimit_meter::{DirectRateLimiter, GCRA};
 //!
+//! # #[macro_use] extern crate nonzero_ext;
+//! # extern crate ratelimit_meter;
+//! # fn main () {
 //! // Allow 50 units/second across all threads:
-//! let mut lim = DirectRateLimiter::<GCRA>::per_second(NonZeroU32::new(50).unwrap());
+//! let mut lim = DirectRateLimiter::<GCRA>::per_second(nonzero!(50u32));
 //! let mut thread_lim = lim.clone();
 //! thread::spawn(move || { assert_eq!(Ok(()), thread_lim.check());});
 //! assert_eq!(Ok(()), lim.check());
+//! # }
 //! ```
 
 pub mod algorithms;
@@ -114,6 +131,8 @@ extern crate failure;
 #[macro_use]
 extern crate failure_derive;
 extern crate evmap;
+#[macro_use]
+extern crate nonzero_ext;
 extern crate parking_lot;
 
 use std::num::NonZeroU32;

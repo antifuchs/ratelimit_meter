@@ -17,7 +17,7 @@ macro_rules! run_with_variants {
             $crate::variants::Variant::GCRA => {
                 let mut $var =
                     ::ratelimit_meter::DirectRateLimiter::<::ratelimit_meter::GCRA>::per_second(
-                        ::std::num::NonZeroU32::new(50).unwrap(),
+                        nonzero!(50u32)
                     );
                 $code
             }
@@ -25,7 +25,7 @@ macro_rules! run_with_variants {
                 let mut $var = ::ratelimit_meter::DirectRateLimiter::<
                     ::ratelimit_meter::LeakyBucket,
                 >::per_second(
-                    ::std::num::NonZeroU32::new(50).unwrap()
+                    nonzero!(50u32)
                 );
                 $code
             }

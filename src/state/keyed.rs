@@ -42,14 +42,10 @@ where
             WriteHandle<K, A::BucketState>,
         ) = evmap::new();
         w.refresh();
-
         KeyedRateLimiter {
             algorithm: PhantomData,
-            params: <A as Algorithm>::params_from_constructor(
-                capacity,
-                NonZeroU32::new(1).unwrap(),
-                per_time_unit,
-            ).unwrap(),
+            params: <A as Algorithm>::params_from_constructor(capacity, nonzero!(1u32), per_time_unit)
+                .unwrap(),
             map_reader: r,
             map_writer: Arc::new(Mutex::new(w)),
         }

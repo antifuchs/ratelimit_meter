@@ -1,20 +1,20 @@
 extern crate ratelimit_meter;
+#[macro_use] extern crate nonzero_ext;
 
 use ratelimit_meter::{DirectRateLimiter, NegativeMultiDecision, GCRA};
-use std::num::NonZeroU32;
 use std::thread;
 use std::time::{Duration, Instant};
 
 #[test]
 fn accepts_first_cell() {
-    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(5).unwrap())
+    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(5u32))
         .build()
         .unwrap();
     assert_eq!(Ok(()), gcra.check());
 }
 #[test]
 fn rejects_too_many() {
-    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(1).unwrap())
+    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1u32))
         .build()
         .unwrap();
     let now = Instant::now();
@@ -25,7 +25,7 @@ fn rejects_too_many() {
 
 #[test]
 fn allows_after_interval() {
-    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(1).unwrap())
+    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1u32))
         .build()
         .unwrap();
     let now = Instant::now();
@@ -40,7 +40,7 @@ fn allows_after_interval() {
 
 #[test]
 fn allows_n_after_interval() {
-    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(2).unwrap())
+    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(2u32))
         .build()
         .unwrap();
     let now = Instant::now();
@@ -58,7 +58,7 @@ fn allows_n_after_interval() {
 #[test]
 fn correctly_handles_per() {
     let ms = Duration::from_millis(1);
-    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(1).unwrap())
+    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1u32))
         .per(ms * 20)
         .build()
         .unwrap();
@@ -72,7 +72,7 @@ fn correctly_handles_per() {
 
 #[test]
 fn never_allows_more_than_capacity() {
-    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(5).unwrap())
+    let mut gcra = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(5u32))
         .build()
         .unwrap();
     let now = Instant::now();
@@ -93,7 +93,7 @@ fn never_allows_more_than_capacity() {
 
 #[test]
 fn actual_threadsafety() {
-    let mut lim = DirectRateLimiter::<GCRA>::build_with_capacity(NonZeroU32::new(20).unwrap())
+    let mut lim = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(20u32))
         .build()
         .unwrap();
     let now = Instant::now();

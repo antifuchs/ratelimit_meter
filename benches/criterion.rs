@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate criterion;
 extern crate ratelimit_meter;
+#[macro_use] extern crate nonzero_ext;
 
 use criterion::Criterion;
 

@@ -1,6 +1,9 @@
 //! An in-memory rate limiter that can make decisions for a single
 //! situation.
 
+// #![feature(trace_macros)]
+// trace_macros!(true);
+
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
@@ -32,27 +35,29 @@ where
     /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
     /// use ratelimit_meter::{DirectRateLimiter, GCRA};
-    /// let _gcra = DirectRateLimiter::<GCRA>::new(NonZeroU32::new(100).unwrap(),
-    ///                                          Duration::from_secs(5));
+    /// # #[macro_use] extern crate nonzero_ext;
+    /// # extern crate ratelimit_meter;
+    /// # fn main () {
+    /// let _gcra = DirectRateLimiter::<GCRA>::new(nonzero!(100u32), Duration::from_secs(5));
+    /// # }
     /// ```
     ///
     /// and similarly, for a leaky bucket:
     /// ```
-    /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
     /// use ratelimit_meter::{DirectRateLimiter, LeakyBucket};
-    /// let _lb = DirectRateLimiter::<LeakyBucket>::new(NonZeroU32::new(100).unwrap(),
-    ///                                               Duration::from_secs(5));
+    /// # #[macro_use] extern crate nonzero_ext;
+    /// # extern crate ratelimit_meter;
+    /// # fn main () {
+    /// let _lb = DirectRateLimiter::<LeakyBucket>::new(nonzero!(100u32), Duration::from_secs(5));
+    /// # }
     /// ```
     pub fn new(capacity: NonZeroU32, per_time_unit: Duration) -> Self {
         DirectRateLimiter {
             algorithm: PhantomData,
             state: <A as Algorithm>::BucketState::default(),
-            params: <A as Algorithm>::params_from_constructor(
-                capacity,
-                NonZeroU32::new(1).unwrap(),
-                per_time_unit,
-            ).unwrap(),
+            params: <A as Algorithm>::params_from_constructor(capacity, nonzero!(1u32), per_time_unit)
+                .unwrap(),
         }
     }
 
@@ -61,18 +66,24 @@ where
     /// # Examples
     /// Constructing a GCRA rate limiter that lets through 100 cells per second:
     /// ```
-    /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
     /// use ratelimit_meter::{DirectRateLimiter, GCRA};
-    /// let _gcra = DirectRateLimiter::<GCRA>::per_second(NonZeroU32::new(100).unwrap());
+    /// # #[macro_use] extern crate nonzero_ext;
+    /// # extern crate ratelimit_meter;
+    /// # fn main () {
+    /// let _gcra = DirectRateLimiter::<GCRA>::per_second(nonzero!(100u32));
+    /// # }
     /// ```
     ///
     /// and a leaky bucket:
     /// ```
-    /// # use std::num::NonZeroU32;
     /// # use std::time::Duration;
     /// use ratelimit_meter::{DirectRateLimiter, LeakyBucket};
-    /// let _gcra = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(100).unwrap());
+    /// # #[macro_use] extern crate nonzero_ext;
+    /// # extern crate ratelimit_meter;
+    /// # fn main () {
+    /// let _gcra = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(100u32));
+    /// # }
     /// ```
     pub fn per_second(capacity: NonZeroU32) -> Self {
         Self::new(capacity, Duration::from_secs(1))
@@ -83,7 +94,7 @@ where
     pub fn build_with_capacity(capacity: NonZeroU32) -> Builder<A> {
         Builder {
             capacity,
-            cell_weight: NonZeroU32::new(1).unwrap(),
+            cell_weight: nonzero!(1u32),
             time_unit: Duration::from_secs(1),
             end_result: PhantomData,
         }

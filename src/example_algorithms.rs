@@ -24,7 +24,7 @@ impl Allower {
     /// through.
     pub fn ratelimiter() -> DirectRateLimiter<Allower> {
         // These numbers are fake, but we make them up for convenience:
-        DirectRateLimiter::per_second(NonZeroU32::new(1).unwrap())
+        DirectRateLimiter::per_second(nonzero!(1u32))
     }
 }
 

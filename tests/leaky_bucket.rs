@@ -1,19 +1,19 @@
 extern crate ratelimit_meter;
+#[macro_use] extern crate nonzero_ext;
 
 use ratelimit_meter::{DirectRateLimiter, LeakyBucket, NegativeMultiDecision};
-use std::num::NonZeroU32;
 use std::thread;
 use std::time::{Duration, Instant};
 
 #[test]
 fn accepts_first_cell() {
-    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(5).unwrap());
+    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
     assert_eq!(Ok(()), lb.check());
 }
 
 #[test]
 fn rejects_too_many() {
-    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(2).unwrap());
+    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(2u32));
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     assert_eq!(Ok(()), lb.check_at(now));
@@ -28,7 +28,7 @@ fn rejects_too_many() {
 
 #[test]
 fn never_allows_more_than_capacity() {
-    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(5).unwrap());
+    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
     let now = Instant::now();
     let ms = Duration::from_millis(1);
 
@@ -48,7 +48,7 @@ fn never_allows_more_than_capacity() {
 #[test]
 fn correct_wait_time() {
     // Bucket adding a new element per 200ms:
-    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(5).unwrap());
+    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
     let mut now = Instant::now();
     let ms = Duration::from_millis(1);
     let mut conforming = 0;
@@ -71,7 +71,7 @@ fn correct_wait_time() {
 
 #[test]
 fn prevents_time_travel() {
-    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(5).unwrap());
+    let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
     let now = Instant::now();
     let ms = Duration::from_millis(1);
 
@@ -82,7 +82,7 @@ fn prevents_time_travel() {
 
 #[test]
 fn actual_threadsafety() {
-    let mut lim = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(20).unwrap());
+    let mut lim = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(20u32));
     let now = Instant::now();
     let ms = Duration::from_millis(1);
     let mut children = vec![];

@@ -37,10 +37,13 @@ use std::time::{Duration, Instant};
 ///
 /// # Example
 /// ``` rust
-/// # use std::num::NonZeroU32;
 /// # use ratelimit_meter::{DirectRateLimiter, LeakyBucket};
-/// let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(NonZeroU32::new(2).unwrap());
+/// # #[macro_use] extern crate nonzero_ext;
+/// # extern crate ratelimit_meter;
+/// # fn main () {
+/// let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(2u32));
 /// assert_eq!(Ok(()), lb.check());
+/// # }
 /// ```
 pub struct LeakyBucket {}
 

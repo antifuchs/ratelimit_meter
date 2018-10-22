@@ -88,7 +88,10 @@ pub struct Params {
 /// # use ratelimit_meter::{DirectRateLimiter, GCRA};
 /// # use std::num::NonZeroU32;
 /// # use std::time::{Instant, Duration};
-/// let mut limiter = DirectRateLimiter::<GCRA>::per_second(NonZeroU32::new(20).unwrap());
+/// # #[macro_use] extern crate nonzero_ext;
+/// # extern crate ratelimit_meter;
+/// # fn main () {
+/// let mut limiter = DirectRateLimiter::<GCRA>::per_second(nonzero!(20u32));
 /// let now = Instant::now();
 /// let ms = Duration::from_millis(1);
 /// assert_eq!(Ok(()), limiter.check_at(now)); // the first cell is free
@@ -101,6 +104,7 @@ pub struct Params {
 ///
 /// // After a sufficient time period, cells are allowed again:
 /// assert_eq!(Ok(()), limiter.check_at(now + ms*50));
+/// # }
 pub struct GCRA {}
 
 impl Algorithm for GCRA {
