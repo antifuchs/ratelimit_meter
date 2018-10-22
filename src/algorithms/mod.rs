@@ -19,18 +19,27 @@ use {InconsistentCapacity, NegativeMultiDecision, NonConformance};
 /// API).
 pub trait Algorithm {
     /// The state of a single rate limiting bucket.
-    type BucketState: Default
+    ///
+    /// Every new rate limiting state is initialized as `Default`. The
+    /// states must be safe to share across threads (this crate uses a
+    /// `parking_lot` Mutex to allow that).
+    type BucketState: RateLimitState<Self::BucketParams>
+        + Default
         + Send
         + Sync
         + Eq
         + ShallowCopy
-        + fmt::Debug
-        + RateLimitState<Self::BucketParams>;
+        + fmt::Debug;
 
     /// The immutable parameters of the rate limiting bucket (e.g.,
-    /// maximum capacity).
+    /// maximum capacity). The bucket parameters are unique per rate
+    /// limiter instance (there are currently no per-user/per-IP rate
+    /// limiter parameters).
     type BucketParams: Send + Sync + fmt::Debug;
 
+    /// Constructs a set of rate limiter parameters from the given
+    /// parameters: `capacity` is the number of cells, weighhing
+    /// `cell_weight`, to allow `per_time_unit`.
     fn params_from_constructor(
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
