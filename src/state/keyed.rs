@@ -8,7 +8,10 @@ use std::time::{Duration, Instant};
 
 use evmap::{self, ReadHandle, WriteHandle};
 
-use {algorithms::Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use {
+    algorithms::{Algorithm, RateLimitState},
+    InconsistentCapacity, NegativeMultiDecision, NonConformance,
+};
 
 #[derive(Clone)]
 pub struct KeyedRateLimiter<A: Algorithm, K: Eq + Hash + Clone> {
@@ -92,6 +95,52 @@ where
 
     pub fn check_n(&mut self, key: K, n: u32) -> Result<(), NegativeMultiDecision> {
         self.check_n_at(key, n, Instant::now())
+    }
+
+    /// Removes the keys from this rate limiter that can be expired safely.
+    ///
+    /// To be eligible for expiration, a key's rate limiter state must
+    /// be at least `min_age` past its last relevance (see
+    /// [`RateLimitState.last_touched`](trait.RateLimitState.html#method.last_touched)).
+    ///
+    /// This method works in two parts, but both parts block new keys
+    /// from getting added while they're running:
+    /// * First, it collects the keys that are eligible for expiration.
+    /// * Then, it expires these keys.
+    ///
+    /// # Race conditions
+    /// Since this is happening concurrently with other operations,
+    /// race conditions can & will occur. It's possible that cells are
+    /// accounted between the time `cleanup_at` is called and their
+    /// expiry.  These cells will lost.
+    ///
+    /// The time window in which this can occur is hopefully short
+    /// enough that this is an acceptable risk of loss in accuracy.
+    pub fn cleanup_at<D: Into<Option<Duration>>, I: Into<Option<Instant>>>(
+        &mut self,
+        min_age: D,
+        at: I,
+    ) {
+        let params = &self.params;
+        let min_age = min_age.into().unwrap_or_else(|| Duration::new(0, 0));
+        let at = at.into().unwrap_or_else(|| Instant::now());
+
+        let mut expireable: Vec<K> = vec![];
+        self.map_reader.for_each(|k, v| {
+            v.get(0).map(|state| {
+                if state.last_touched(params) < at - min_age {
+                    expireable.push(k.clone());
+                }
+            });
+        });
+
+        // Now take the map write lock and remove all the keys that we
+        // collected:
+        let mut w = self.map_writer.lock();
+        for key in expireable {
+            w.empty(key);
+        }
+        w.refresh();
     }
 }
 
