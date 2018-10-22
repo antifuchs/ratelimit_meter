@@ -19,7 +19,13 @@ use {InconsistentCapacity, NegativeMultiDecision, NonConformance};
 /// API).
 pub trait Algorithm {
     /// The state of a single rate limiting bucket.
-    type BucketState: Default + Send + Sync + Eq + ShallowCopy + fmt::Debug;
+    type BucketState: Default
+        + Send
+        + Sync
+        + Eq
+        + ShallowCopy
+        + fmt::Debug
+        + RateLimitState<Self::BucketParams>;
 
     /// The immutable parameters of the rate limiting bucket (e.g.,
     /// maximum capacity).
@@ -62,4 +68,20 @@ pub trait Algorithm {
             Err(other) => panic!("bug: There's a non-conforming batch: {:?}", other),
         }
     }
+}
+
+/// Trait that all rate limit states have to implement around
+/// housekeeping in keyed rate limiters.
+pub trait RateLimitState<P> {
+    /// Returns the last time instant that the state had any relevance
+    /// (i.e. the rate limiter would behave exactly as if it was a new
+    /// rate limiter after this time).
+    ///
+    /// If the state has not been touched for a given amount of time,
+    /// the keyed rate limiter will expire it.
+    ///
+    /// # Thread safety
+    /// This uses a bucket state snapshot to determine eligibility;
+    /// race conditions can occur.
+    fn last_touched(&self, params: &P) -> Instant;
 }

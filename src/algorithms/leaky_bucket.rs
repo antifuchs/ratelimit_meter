@@ -2,7 +2,10 @@
 
 use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
-use {algorithms::Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use {
+    algorithms::{Algorithm, RateLimitState},
+    InconsistentCapacity, NegativeMultiDecision, NonConformance,
+};
 
 use evmap::ShallowCopy;
 
@@ -48,6 +51,13 @@ pub struct State(ThreadsafeWrapper<BucketState>);
 impl ShallowCopy for State {
     unsafe fn shallow_copy(&mut self) -> Self {
         State(self.0.shallow_copy())
+    }
+}
+
+impl RateLimitState<Params> for State {
+    fn last_touched(&self, _params: &Params) -> Instant {
+        let data = self.0.snapshot();
+        data.last_update.unwrap_or_else(|| Instant::now()) + data.level
     }
 }
 

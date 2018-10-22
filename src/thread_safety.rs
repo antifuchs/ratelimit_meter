@@ -89,4 +89,17 @@ where
         }
         decision
     }
+
+    /// Retrieves and returns a snapshot of the bucket state. This
+    /// isn't thread safe, but can be used to restore an old copy of
+    /// the bucket if necessary.
+    ///
+    /// # Thread safety
+    /// This function operates threadsafely, but you're literally
+    /// taking a copy of data that will change. Relying on the data
+    /// that is returned *will* race.
+    pub(crate) fn snapshot(&self) -> T {
+        let data = self.data.lock();
+        data.clone()
+    }
 }

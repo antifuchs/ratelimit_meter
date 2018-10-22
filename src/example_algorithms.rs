@@ -1,6 +1,9 @@
 use failure::_core::time::Duration;
 use std::num::NonZeroU32;
-use {algorithms::Algorithm, DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision};
+use {
+    algorithms::{Algorithm, RateLimitState},
+    DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision,
+};
 
 use std::time::Instant;
 
@@ -22,6 +25,12 @@ impl Allower {
     pub fn ratelimiter() -> DirectRateLimiter<Allower> {
         // These numbers are fake, but we make them up for convenience:
         DirectRateLimiter::per_second(NonZeroU32::new(1).unwrap())
+    }
+}
+
+impl RateLimitState<()> for () {
+    fn last_touched(&self, _params: &()) -> Instant {
+        Instant::now()
     }
 }
 

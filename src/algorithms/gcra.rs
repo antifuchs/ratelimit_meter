@@ -1,7 +1,10 @@
 //! The Generic Cell Rate Algorithm
 
 use thread_safety::ThreadsafeWrapper;
-use {algorithms::Algorithm, InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use {
+    algorithms::{Algorithm, RateLimitState},
+    InconsistentCapacity, NegativeMultiDecision, NonConformance,
+};
 
 use evmap::ShallowCopy;
 
@@ -16,6 +19,13 @@ pub struct State(ThreadsafeWrapper<Tat>);
 impl ShallowCopy for State {
     unsafe fn shallow_copy(&mut self) -> Self {
         State(self.0.shallow_copy())
+    }
+}
+
+impl RateLimitState<Params> for State {
+    fn last_touched(&self, params: &Params) -> Instant {
+        let data = self.0.snapshot();
+        data.0.unwrap_or_else(|| Instant::now()) + params.tau
     }
 }
 
