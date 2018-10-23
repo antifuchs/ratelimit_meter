@@ -64,6 +64,24 @@ impl RateLimitState<Params> for State {
     }
 }
 
+/// Returned in case of a negative rate-limiting decision.
+///
+/// To avoid the thundering herd effect, client code should always add
+/// some jitter to the wait time.
+#[derive(Fail, Debug, PartialEq)]
+#[fail(display = "rate-limited, wait at least for {:?}", _0)]
+pub struct TooEarly(Instant, Duration);
+
+impl NonConformance for TooEarly {
+    fn earliest_possible(&self) -> Instant {
+        self.0 + self.1
+    }
+
+    fn wait_time_from(&self, from: Instant) -> Duration {
+        (self.0 + self.1).duration_since(from)
+    }
+}
+
 /// Represents the parameters affecting all decisions made using a
 /// single rate limiter - the total capacity of the bucket, and the
 /// interval during which a full new token's "volume" drips out.
@@ -92,6 +110,8 @@ impl Algorithm for LeakyBucket {
     type BucketState = State;
     type BucketParams = Params;
 
+    type NegativeDecision = TooEarly;
+    
     fn params_from_constructor(
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
@@ -115,7 +135,7 @@ impl Algorithm for LeakyBucket {
         params: &Self::BucketParams,
         n: u32,
         t0: Instant,
-    ) -> Result<(), NegativeMultiDecision> {
+    ) -> Result<(), NegativeMultiDecision<TooEarly>> {
         let full = params.full;
         let weight = params.token_interval * n;
         if weight > params.full {
@@ -142,7 +162,7 @@ impl Algorithm for LeakyBucket {
                 (
                     Err(NegativeMultiDecision::BatchNonConforming(
                         n,
-                        NonConformance::new(t0, wait_period),
+                        TooEarly(t0, wait_period),
                     )),
                     None,
                 )

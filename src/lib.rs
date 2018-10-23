@@ -136,64 +136,14 @@ extern crate nonzero_ext;
 extern crate parking_lot;
 
 use std::num::NonZeroU32;
-use std::time::{Duration, Instant};
+use failure::Fail;
 
 pub use self::algorithms::LeakyBucket;
 pub use self::algorithms::GCRA;
+pub use self::algorithms::NonConformance;
 
 pub use self::state::DirectRateLimiter;
 pub use self::state::KeyedRateLimiter;
-
-/// Provides additional information about non-conforming cells, most
-/// importantly the earliest time until the next cell could be
-/// considered conforming.
-///
-/// Since this does not account for effects like thundering herds,
-/// users should always add random jitter to the times given.
-#[derive(Fail, Debug, PartialEq)]
-#[fail(display = "rate-limited, wait at least {:?}", min_time)]
-pub struct NonConformance {
-    t0: Instant,
-    min_time: Duration,
-}
-
-impl NonConformance {
-    pub(crate) fn new(t0: Instant, min_time: Duration) -> NonConformance {
-        NonConformance { t0, min_time }
-    }
-}
-
-impl NonConformance {
-    /// Returns the earliest time at which a decision could be
-    /// conforming (excluding conforming decisions made by the Decider
-    /// that are made in the meantime).
-    pub fn earliest_possible(&self) -> Instant {
-        self.t0 + self.min_time
-    }
-
-    /// Returns the minimum amount of time from the time that the
-    /// decision was made (relative to the `at` argument in a
-    /// `Decider`'s `check_at` method) that must pass before a
-    /// decision can be conforming. Since Durations can not be
-    /// negative, a zero duration is returned if `from` is already
-    /// after that duration.
-    pub fn wait_time_from(&self, from: Instant) -> Duration {
-        if from == self.t0 {
-            self.min_time
-        } else if from < self.t0 + self.min_time {
-            (self.t0 + self.min_time).duration_since(from)
-        } else {
-            Duration::new(0, 0)
-        }
-    }
-
-    /// Returns the minimum amount of time (down to 0) that needs to
-    /// pass from the current instant for the Decider to consider a
-    /// cell conforming again.
-    pub fn wait_time(&self) -> Duration {
-        self.wait_time_from(Instant::now())
-    }
-}
 
 /// Gives additional information about the negative outcome of a batch
 /// cell decision.
@@ -208,14 +158,14 @@ impl NonConformance {
 ///   * `InsufficientCapacity` - the Decider can never accomodate the
 ///     cells queried for.
 #[derive(Fail, Debug, PartialEq)]
-pub enum NegativeMultiDecision {
+pub enum NegativeMultiDecision<E: Fail> {
     /// A batch of cells (the first argument) is non-conforming and
     /// can not be let through at this time. The second argument gives
     /// information about when that batch of cells might be let
     /// through again (not accounting for thundering herds and other,
     /// simultaneous decisions).
     #[fail(display = "{} cells: {}", _0, _1)]
-    BatchNonConforming(u32, NonConformance),
+    BatchNonConforming(u32, E),
 
     /// The number of cells tested (the first argument) is larger than
     /// the bucket's capacity, which means the decision can never have
@@ -240,13 +190,13 @@ pub struct InconsistentCapacity {
     cell_weight: NonZeroU32,
 }
 
-#[test]
-fn test_wait_time_from() {
-    let now = Instant::now();
-    let nc = NonConformance::new(now, Duration::from_secs(20));
-    assert_eq!(nc.wait_time_from(now), Duration::from_secs(20));
-    assert_eq!(
-        nc.wait_time_from(now + Duration::from_secs(5)),
-        Duration::from_secs(15)
-    );
-}
+// #[test]
+// fn test_wait_time_from() {
+//     let now = Instant::now();
+//     let nc = NonConformance::new(now, Duration::from_secs(20));
+//     assert_eq!(nc.wait_time_from(now), Duration::from_secs(20));
+//     assert_eq!(
+//         nc.wait_time_from(now + Duration::from_secs(5)),
+//         Duration::from_secs(15)
+//     );
+// }

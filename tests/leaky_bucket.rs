@@ -1,7 +1,7 @@
 extern crate ratelimit_meter;
 #[macro_use] extern crate nonzero_ext;
 
-use ratelimit_meter::{DirectRateLimiter, LeakyBucket, NegativeMultiDecision};
+use ratelimit_meter::{DirectRateLimiter, LeakyBucket, NegativeMultiDecision, NonConformance};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -61,7 +61,7 @@ fn correct_wait_time() {
             }
             Err(wait) => {
                 now += wait.wait_time_from(now);
-                assert!(lb.check_at(now).is_ok());
+                assert_eq!(Ok(()), lb.check_at(now));
                 conforming += 1;
             }
         }

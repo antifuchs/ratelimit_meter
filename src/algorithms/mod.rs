@@ -8,7 +8,8 @@ use evmap::ShallowCopy;
 use std::fmt;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
-use {InconsistentCapacity, NegativeMultiDecision, NonConformance};
+use failure::Fail;
+use {InconsistentCapacity, NegativeMultiDecision};
 
 /// The default rate limiting algorithm in this crate: The ["leaky
 /// bucket"](leaky_bucket/struct.LeakyBucket.html).
@@ -18,6 +19,34 @@ use {InconsistentCapacity, NegativeMultiDecision, NonConformance};
 /// is needed, this crate also offers the
 /// [`GCRA`](gcra/struct.GCRA.html) algorithm.
 pub type DefaultAlgorithm = LeakyBucket;
+
+/// Provides additional information about non-conforming cells, most
+/// importantly the earliest time until the next cell could be
+/// considered conforming.
+///
+/// Since this does not account for effects like thundering herds,
+/// users should always add random jitter to the times given.
+pub trait NonConformance {
+    /// Returns the earliest time at which a decision could be
+    /// conforming (excluding conforming decisions made by the Decider
+    /// that are made in the meantime).
+    fn earliest_possible(&self) -> Instant;
+
+    /// Returns the minimum amount of time from the time that the
+    /// decision was made (relative to the `at` argument in a
+    /// `Decider`'s `check_at` method) that must pass before a
+    /// decision can be conforming. Since Durations can not be
+    /// negative, a zero duration is returned if `from` is already
+    /// after that duration.
+    fn wait_time_from(&self, from: Instant) -> Duration;
+
+    /// Returns the minimum amount of time (down to 0) that needs to
+    /// pass from the current instant for the Decider to consider a
+    /// cell conforming again.
+    fn wait_time(&self) -> Duration {
+        self.wait_time_from(Instant::now())
+    }
+}
 
 /// The trait that implementations of metered rate-limiter algorithms
 /// have to implement.
@@ -46,6 +75,14 @@ pub trait Algorithm {
     /// limiter parameters).
     type BucketParams: Send + Sync + fmt::Debug;
 
+    /// The type returned when a rate limiting decision for a single
+    /// cell is negative. Each rate limiting algorithm can decide to
+    /// return the type that suits it best, but most algorithms'
+    /// decisions also implement
+    /// [`NonConformance`](trait.NonConformance.html), to ease
+    /// handling of how long to wait.
+    type NegativeDecision: PartialEq + Fail;
+    
     /// Constructs a set of rate limiter parameters from the given
     /// parameters: `capacity` is the number of cells, weighhing
     /// `cell_weight`, to allow `per_time_unit`.
@@ -56,8 +93,8 @@ pub trait Algorithm {
     ) -> Result<Self::BucketParams, InconsistentCapacity>;
 
     /// Tests if `n` cells can be accommodated in the rate limiter at
-    /// the instant `at` and updates the rate-limiter to account for
-    /// the weight of the cells and updates the ratelimiter state.
+    /// the instant `at` and updates the rate-limiter state to account
+    /// for the weight of the cells and updates the ratelimiter state.
     ///
     /// The update is all or nothing: Unless all n cells can be
     /// accommodated, the state of the rate limiter will not be
@@ -67,11 +104,11 @@ pub trait Algorithm {
         params: &Self::BucketParams,
         n: u32,
         at: Instant,
-    ) -> Result<(), NegativeMultiDecision>;
+    ) -> Result<(), NegativeMultiDecision<Self::NegativeDecision>>;
 
     /// Tests if a single cell can be accommodated in the rate limiter
-    /// at the instant `at` and updates the rate-limiter to account
-    /// for the weight of the cell.
+    /// at the instant `at` and updates the rate-limiter state to
+    /// account for the weight of the cell.
     ///
     /// This method is provided by default, using the `n` test&update
     /// method.
@@ -79,7 +116,7 @@ pub trait Algorithm {
         state: &Self::BucketState,
         params: &Self::BucketParams,
         at: Instant,
-    ) -> Result<(), NonConformance> {
+    ) -> Result<(), Self::NegativeDecision> {
         match Self::test_n_and_update(state, params, 1, at) {
             Ok(()) => Ok(()),
             Err(NegativeMultiDecision::BatchNonConforming(1, nc)) => Err(nc),

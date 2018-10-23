@@ -73,23 +73,23 @@ where
             })
     }
 
-    pub fn check_at(&mut self, key: K, at: Instant) -> Result<(), NonConformance> {
+    pub fn check_at(&mut self, key: K, at: Instant) -> Result<(), <A as Algorithm>::NegativeDecision> {
         self.check_and_update_key(key, |state| {
             <A as Algorithm>::test_and_update(state, &self.params, at)
         })
     }
 
-    pub fn check_n_at(&mut self, key: K, n: u32, at: Instant) -> Result<(), NegativeMultiDecision> {
+    pub fn check_n_at(&mut self, key: K, n: u32, at: Instant) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
         self.check_and_update_key(key, |state| {
             <A as Algorithm>::test_n_and_update(state, &self.params, n, at)
         })
     }
 
-    pub fn check(&mut self, key: K) -> Result<(), NonConformance> {
+    pub fn check(&mut self, key: K) -> Result<(), <A as Algorithm>::NegativeDecision> {
         self.check_at(key, Instant::now())
     }
 
-    pub fn check_n(&mut self, key: K, n: u32) -> Result<(), NegativeMultiDecision> {
+    pub fn check_n(&mut self, key: K, n: u32) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
         self.check_n_at(key, n, Instant::now())
     }
 

@@ -2,8 +2,8 @@
 
 use thread_safety::ThreadsafeWrapper;
 use {
-    algorithms::{Algorithm, RateLimitState},
-    InconsistentCapacity, NegativeMultiDecision, NonConformance,
+    algorithms::{Algorithm, RateLimitState, NonConformance},
+    InconsistentCapacity, NegativeMultiDecision,
 };
 
 use evmap::ShallowCopy;
@@ -48,6 +48,25 @@ pub struct Params {
 
     // The "capacity" of the bucket.
     tau: Duration,
+}
+
+/// Returned in case of a negative rate-limiting decision. Indicates
+/// the earliest instant that a cell might get accepted again.
+///
+/// To avoid thundering herd effects, client code should always add a
+/// random amount of jitter to wait time estimates.
+#[derive(Fail, Debug, PartialEq)]
+#[fail(display = "rate-limited until {:?}", _0)]
+pub struct NotUntil(Instant);
+
+impl NonConformance for NotUntil {
+    fn earliest_possible(&self) -> Instant {
+        self.0
+    }
+
+    fn wait_time_from(&self, from: Instant) -> Duration {
+        self.0.duration_since(from)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -112,6 +131,8 @@ impl Algorithm for GCRA {
 
     type BucketParams = Params;
 
+    type NegativeDecision = NotUntil;
+    
     fn params_from_constructor(
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
@@ -136,13 +157,13 @@ impl Algorithm for GCRA {
         state: &Self::BucketState,
         params: &Self::BucketParams,
         t0: Instant,
-    ) -> Result<(), NonConformance> {
+    ) -> Result<(), Self::NegativeDecision> {
         let tau = params.tau;
         let t = params.t;
         state.0.measure_and_replace(|tat| {
             let tat = tat.0.unwrap_or(t0);
             if t0 < tat - tau {
-                (Err(NonConformance::new(t0, tat - t0)), None)
+                (Err(NotUntil(tat)), None)
             } else {
                 (Ok(()), Some(Tat(Some(cmp::max(tat, t0) + t))))
             }
@@ -160,7 +181,7 @@ impl Algorithm for GCRA {
         params: &Self::BucketParams,
         n: u32,
         t0: Instant,
-    ) -> Result<(), NegativeMultiDecision> {
+    ) -> Result<(), NegativeMultiDecision<Self::NegativeDecision>> {
         let tau = params.tau;
         let t = params.t;
         state.0.measure_and_replace(|tat| {
@@ -187,7 +208,7 @@ impl Algorithm for GCRA {
                 (
                     Err(NegativeMultiDecision::BatchNonConforming(
                         n,
-                        NonConformance::new(t0, tat - t0),
+                        NotUntil(tat),
                     )),
                     None,
                 )

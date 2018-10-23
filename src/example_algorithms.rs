@@ -34,9 +34,14 @@ impl RateLimitState<()> for () {
     }
 }
 
+#[derive(Fail, Debug, PartialEq)]
+#[fail(display = "Should never happen")]
+pub struct Impossible();
+
 impl Algorithm for Allower {
     type BucketState = ();
     type BucketParams = ();
+    type NegativeDecision = Impossible;
 
     fn params_from_constructor(
         _capacity: NonZeroU32,
@@ -52,7 +57,7 @@ impl Algorithm for Allower {
         _params: &Self::BucketParams,
         _n: u32,
         _t0: Instant,
-    ) -> Result<(), NegativeMultiDecision> {
+    ) -> Result<(), NegativeMultiDecision<Impossible>> {
         Ok(())
     }
 }
