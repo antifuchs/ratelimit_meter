@@ -1,7 +1,7 @@
 extern crate ratelimit_meter;
 #[macro_use] extern crate nonzero_ext;
 
-use ratelimit_meter::{DirectRateLimiter, NegativeMultiDecision, GCRA};
+use ratelimit_meter::{DirectRateLimiter, NegativeMultiDecision, GCRA, NonConformance};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -89,6 +89,30 @@ fn never_allows_more_than_capacity() {
         Err(NegativeMultiDecision::InsufficientCapacity(n)) => assert_eq!(n, 15),
         _ => panic!("Did not expect {:?}", result),
     }
+}
+
+#[test]
+fn correct_wait_time() {
+    // Bucket adding a new element per 200ms:
+    let mut lb = DirectRateLimiter::<GCRA>::per_second(nonzero!(5u32));
+    let mut now = Instant::now();
+    let ms = Duration::from_millis(1);
+    let mut conforming = 0;
+    for _i in 0..20 {
+        now += ms;
+        let res = lb.check_at(now);
+        match res {
+            Ok(()) => {
+                conforming += 1;
+            }
+            Err(wait) => {
+                now += wait.wait_time_from(now);
+                assert_eq!(Ok(()), lb.check_at(now));
+                conforming += 1;
+            }
+        }
+    }
+    assert_eq!(20, conforming);
 }
 
 #[test]
