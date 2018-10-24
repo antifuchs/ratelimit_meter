@@ -33,12 +33,6 @@ where
         let other = other.data.lock();
         *other == *mine
     }
-
-    fn ne(&self, other: &Self) -> bool {
-        let mine = self.data.lock();
-        let other = other.data.lock();
-        *other != *mine
-    }
 }
 
 impl<T> Eq for ThreadsafeWrapper<T> where T: fmt::Debug + Default + Clone + PartialEq + Eq {}

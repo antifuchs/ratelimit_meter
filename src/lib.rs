@@ -122,6 +122,8 @@
 //! # }
 //! ```
 
+#![cfg_attr(feature = "cargo-clippy", deny(warnings))]
+
 pub mod algorithms;
 pub mod example_algorithms;
 pub mod state;

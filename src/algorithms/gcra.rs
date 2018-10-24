@@ -25,7 +25,7 @@ impl ShallowCopy for State {
 impl RateLimitState<Params> for State {
     fn last_touched(&self, params: &Params) -> Instant {
         let data = self.0.snapshot();
-        data.0.unwrap_or_else(|| Instant::now()) + params.tau
+        data.0.unwrap_or_else(Instant::now) + params.tau
     }
 }
 

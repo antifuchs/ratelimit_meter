@@ -1,5 +1,7 @@
 use parking_lot::Mutex;
+use std::collections::hash_map::RandomState;
 use std::fmt;
+use std::hash::BuildHasher;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
@@ -10,15 +12,21 @@ use evmap::{self, ReadHandle, WriteHandle};
 
 use {
     algorithms::{Algorithm, DefaultAlgorithm, RateLimitState},
-    InconsistentCapacity, NegativeMultiDecision, NonConformance,
+    InconsistentCapacity, NegativeMultiDecision,
 };
 
+type MapWriteHandle<K, A, H> = Arc<Mutex<WriteHandle<K, <A as Algorithm>::BucketState, (), H>>>;
+
 #[derive(Clone)]
-pub struct KeyedRateLimiter<K: Eq + Hash + Clone, A: Algorithm = DefaultAlgorithm> {
+pub struct KeyedRateLimiter<
+    K: Eq + Hash + Clone,
+    A: Algorithm = DefaultAlgorithm,
+    H: BuildHasher + Clone = RandomState,
+> {
     algorithm: PhantomData<A>,
     params: A::BucketParams,
-    map_reader: ReadHandle<K, A::BucketState>,
-    map_writer: Arc<Mutex<WriteHandle<K, A::BucketState>>>,
+    map_reader: ReadHandle<K, A::BucketState, (), H>,
+    map_writer: MapWriteHandle<K, A, H>,
 }
 
 impl<A, K> fmt::Debug for KeyedRateLimiter<K, A>
@@ -58,6 +66,13 @@ where
         Self::new(capacity, Duration::from_secs(1))
     }
 
+    pub fn build_with_capacity(capacity: NonZeroU32) -> Builder<K, A, RandomState> {
+        Builder {
+            capacity,
+            ..Default::default()
+        }
+    }
+
     fn check_and_update_key<E, F>(&self, key: K, update: F) -> Result<(), E>
     where
         F: Fn(&A::BucketState) -> Result<(), E>,
@@ -67,7 +82,7 @@ where
                 // we have at least one element (owing to the nature of
                 // the evmap, it says there could be >1
                 // entries, but we'll only ever add one):
-                let state = v.get(0).unwrap();
+                let state = &v[0];
                 update(state)
             }).unwrap_or_else(|| {
                 // entry does not exist, let's add one.
@@ -139,15 +154,15 @@ where
     ) {
         let params = &self.params;
         let min_age = min_age.into().unwrap_or_else(|| Duration::new(0, 0));
-        let at = at.into().unwrap_or_else(|| Instant::now());
+        let at = at.into().unwrap_or_else(Instant::now);
 
         let mut expireable: Vec<K> = vec![];
         self.map_reader.for_each(|k, v| {
-            v.get(0).map(|state| {
+            if let Some(state) = v.get(0) {
                 if state.last_touched(params) < at - min_age {
                     expireable.push(k.clone());
                 }
-            });
+            }
         });
 
         // Now take the map write lock and remove all the keys that we
@@ -160,4 +175,86 @@ where
     }
 }
 
-// TODO: add a builder for this one
+pub struct Builder<K: Eq + Hash + Clone, A: Algorithm, H: BuildHasher> {
+    end_result: PhantomData<(K, A)>,
+    capacity: NonZeroU32,
+    cell_weight: NonZeroU32,
+    per_time_unit: Duration,
+    hasher: H,
+    map_capacity: Option<usize>,
+}
+
+impl<K, A> Default for Builder<K, A, RandomState>
+where
+    K: Eq + Hash + Clone,
+    A: Algorithm,
+{
+    fn default() -> Builder<K, A, RandomState> {
+        Builder {
+            end_result: PhantomData,
+            map_capacity: None,
+            capacity: nonzero!(1u32),
+            cell_weight: nonzero!(1u32),
+            per_time_unit: Duration::from_secs(1),
+            hasher: RandomState::new(),
+        }
+    }
+}
+
+impl<K, A, H> Builder<K, A, H>
+where
+    K: Eq + Hash + Clone,
+    A: Algorithm,
+    H: BuildHasher,
+{
+    pub fn with_hasher<H2: BuildHasher>(self, hash_builder: H2) -> Builder<K, A, H2> {
+        Builder {
+            hasher: hash_builder,
+            end_result: self.end_result,
+            capacity: self.capacity,
+            cell_weight: self.cell_weight,
+            per_time_unit: self.per_time_unit,
+            map_capacity: self.map_capacity,
+        }
+    }
+
+    pub fn with_cell_weight(self, cell_weight: NonZeroU32) -> Self {
+        Builder {
+            cell_weight,
+            ..self
+        }
+    }
+
+    pub fn with_map_capacity(self, map_capacity: usize) -> Self {
+        Builder {
+            map_capacity: Some(map_capacity),
+            ..self
+        }
+    }
+
+    pub fn build(self) -> Result<KeyedRateLimiter<K, A, H>, InconsistentCapacity>
+    where
+        H: Clone,
+    {
+        let map_opts = evmap::Options::default().with_hasher(self.hasher);
+        let (r, mut w) = if self.map_capacity.is_some() {
+            map_opts
+                .with_capacity(self.map_capacity.unwrap())
+                .construct()
+        } else {
+            map_opts.construct()
+        };
+
+        w.refresh();
+        Ok(KeyedRateLimiter {
+            algorithm: PhantomData,
+            params: <A as Algorithm>::params_from_constructor(
+                self.capacity,
+                self.cell_weight,
+                self.per_time_unit,
+            )?,
+            map_reader: r,
+            map_writer: Arc::new(Mutex::new(w)),
+        })
+    }
+}
