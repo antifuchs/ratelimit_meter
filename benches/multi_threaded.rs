@@ -1,8 +1,9 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::variants::Variant;
+use super::variants::{BenchmarkDirectBucket, Variant};
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
+use ratelimit_meter::DirectRateLimiter;
 
 pub fn bench_all(c: &mut Criterion) {
     let id = "multi_threaded/20_threads";
@@ -10,7 +11,7 @@ pub fn bench_all(c: &mut Criterion) {
     let bm = ParameterizedBenchmark::new(
         id,
         |b, ref v| {
-            run_with_variants!(v, lim, {
+            run_with_variants!(v, lim: BenchmarkDirectBucket, {
                 let now = Instant::now();
                 let ms = Duration::from_millis(20);
                 let mut children = vec![];

@@ -44,11 +44,18 @@ where
         w.refresh();
         KeyedRateLimiter {
             algorithm: PhantomData,
-            params: <A as Algorithm>::params_from_constructor(capacity, nonzero!(1u32), per_time_unit)
-                .unwrap(),
+            params: <A as Algorithm>::params_from_constructor(
+                capacity,
+                nonzero!(1u32),
+                per_time_unit,
+            ).unwrap(),
             map_reader: r,
             map_writer: Arc::new(Mutex::new(w)),
         }
+    }
+
+    pub fn per_second(capacity: NonZeroU32) -> Self {
+        Self::new(capacity, Duration::from_secs(1))
     }
 
     fn check_and_update_key<E, F>(&self, key: K, update: F) -> Result<(), E>
@@ -73,13 +80,22 @@ where
             })
     }
 
-    pub fn check_at(&mut self, key: K, at: Instant) -> Result<(), <A as Algorithm>::NegativeDecision> {
+    pub fn check_at(
+        &mut self,
+        key: K,
+        at: Instant,
+    ) -> Result<(), <A as Algorithm>::NegativeDecision> {
         self.check_and_update_key(key, |state| {
             <A as Algorithm>::test_and_update(state, &self.params, at)
         })
     }
 
-    pub fn check_n_at(&mut self, key: K, n: u32, at: Instant) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
+    pub fn check_n_at(
+        &mut self,
+        key: K,
+        n: u32,
+        at: Instant,
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
         self.check_and_update_key(key, |state| {
             <A as Algorithm>::test_n_and_update(state, &self.params, n, at)
         })
@@ -89,7 +105,11 @@ where
         self.check_at(key, Instant::now())
     }
 
-    pub fn check_n(&mut self, key: K, n: u32) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
+    pub fn check_n(
+        &mut self,
+        key: K,
+        n: u32,
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
         self.check_n_at(key, n, Instant::now())
     }
 
