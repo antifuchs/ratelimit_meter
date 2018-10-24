@@ -1,17 +1,18 @@
 #[macro_use]
 extern crate criterion;
 extern crate ratelimit_meter;
-#[macro_use] extern crate nonzero_ext;
+#[macro_use]
+extern crate nonzero_ext;
 
 use criterion::Criterion;
 
 #[macro_use]
 mod variants;
 
+mod algorithms;
 mod multi_threaded;
 mod no_op;
 mod single_threaded;
-mod algorithms;
 
 criterion_group!(
     benches,

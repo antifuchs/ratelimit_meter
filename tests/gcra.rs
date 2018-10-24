@@ -1,7 +1,8 @@
 extern crate ratelimit_meter;
-#[macro_use] extern crate nonzero_ext;
+#[macro_use]
+extern crate nonzero_ext;
 
-use ratelimit_meter::{DirectRateLimiter, NegativeMultiDecision, GCRA, NonConformance};
+use ratelimit_meter::{DirectRateLimiter, NegativeMultiDecision, NonConformance, GCRA};
 use std::thread;
 use std::time::{Duration, Instant};
 

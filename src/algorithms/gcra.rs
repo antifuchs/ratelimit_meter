@@ -2,7 +2,7 @@
 
 use thread_safety::ThreadsafeWrapper;
 use {
-    algorithms::{Algorithm, RateLimitState, NonConformance},
+    algorithms::{Algorithm, NonConformance, RateLimitState},
     InconsistentCapacity, NegativeMultiDecision,
 };
 
@@ -132,7 +132,7 @@ impl Algorithm for GCRA {
     type BucketParams = Params;
 
     type NegativeDecision = NotUntil;
-    
+
     fn params_from_constructor(
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
@@ -206,10 +206,7 @@ impl Algorithm for GCRA {
             };
             if t0 < tat - tau {
                 (
-                    Err(NegativeMultiDecision::BatchNonConforming(
-                        n,
-                        NotUntil(tat),
-                    )),
+                    Err(NegativeMultiDecision::BatchNonConforming(n, NotUntil(tat))),
                     None,
                 )
             } else {

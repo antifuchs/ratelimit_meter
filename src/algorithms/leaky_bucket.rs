@@ -111,7 +111,7 @@ impl Algorithm for LeakyBucket {
     type BucketParams = Params;
 
     type NegativeDecision = TooEarly;
-    
+
     fn params_from_constructor(
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,

@@ -52,7 +52,7 @@
 //! [nonzero_ext](https://crates.io/crates/nonzero_ext) crate, which
 //! comes with a macro `nonzero!()`. This macro makes it far easier to
 //! construct rate limiters without cluttering your code.
-//! 
+//!
 //! ## Rate-limiting Algorithms
 //!
 //! ### Design and implementation of GCRA
@@ -135,12 +135,12 @@ extern crate evmap;
 extern crate nonzero_ext;
 extern crate parking_lot;
 
-use std::num::NonZeroU32;
 use failure::Fail;
+use std::num::NonZeroU32;
 
 pub use self::algorithms::LeakyBucket;
-pub use self::algorithms::GCRA;
 pub use self::algorithms::NonConformance;
+pub use self::algorithms::GCRA;
 
 pub use self::state::DirectRateLimiter;
 pub use self::state::KeyedRateLimiter;

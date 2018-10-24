@@ -1,7 +1,8 @@
 // This test uses procinfo, so can only be run on Linux.
 extern crate libc;
 extern crate ratelimit_meter;
-#[macro_use]extern crate nonzero_ext;
+#[macro_use]
+extern crate nonzero_ext;
 
 use ratelimit_meter::{DirectRateLimiter, LeakyBucket, GCRA};
 use std::thread;
@@ -28,10 +29,9 @@ fn check_for_leaks(n_iter: usize, usage_before: i64) {
 #[test]
 fn memleak_gcra() {
     const N_ITER: usize = 500_000;
-    let mut bucket =
-        DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
-            .build()
-            .unwrap();
+    let mut bucket = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
+        .build()
+        .unwrap();
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {
@@ -43,10 +43,9 @@ fn memleak_gcra() {
 #[test]
 fn memleak_gcra_multi() {
     const N_ITER: usize = 500_000;
-    let mut bucket =
-        DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
-            .build()
-            .unwrap();
+    let mut bucket = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
+        .build()
+        .unwrap();
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {
@@ -58,10 +57,9 @@ fn memleak_gcra_multi() {
 #[test]
 fn memleak_gcra_threaded() {
     const N_ITER: usize = 5_000;
-    let bucket =
-        DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
-            .build()
-            .unwrap();
+    let bucket = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
+        .build()
+        .unwrap();
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {
@@ -74,8 +72,7 @@ fn memleak_gcra_threaded() {
 #[test]
 fn memleak_leakybucket() {
     const N_ITER: usize = 500_000;
-    let mut bucket =
-        DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(1_000_000u32));
+    let mut bucket = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(1_000_000u32));
     let usage_before = resident_memsize();
 
     for _i in 0..N_ITER {

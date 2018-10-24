@@ -56,8 +56,11 @@ where
         DirectRateLimiter {
             algorithm: PhantomData,
             state: <A as Algorithm>::BucketState::default(),
-            params: <A as Algorithm>::params_from_constructor(capacity, nonzero!(1u32), per_time_unit)
-                .unwrap(),
+            params: <A as Algorithm>::params_from_constructor(
+                capacity,
+                nonzero!(1u32),
+                per_time_unit,
+            ).unwrap(),
         }
     }
 
@@ -128,7 +131,10 @@ where
     /// If `n` exceeds the bucket capacity, `check_n_at` returns
     /// [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity),
     /// indicating that a batch of this many cells can never succeed.
-    pub fn check_n(&mut self, n: u32) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
+    pub fn check_n(
+        &mut self,
+        n: u32,
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
         <A as Algorithm>::test_n_and_update(&mut self.state, &self.params, n, Instant::now())
     }
 
@@ -140,7 +146,11 @@ where
 
     /// Tests if `n` cells can be accommodated at the given time
     /// (`Instant::now()`), using [`check_n`](#method.check_n)
-    pub fn check_n_at(&mut self, n: u32, at: Instant) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
+    pub fn check_n_at(
+        &mut self,
+        n: u32,
+        at: Instant,
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
         <A as Algorithm>::test_n_and_update(&mut self.state, &self.params, n, at)
     }
 }

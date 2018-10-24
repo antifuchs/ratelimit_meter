@@ -1,5 +1,6 @@
 extern crate ratelimit_meter;
-#[macro_use] extern crate nonzero_ext;
+#[macro_use]
+extern crate nonzero_ext;
 
 use ratelimit_meter::{DirectRateLimiter, LeakyBucket, NegativeMultiDecision, NonConformance};
 use std::thread;

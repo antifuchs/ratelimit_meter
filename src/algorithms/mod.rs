@@ -5,10 +5,10 @@ pub use self::gcra::*;
 pub use self::leaky_bucket::*;
 
 use evmap::ShallowCopy;
+use failure::Fail;
 use std::fmt;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
-use failure::Fail;
 use {InconsistentCapacity, NegativeMultiDecision};
 
 /// The default rate limiting algorithm in this crate: The ["leaky
@@ -82,7 +82,7 @@ pub trait Algorithm {
     /// [`NonConformance`](trait.NonConformance.html), to ease
     /// handling of how long to wait.
     type NegativeDecision: PartialEq + Fail;
-    
+
     /// Constructs a set of rate limiter parameters from the given
     /// parameters: `capacity` is the number of cells, weighhing
     /// `cell_weight`, to allow `per_time_unit`.
