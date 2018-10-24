@@ -13,9 +13,11 @@ use {
     InconsistentCapacity, NegativeMultiDecision,
 };
 
-/// An in-memory rate limiter that makes direct (un-keyed) rate-limiting
-/// decisions. This kind of rate limiter can be used to regulate the
-/// number of packets per connection.
+/// An in-memory rate limiter that makes direct (un-keyed)
+/// rate-limiting decisions. Direct rate limiters can be used to
+/// e.g. regulate the transmission of packets on a single connection,
+/// or to ensure that an API client stays within a server's rate
+/// limit.
 #[derive(Debug, Clone)]
 pub struct DirectRateLimiter<A: Algorithm = DefaultAlgorithm> {
     algorithm: PhantomData<A>,
@@ -111,7 +113,7 @@ where
     /// If the cell is non-conforming (i.e., it can't be accomodated
     /// at this time stamp), `check_at` returns `Err` with information
     /// about the earliest time at which a cell could be considered
-    /// conforming (see [`NonConformance`](struct.NonConformance.html)).
+    /// conforming.
     pub fn check(&mut self) -> Result<(), <A as Algorithm>::NegativeDecision> {
         <A as Algorithm>::test_and_update(&self.state, &self.params, Instant::now())
     }
@@ -124,12 +126,12 @@ where
     /// If the entire batch of cells would not be conforming but the
     /// rate limiter has the capacity to accomodate the cells at any
     /// point in time, `check_n_at` returns error
-    /// [`NegativeMultiDecision::BatchNonConforming`](enum.NegativeMultiDecision.html#variant.BatchNonConforming),
-    /// holding the number of cells and
-    /// [`NonConformance`](struct.NonConformance.html) information.
+    /// [`NegativeMultiDecision::BatchNonConforming`](../../enum.NegativeMultiDecision.html#variant.BatchNonConforming),
+    /// holding the number of cells the rate limiter's negative
+    /// outcome result.
     ///
     /// If `n` exceeds the bucket capacity, `check_n_at` returns
-    /// [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity),
+    /// [`NegativeMultiDecision::InsufficientCapacity`](../../enum.NegativeMultiDecision.html#variant.InsufficientCapacity),
     /// indicating that a batch of this many cells can never succeed.
     pub fn check_n(
         &mut self,
