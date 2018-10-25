@@ -1,3 +1,6 @@
+//! An in-memory rate limiter that can keep track of rates for
+//! multiple keys, e.g. per-customer or per-IP rates.
+
 use parking_lot::Mutex;
 use std::collections::hash_map::RandomState;
 use std::fmt;
@@ -31,6 +34,21 @@ type MapWriteHandle<K, A, H> = Arc<Mutex<WriteHandle<K, <A as Algorithm>::Bucket
 /// eventually consistent behavior on key addition), while reads of
 /// existing keys all happen simultaneously, then get synchronized by
 /// the rate limiting algorithm itself.
+///
+/// ```
+/// # use std::num::NonZeroU32;
+/// # use std::time::Duration;
+/// use ratelimit_meter::{KeyedRateLimiter};
+/// # #[macro_use] extern crate nonzero_ext;
+/// # extern crate ratelimit_meter;
+/// # fn main () {
+/// let mut limiter = KeyedRateLimiter::<&str>::new(nonzero!(1u32), Duration::from_secs(5));
+/// assert_eq!(Ok(()), limiter.check("customer1")); // allowed!
+/// assert_ne!(Ok(()), limiter.check("customer1")); // ...but now customer1 must wait 5 seconds.
+///
+/// assert_eq!(Ok(()), limiter.check("customer2")); // it's customer2's first request!
+/// # }
+/// ```
 ///
 /// # Expiring old keys
 /// If a key has not been checked in a long time, that key can be
