@@ -228,7 +228,7 @@ where
     }
 
     /// Removes the keys from this rate limiter that can be expired
-    /// safely.
+    /// safely and returns the keys that were removed.
     ///
     /// To be eligible for expiration, a key's rate limiter state must
     /// be at least `min_age` past its last relevance (see
@@ -247,17 +247,19 @@ where
     ///
     /// The time window in which this can occur is hopefully short
     /// enough that this is an acceptable risk of loss in accuracy.
-    pub fn cleanup<D: Into<Option<Duration>>>(&mut self, min_age: D) {
-        self.cleanup_at(min_age, Instant::now());
+    pub fn cleanup<D: Into<Option<Duration>>>(&mut self, min_age: D) -> Vec<K> {
+        self.cleanup_at(min_age, Instant::now())
     }
 
     /// Removes the keys from this rate limiter that can be expired
-    /// safely at the given time stamp. See [`cleanup`](#method.cleanup)
+    /// safely at the given time stamp. See
+    /// [`cleanup`](#method.cleanup). It returns the list of expired
+    /// keys.
     pub fn cleanup_at<D: Into<Option<Duration>>, I: Into<Option<Instant>>>(
         &mut self,
         min_age: D,
         at: I,
-    ) {
+    ) -> Vec<K> {
         let params = &self.params;
         let min_age = min_age.into().unwrap_or_else(|| Duration::new(0, 0));
         let at = at.into().unwrap_or_else(Instant::now);
@@ -274,10 +276,11 @@ where
         // Now take the map write lock and remove all the keys that we
         // collected:
         let mut w = self.map_writer.lock();
-        for key in expireable {
+        for key in expireable.iter().cloned() {
             w.empty(key);
         }
         w.refresh();
+        expireable
     }
 }
 
