@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 #[test]
 fn accepts_first_cell() {
     let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-    assert_eq!(Ok(()), lb.check());
+    assert_eq!(Ok(()), lb.check_at(Instant::now()));
 }
 
 #[test]
@@ -19,12 +19,15 @@ fn rejects_too_many() {
     let ms = Duration::from_millis(1);
     assert_eq!(Ok(()), lb.check_at(now));
     assert_eq!(Ok(()), lb.check_at(now));
-    assert!(!lb.check_at(now + ms * 2).is_ok());
+
+    assert_ne!(Ok(()), lb.check_at(now + ms * 2));
+
     // should be ok again in 1s:
     let next = now + Duration::from_millis(1002);
     assert_eq!(Ok(()), lb.check_at(next));
     assert_eq!(Ok(()), lb.check_at(next + ms));
-    assert!(!lb.check_at(next + ms * 2).is_ok(), "{:?}", lb);
+
+    assert_ne!(Ok(()), lb.check_at(next + ms * 2), "{:?}", lb);
 }
 
 #[test]
@@ -34,11 +37,10 @@ fn never_allows_more_than_capacity() {
     let ms = Duration::from_millis(1);
 
     // Should not allow the first 15 cells on a capacity 5 bucket:
-    assert!(lb.check_n_at(15, now).is_err());
+    assert_ne!(Ok(()), lb.check_n_at(15, now));
 
     // After 3 and 20 seconds, it should not allow 15 on that bucket either:
-    assert!(lb.check_n_at(15, now + (ms * 3 * 1000)).is_err());
-
+    assert_ne!(Ok(()), lb.check_n_at(15, now + (ms * 3 * 1000)));
     let result = lb.check_n_at(15, now + (ms * 20 * 1000));
     match result {
         Err(NegativeMultiDecision::InsufficientCapacity(n)) => assert_eq!(n, 15),
