@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use super::variants::{BenchmarkDirectBucket, BenchmarkKeyedBucket, Variant};
+use test_utilities::variants::{DirectBucket, KeyedBucket, Variant};
 
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
 
@@ -14,7 +14,7 @@ fn bench_direct(c: &mut Criterion) {
     let bm = ParameterizedBenchmark::new(
         id,
         move |b, ref v| {
-            run_with_variants!(v, rl: BenchmarkDirectBucket, {
+            bench_with_variants!(v, rl: DirectBucket, {
                 let now = Instant::now();
                 let ms = Duration::from_millis(20);
                 let mut i = 0;
@@ -34,7 +34,7 @@ fn bench_keyed(c: &mut Criterion) {
     let bm = ParameterizedBenchmark::new(
         id,
         move |b, ref v| {
-            run_with_variants!(v, rl: BenchmarkKeyedBucket, {
+            bench_with_variants!(v, rl: KeyedBucket, {
                 let now = Instant::now();
                 let ms = Duration::from_millis(20);
                 let mut i = 0;

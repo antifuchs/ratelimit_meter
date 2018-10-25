@@ -1,6 +1,6 @@
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
 use std::time::{Duration, Instant};
-use variants::Variant;
+use test_utilities::variants::Variant;
 
 pub fn bench_all(c: &mut Criterion) {
     bench_plain_algorithm_1elem(c);
@@ -12,7 +12,7 @@ fn bench_plain_algorithm_1elem(c: &mut Criterion) {
     let bm = ParameterizedBenchmark::new(
         id,
         move |b, ref v| {
-            run_with_algorithm_variants!(v, algo, {
+            bench_with_algorithm_variants!(v, algo, {
                 let now = Instant::now();
                 let ms = Duration::from_millis(20);
                 let params = algo.params();
@@ -36,7 +36,7 @@ fn bench_plain_algorithm_multi(c: &mut Criterion) {
     let bm = ParameterizedBenchmark::new(
         id,
         move |b, ref v| {
-            run_with_algorithm_variants!(v, algo, {
+            bench_with_algorithm_variants!(v, algo, {
                 let now = Instant::now();
                 let ms = Duration::from_millis(20);
                 let params = algo.params();

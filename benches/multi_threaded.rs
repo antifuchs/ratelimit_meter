@@ -1,8 +1,8 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::variants::{BenchmarkDirectBucket, BenchmarkKeyedBucket, Variant};
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
+use test_utilities::variants::{DirectBucket, KeyedBucket, Variant};
 
 pub fn bench_all(c: &mut Criterion) {
     bench_direct(c);
@@ -15,7 +15,7 @@ fn bench_direct(c: &mut Criterion) {
     let bm = ParameterizedBenchmark::new(
         id,
         |b, ref v| {
-            run_with_variants!(v, lim: BenchmarkDirectBucket, {
+            bench_with_variants!(v, lim: DirectBucket, {
                 let now = Instant::now();
                 let ms = Duration::from_millis(20);
                 let mut children = vec![];
@@ -52,7 +52,7 @@ fn bench_keyed(c: &mut Criterion) {
     let bm = ParameterizedBenchmark::new(
         id,
         |b, ref v| {
-            run_with_variants!(v, lim: BenchmarkKeyedBucket, {
+            bench_with_variants!(v, lim: KeyedBucket, {
                 let now = Instant::now();
                 let ms = Duration::from_millis(20);
                 let mut children = vec![];

@@ -41,8 +41,9 @@ failure = "0.1.2"
 failure_derive = "0.1.2"
 parking_lot = "0.6.4"
 evmap = "4.0.0"
-nonzero_ext = "0.1.1"
+nonzero_ext = "0.1.2"
 
 [dev_dependencies]
 libc = "0.2.41"
 criterion = "0.2.5"
+test_utilities = {path = "test_utilities/"}

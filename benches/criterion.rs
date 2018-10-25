@@ -1,13 +1,10 @@
 #[macro_use]
+extern crate test_utilities;
+#[macro_use]
 extern crate criterion;
 extern crate ratelimit_meter;
-#[macro_use]
-extern crate nonzero_ext;
 
 use criterion::Criterion;
-
-#[macro_use]
-mod variants;
 
 mod algorithms;
 mod multi_threaded;

@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use ratelimit_meter::example_algorithms::Allower;
-use variants::AlgorithmForBenchmark;
+use test_utilities::algorithms::AlgorithmForTest;
 
 use criterion::{black_box, Benchmark, Criterion, Throughput};
 
@@ -9,7 +9,7 @@ pub fn bench_all(c: &mut Criterion) {
     let id = "algorithm/no_op";
 
     let bm = Benchmark::new(id, move |b| {
-        let algo = AlgorithmForBenchmark::<Allower>::new();
+        let algo = AlgorithmForTest::<Allower>::default();
         let now = Instant::now();
         let ms = Duration::from_millis(20);
         let params = algo.params();
