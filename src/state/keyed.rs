@@ -163,33 +163,6 @@ where
             })
     }
 
-    /// Tests whether a single cell for the given key can be
-    /// accommodated at the given time stamp. See
-    /// [`check`](#method.check).
-    pub fn check_at(
-        &mut self,
-        key: K,
-        at: Instant,
-    ) -> Result<(), <A as Algorithm>::NegativeDecision> {
-        self.check_and_update_key(key, |state| {
-            <A as Algorithm>::test_and_update(state, &self.params, at)
-        })
-    }
-
-    /// Tests if `n` cells for the given key can be accommodated at
-    /// the given time (`Instant::now()`), using
-    /// [`check_n`](#method.check_n)
-    pub fn check_n_at(
-        &mut self,
-        key: K,
-        n: u32,
-        at: Instant,
-    ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
-        self.check_and_update_key(key, |state| {
-            <A as Algorithm>::test_n_and_update(state, &self.params, n, at)
-        })
-    }
-
     /// Tests if a single cell for the given key can be accommodated
     /// at `Instant::now()`. If it can be, `check` updates the rate
     /// limiter state on that key to account for the conforming cell
@@ -227,6 +200,33 @@ where
         self.check_n_at(key, n, Instant::now())
     }
 
+    /// Tests whether a single cell for the given key can be
+    /// accommodated at the given time stamp. See
+    /// [`check`](#method.check).
+    pub fn check_at(
+        &mut self,
+        key: K,
+        at: Instant,
+    ) -> Result<(), <A as Algorithm>::NegativeDecision> {
+        self.check_and_update_key(key, |state| {
+            <A as Algorithm>::test_and_update(state, &self.params, at)
+        })
+    }
+
+    /// Tests if `n` cells for the given key can be accommodated at
+    /// the given time (`Instant::now()`), using
+    /// [`check_n`](#method.check_n)
+    pub fn check_n_at(
+        &mut self,
+        key: K,
+        n: u32,
+        at: Instant,
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
+        self.check_and_update_key(key, |state| {
+            <A as Algorithm>::test_n_and_update(state, &self.params, n, at)
+        })
+    }
+
     /// Removes the keys from this rate limiter that can be expired
     /// safely and returns the keys that were removed.
     ///
@@ -238,6 +238,10 @@ where
     /// from getting added while they're running:
     /// * First, it collects the keys that are eligible for expiration.
     /// * Then, it expires these keys.
+    ///
+    /// Note that this only affects new keys that need to be
+    /// added. Rate-limiting operations on existing keys continue
+    /// concurrently.
     ///
     /// # Race conditions
     /// Since this is happening concurrently with other operations,
