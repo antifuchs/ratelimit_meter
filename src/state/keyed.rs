@@ -51,7 +51,7 @@ type MapWriteHandle<K, A, H> = Arc<Mutex<WriteHandle<K, <A as Algorithm>::Bucket
 /// // time passes...
 ///
 /// // remove all keys that have been expireable for 10 minutes:
-/// limiter.cleanup(Some(Duration::from_secs(600)));
+/// limiter.cleanup(Duration::from_secs(600));
 /// # }
 /// ```
 #[derive(Clone)]
