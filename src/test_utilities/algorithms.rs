@@ -63,9 +63,8 @@ macro_rules! bench_with_algorithm_variants {
     ($variant:expr, $var:ident, $code:block) => {
         match $variant {
             $crate::test_utilities::variants::Variant::GCRA => {
-                let mut $var = $crate::test_utilities::algorithms::AlgorithmForTest::<
-                    $crate::GCRA,
-                >::default();
+                let mut $var =
+                    $crate::test_utilities::algorithms::AlgorithmForTest::<$crate::GCRA>::default();
                 $code
             }
             $crate::test_utilities::variants::Variant::LeakyBucket => {
