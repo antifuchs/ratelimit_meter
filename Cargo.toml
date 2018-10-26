@@ -1,6 +1,6 @@
 [package]
 name = "ratelimit_meter"
-version = "4.0.0"
+version = "4.0.1-dev"
 authors = ["Andreas Fuchs <asf@boinkor.net>"]
 license = "MIT"
 homepage = "https://github.com/antifuchs/ratelimit_meter"
