@@ -50,6 +50,7 @@ where
 // I really wish I could just have a function that returns an impl
 // Trait that was usable in all the benchmarks, but alas it should not
 // be so.
+#[doc(hidden)]
 #[macro_export]
 macro_rules! bench_with_variants {
     ($variant:expr, $var:ident : $bucket:tt, $code:block) => {

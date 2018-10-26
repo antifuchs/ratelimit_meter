@@ -59,6 +59,7 @@ where
 }
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! bench_with_algorithm_variants {
     ($variant:expr, $var:ident, $code:block) => {
         match $variant {
