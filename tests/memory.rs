@@ -1,9 +1,10 @@
 // This test uses procinfo, so can only be run on Linux.
 extern crate libc;
 extern crate ratelimit_meter;
+#[macro_use]
+extern crate nonzero_ext;
 
-use ratelimit_meter::{build_with_capacity, per_second, Decider, LeakyBucket, MultiDecider, GCRA};
-use std::num::NonZeroU32;
+use ratelimit_meter::{DirectRateLimiter, LeakyBucket, GCRA};
 use std::thread;
 
 fn resident_memsize() -> i64 {
@@ -14,81 +15,87 @@ fn resident_memsize() -> i64 {
 
 const LEAK_TOLERANCE: i64 = 1024 * 1024 * 10;
 
-fn check_for_leaks(n_iter: usize, usage_before: i64) {
-    let usage_after = resident_memsize();
-    assert!(
-        usage_after <= usage_before + LEAK_TOLERANCE,
-        "Plausible memory leak!\nAfter {} iterations, usage before: {}, usage after: {}",
-        n_iter,
-        usage_before,
-        usage_after
-    );
+struct LeakCheck {
+    usage_before: i64,
+    n_iter: usize,
+}
+
+impl Drop for LeakCheck {
+    fn drop(&mut self) {
+        let usage_after = resident_memsize();
+        assert!(
+            usage_after <= self.usage_before + LEAK_TOLERANCE,
+            "Plausible memory leak!\nAfter {} iterations, usage before: {}, usage after: {}",
+            self.n_iter,
+            self.usage_before,
+            usage_after
+        );
+    }
+}
+
+impl LeakCheck {
+    fn new(n_iter: usize) -> Self {
+        LeakCheck {
+            n_iter,
+            usage_before: resident_memsize(),
+        }
+    }
 }
 
 #[test]
 fn memleak_gcra() {
-    const N_ITER: usize = 500_000;
-    let mut bucket = build_with_capacity::<GCRA>(NonZeroU32::new(1_000_000).unwrap())
+    let mut bucket = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
         .build()
         .unwrap();
-    let usage_before = resident_memsize();
+    let leak_check = LeakCheck::new(500_000);
 
-    for _i in 0..N_ITER {
+    for _i in 0..leak_check.n_iter {
         drop(bucket.check());
     }
-    check_for_leaks(N_ITER, usage_before);
 }
 
 #[test]
 fn memleak_gcra_multi() {
-    const N_ITER: usize = 500_000;
-    let mut bucket = build_with_capacity::<GCRA>(NonZeroU32::new(1_000_000).unwrap())
+    let mut bucket = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
         .build()
         .unwrap();
-    let usage_before = resident_memsize();
+    let leak_check = LeakCheck::new(500_000);
 
-    for _i in 0..N_ITER {
+    for _i in 0..leak_check.n_iter {
         drop(bucket.check_n(2));
     }
-    check_for_leaks(N_ITER, usage_before);
 }
 
 #[test]
 fn memleak_gcra_threaded() {
-    const N_ITER: usize = 5_000;
-    let bucket = build_with_capacity::<GCRA>(NonZeroU32::new(1_000_000).unwrap())
+    let bucket = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
         .build()
         .unwrap();
-    let usage_before = resident_memsize();
+    let leak_check = LeakCheck::new(5_000);
 
-    for _i in 0..N_ITER {
+    for _i in 0..leak_check.n_iter {
         let mut bucket = bucket.clone();
         thread::spawn(move || drop(bucket.check())).join().unwrap();
     }
-    check_for_leaks(N_ITER, usage_before);
 }
 
 #[test]
 fn memleak_leakybucket() {
-    const N_ITER: usize = 500_000;
-    let mut bucket = per_second::<LeakyBucket>(NonZeroU32::new(1_000_000).unwrap());
-    let usage_before = resident_memsize();
+    let mut bucket = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(1_000_000u32));
+    let leak_check = LeakCheck::new(500_000);
 
-    for _i in 0..N_ITER {
+    for _i in 0..leak_check.n_iter {
         drop(bucket.check());
     }
-    check_for_leaks(N_ITER, usage_before);
 }
 
 #[test]
 fn memleak_leakybucket_threaded() {
-    const N_ITER: usize = 5_000;
-    let bucket = per_second::<LeakyBucket>(NonZeroU32::new(1_000_000).unwrap());
-    let usage_before = resident_memsize();
+    let bucket = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(1_000_000u32));
+    let leak_check = LeakCheck::new(5_000);
 
-    for _i in 0..N_ITER {
+    for _i in 0..leak_check.n_iter {
         let mut bucket = bucket.clone();
         thread::spawn(move || drop(bucket.check())).join().unwrap();
     }
-    check_for_leaks(N_ITER, usage_before);
 }

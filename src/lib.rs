@@ -1,8 +1,13 @@
 //! # Leaky Bucket Rate-Limiting (as a meter) in Rust
-//! This crate implements
-//! the
-//! [generic cell rate algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm) (GCRA)
-//! for rate-limiting and scheduling in Rust.
+//!
+//! This crate provides generic rate-limiting interfaces and implements a
+//! few rate-limiting algorithms. The generic rate-limiting interfaces
+//! are extendable to persistence-based rate limiting schemes such as
+//! databases.
+//!
+//! This crate currently provides in-memory implementations of a by-key
+//! (limits enforced per key, e.g. an IP address or a customer ID) and a
+//! simple (one limit per object) state tracker.
 //!
 //! ## Interface
 //!
@@ -15,15 +20,19 @@
 //! [`Allower`](example_algorithms/struct.Allower.html), which returns
 //! "Yes" to all rate-limiting queries.
 //!
-//! The Generic Cell Rate Algorithm can be used by creating a builder
-//! from the [`GCRA`](algorithms/gcra/struct.GCRA.html) struct:
+//! The Generic Cell Rate Algorithm can be used by in an in-memory
+//! rate limiter like so:
 //!
 //! ``` rust
 //! use std::num::NonZeroU32;
-//! use ratelimit_meter::{Decider, GCRA, per_second};
+//! use ratelimit_meter::{DirectRateLimiter, GCRA};
 //!
-//! let mut lim = per_second::<GCRA>(NonZeroU32::new(50).unwrap()); // Allow 50 units per second
+//! # #[macro_use] extern crate nonzero_ext;
+//! # extern crate ratelimit_meter;
+//! # fn main () {
+//! let mut lim = DirectRateLimiter::<GCRA>::per_second(nonzero!(50u32)); // Allow 50 units per second
 //! assert_eq!(Ok(()), lim.check());
+//! # }
 //! ```
 //!
 //! The rate-limiter interface is intentionally geared towards only
@@ -39,6 +48,15 @@
 //! [`NonConformance`](struct.NonConformance.html) returned with
 //! negative decisions and have the program wait using the method best
 //! suited for this, e.g. an event loop.
+//!
+//! ## Using this crate effectively
+//!
+//! Many of the parameters in use by this crate are `NonZeroU32` -
+//! since they are not very ergonomic to construct from constants
+//! using stdlib means, I recommend using the
+//! [nonzero_ext](https://crates.io/crates/nonzero_ext) crate, which
+//! comes with a macro `nonzero!()`. This macro makes it far easier to
+//! construct rate limiters without cluttering your code.
 //!
 //! ## Rate-limiting Algorithms
 //!
@@ -86,8 +104,9 @@
 //!
 //! ## Thread-safe operation
 //!
-//! The implementations in this crate use compare-and-set to keep
-//! state, and are safe to share across threads..
+//! The in-memory implementations in this crate use parking_lot
+//! mutexes to ensure rate-limiting operations can happen safely
+//! across threads.
 //!
 //! Example:
 //!
@@ -95,106 +114,66 @@
 //! use std::thread;
 //! use std::num::NonZeroU32;
 //! use std::time::Duration;
-//! use ratelimit_meter::{Decider, GCRA, per_second};
+//! use ratelimit_meter::{DirectRateLimiter, GCRA};
 //!
+//! # #[macro_use] extern crate nonzero_ext;
+//! # extern crate ratelimit_meter;
+//! # fn main () {
 //! // Allow 50 units/second across all threads:
-//! let mut lim = per_second::<GCRA>(NonZeroU32::new(50).unwrap());
+//! let mut lim = DirectRateLimiter::<GCRA>::per_second(nonzero!(50u32));
 //! let mut thread_lim = lim.clone();
 //! thread::spawn(move || { assert_eq!(Ok(()), thread_lim.check());});
 //! assert_eq!(Ok(()), lim.check());
+//! # }
 //! ```
+
+#![cfg_attr(feature = "cargo-clippy", deny(warnings))]
 
 pub mod algorithms;
 pub mod example_algorithms;
-mod implementation;
+pub mod state;
 mod thread_safety;
 
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
+extern crate evmap;
+#[macro_use]
+extern crate nonzero_ext;
 extern crate parking_lot;
 
-use std::marker::PhantomData;
+use failure::Fail;
 use std::num::NonZeroU32;
-use std::time::{Duration, Instant};
-
-use implementation::*;
 
 pub use self::algorithms::LeakyBucket;
+pub use self::algorithms::NonConformance;
 pub use self::algorithms::GCRA;
 
-/// Provides additional information about non-conforming cells, most
-/// importantly the earliest time until the next cell could be
-/// considered conforming.
-///
-/// Since this does not account for effects like thundering herds,
-/// users should always add random jitter to the times given.
-#[derive(Fail, Debug, PartialEq)]
-#[fail(display = "rate-limited, wait at least {:?}", min_time)]
-pub struct NonConformance {
-    t0: Instant,
-    min_time: Duration,
-}
-
-impl NonConformance {
-    pub(crate) fn new(t0: Instant, min_time: Duration) -> NonConformance {
-        NonConformance { t0, min_time }
-    }
-}
-
-impl NonConformance {
-    /// Returns the earliest time at which a decision could be
-    /// conforming (excluding conforming decisions made by the Decider
-    /// that are made in the meantime).
-    pub fn earliest_possible(&self) -> Instant {
-        self.t0 + self.min_time
-    }
-
-    /// Returns the minimum amount of time from the time that the
-    /// decision was made (relative to the `at` argument in a
-    /// `Decider`'s `check_at` method) that must pass before a
-    /// decision can be conforming. Since Durations can not be
-    /// negative, a zero duration is returned if `from` is already
-    /// after that duration.
-    pub fn wait_time_from(&self, from: Instant) -> Duration {
-        if from == self.t0 {
-            self.min_time
-        } else if from < self.t0 + self.min_time {
-            (self.t0 + self.min_time).duration_since(from)
-        } else {
-            Duration::new(0, 0)
-        }
-    }
-
-    /// Returns the minimum amount of time (down to 0) that needs to
-    /// pass from the current instant for the Decider to consider a
-    /// cell conforming again.
-    pub fn wait_time(&self) -> Duration {
-        self.wait_time_from(Instant::now())
-    }
-}
+pub use self::state::DirectRateLimiter;
+pub use self::state::KeyedRateLimiter;
 
 /// Gives additional information about the negative outcome of a batch
 /// cell decision.
 ///
-/// Since batch queries can be made for batch sizes bigger than a
-/// Decider could accomodate, there are now two possible negative
-/// outcomes:
+/// Since batch queries can be made for batch sizes bigger than the
+/// rate limiter parameter could accomodate, there are now two
+/// possible negative outcomes:
 ///
 ///   * `BatchNonConforming` - the query is valid but the Decider can
 ///     not accomodate them.
 ///
-///   * `InsufficientCapacity` - the Decider can never accomodate the
-///     cells queried for.
+///   * `InsufficientCapacity` - the query was invalid as the rate
+///     limite parameters can never accomodate the number of cells
+///     queried for.
 #[derive(Fail, Debug, PartialEq)]
-pub enum NegativeMultiDecision {
+pub enum NegativeMultiDecision<E: Fail> {
     /// A batch of cells (the first argument) is non-conforming and
     /// can not be let through at this time. The second argument gives
     /// information about when that batch of cells might be let
     /// through again (not accounting for thundering herds and other,
     /// simultaneous decisions).
     #[fail(display = "{} cells: {}", _0, _1)]
-    BatchNonConforming(u32, NonConformance),
+    BatchNonConforming(u32, E),
 
     /// The number of cells tested (the first argument) is larger than
     /// the bucket's capacity, which means the decision can never have
@@ -206,127 +185,8 @@ pub enum NegativeMultiDecision {
     InsufficientCapacity(u32),
 }
 
-/// The main decision trait. It allows checking a single cell against
-/// the rate-limiter, either at the current time instant, or at a
-/// given instant in time, updating the `Decider`'s internal state if
-/// the cell is conforming.
-pub trait Decider: Sized + DeciderImpl {
-    /// Tests if a single cell can be accommodated at
-    /// `Instant::now()`. If it can be, `check` updates the `Decider`
-    /// to account for the conforming cell and returns `Ok(())`.
-    ///
-    /// If the cell is non-conforming (i.e., it can't be accomodated
-    /// at this time stamp), `check_at` returns `Err` with information
-    /// about the earliest time at which a cell could be considered
-    /// conforming (see [`NonConformance`](struct.NonConformance.html)).
-    fn check(&mut self) -> Result<(), NonConformance> {
-        self.test_and_update(Instant::now())
-    }
-
-    /// Tests whether a single cell can be accommodated at the given
-    /// time stamp. See [`check`](#method.check).
-    fn check_at(&mut self, at: Instant) -> Result<(), NonConformance> {
-        self.test_and_update(at)
-    }
-}
-
-/// Construct a new Decider that allows `capacity` cells per time
-/// unit through.
-/// # Examples
-/// You can construct a GCRA decider like so:
-/// ```
-/// # use std::num::NonZeroU32;
-/// # use std::time::Duration;
-/// use ratelimit_meter::GCRA;
-/// let _gcra = ratelimit_meter::new::<GCRA>(NonZeroU32::new(100).unwrap(),
-///                                          Duration::from_secs(5));
-/// ```
-///
-/// and similarly, for a leaky bucket:
-/// ```
-/// # use std::num::NonZeroU32;
-/// # use std::time::Duration;
-/// use ratelimit_meter::LeakyBucket;
-/// let _lb = ratelimit_meter::new::<LeakyBucket>(NonZeroU32::new(100).unwrap(),
-///                                               Duration::from_secs(5));
-/// ```
-pub fn new<T>(capacity: NonZeroU32, per_time_unit: Duration) -> T
-where
-    T: Sized + NewImpl,
-{
-    T::from_construction_parameters(capacity, NonZeroU32::new(1).unwrap(), per_time_unit).unwrap()
-}
-
-/// Construct a new Decider that allows `capacity` cells per
-/// second.
-/// # Examples
-/// Constructing a GCRA decider that lets through 100 cells per second:
-/// ```
-/// # use std::num::NonZeroU32;
-/// # use std::time::Duration;
-/// use ratelimit_meter::GCRA;
-/// let _gcra = ratelimit_meter::per_second::<GCRA>(NonZeroU32::new(100).unwrap());
-/// ```
-///
-/// and a leaky bucket:
-/// ```
-/// # use std::num::NonZeroU32;
-/// # use std::time::Duration;
-/// use ratelimit_meter::LeakyBucket;
-/// let _gcra = ratelimit_meter::per_second::<LeakyBucket>(NonZeroU32::new(100).unwrap());
-/// ```
-pub fn per_second<T>(capacity: NonZeroU32) -> T
-where
-    T: Sized + NewImpl,
-{
-    new::<T>(capacity, Duration::from_secs(1))
-}
-
-/// Return a builder that can be used to construct a Decider using
-/// the parameters passed to the Builder.
-pub fn build_with_capacity<T>(capacity: NonZeroU32) -> Builder<T>
-where
-    T: Sized + NewImpl,
-{
-    Builder {
-        capacity,
-        cell_weight: NonZeroU32::new(1).unwrap(),
-        time_unit: Duration::from_secs(1),
-        end_result: PhantomData,
-    }
-}
-
-/// The "batch" decision trait, allowing a Decider to make a decision
-/// about multiple cells at once.
-pub trait MultiDecider: MultiDeciderImpl {
-    /// Tests if `n` cells can be accommodated at the given time
-    /// stamp. If (and only if) all cells in the batch can be
-    /// accomodated, the `MultiDecider` updates the internal state to
-    /// account for all cells and returns `Ok(())`.
-    ///
-    /// If the entire batch of cells would not be conforming but the
-    /// `MultiDecider` has the capacity to accomodate the cells at any
-    /// point in time, `check_n_at` returns error
-    /// [`NegativeMultiDecision::BatchNonConforming`](enum.NegativeMultiDecision.html#variant.BatchNonConforming),
-    /// holding the number of cells and
-    /// [`NonConformance`](struct.NonConformance.html) information.
-    ///
-    /// If `n` exceeds the bucket capacity, `check_n_at` returns
-    /// [`NegativeMultiDecision::InsufficientCapacity`](enum.NegativeMultiDecision.html#variant.InsufficientCapacity),
-    /// indicating that a batch of this many cells can never succeed.
-    fn check_n_at(&mut self, n: u32, at: Instant) -> Result<(), NegativeMultiDecision> {
-        self.test_n_and_update(n, at)
-    }
-
-    /// Tests if `n` cells can be accommodated at the current time
-    /// (`Instant::now()`), using [`check_n_at`](#method.check_n_at)
-    fn check_n(&mut self, n: u32) -> Result<(), NegativeMultiDecision> {
-        self.test_n_and_update(n, Instant::now())
-    }
-}
-
-/// An error that is returned when initializing a Decider that is too
-/// small to let a single cell through.
+/// An error that is returned when initializing a rate limiter that is
+/// too small to let a single cell through.
 #[derive(Fail, Debug)]
 #[fail(
     display = "bucket capacity {} too small for a single cell with weight {}",
@@ -336,61 +196,4 @@ pub trait MultiDecider: MultiDeciderImpl {
 pub struct InconsistentCapacity {
     capacity: NonZeroU32,
     cell_weight: NonZeroU32,
-}
-
-/// An object that allows incrementally constructing Decider objects.
-pub struct Builder<T>
-where
-    T: NewImpl + Sized,
-{
-    capacity: NonZeroU32,
-    cell_weight: NonZeroU32,
-    time_unit: Duration,
-    end_result: PhantomData<T>,
-}
-
-impl<T> Builder<T>
-where
-    T: NewImpl + Sized,
-{
-    /// Sets the "weight" of each cell being checked against the
-    /// bucket. Each cell fills the bucket by this much.
-    pub fn cell_weight(
-        &mut self,
-        weight: NonZeroU32,
-    ) -> Result<&mut Builder<T>, InconsistentCapacity> {
-        if self.cell_weight > self.capacity {
-            return Err(InconsistentCapacity {
-                capacity: self.capacity,
-                cell_weight: self.cell_weight,
-            });
-        }
-        self.cell_weight = weight;
-        Ok(self)
-    }
-
-    /// Sets the "unit of time" within which the bucket drains.
-    ///
-    /// The assumption is that in a period of `time_unit` (if no cells
-    /// are being checked), the bucket is fully drained.
-    pub fn per(&mut self, time_unit: Duration) -> &mut Builder<T> {
-        self.time_unit = time_unit;
-        self
-    }
-
-    /// Builds a decider of the specified type.
-    pub fn build(&self) -> Result<T, InconsistentCapacity> {
-        T::from_construction_parameters(self.capacity, self.cell_weight, self.time_unit)
-    }
-}
-
-#[test]
-fn test_wait_time_from() {
-    let now = Instant::now();
-    let nc = NonConformance::new(now, Duration::from_secs(20));
-    assert_eq!(nc.wait_time_from(now), Duration::from_secs(20));
-    assert_eq!(
-        nc.wait_time_from(now + Duration::from_secs(5)),
-        Duration::from_secs(15)
-    );
 }

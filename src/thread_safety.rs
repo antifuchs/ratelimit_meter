@@ -1,3 +1,4 @@
+use evmap::ShallowCopy;
 use parking_lot::Mutex;
 use std::fmt;
 use std::sync::Arc;
@@ -7,14 +8,14 @@ use std::sync::Arc;
 /// fashion.
 pub(crate) struct ThreadsafeWrapper<T>
 where
-    T: fmt::Debug + Default + Clone,
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
     data: Arc<Mutex<T>>,
 }
 
 impl<T> Default for ThreadsafeWrapper<T>
 where
-    T: fmt::Debug + Default + Clone,
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
     fn default() -> Self {
         ThreadsafeWrapper {
@@ -23,9 +24,22 @@ where
     }
 }
 
+impl<T> PartialEq<Self> for ThreadsafeWrapper<T>
+where
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        let mine = self.data.lock();
+        let other = other.data.lock();
+        *other == *mine
+    }
+}
+
+impl<T> Eq for ThreadsafeWrapper<T> where T: fmt::Debug + Default + Clone + PartialEq + Eq {}
+
 impl<T> fmt::Debug for ThreadsafeWrapper<T>
 where
-    T: fmt::Debug + Default + Clone,
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let data = self.data.lock();
@@ -33,16 +47,21 @@ where
     }
 }
 
-impl<T> ThreadsafeWrapper<T>
+impl<T> ShallowCopy for ThreadsafeWrapper<T>
 where
-    T: fmt::Debug + Default + Clone,
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
-    pub(crate) fn new(elt: T) -> ThreadsafeWrapper<T> {
+    unsafe fn shallow_copy(&mut self) -> Self {
         ThreadsafeWrapper {
-            data: Arc::new(Mutex::new(elt)),
+            data: self.data.shallow_copy(),
         }
     }
+}
 
+impl<T> ThreadsafeWrapper<T>
+where
+    T: fmt::Debug + Default + Clone + PartialEq + Eq,
+{
     #[inline]
     /// Wraps retrieving a bucket's data, calls a function to make a
     /// decision and return a new state, and then tries to set the
@@ -53,7 +72,7 @@ where
     ///
     /// # Panics
     /// Panics if an error occurs in acquiring any locks.
-    pub(crate) fn measure_and_replace<F, E>(&mut self, f: F) -> Result<(), E>
+    pub(crate) fn measure_and_replace<F, E>(&self, f: F) -> Result<(), E>
     where
         F: Fn(&T) -> (Result<(), E>, Option<T>),
     {
@@ -72,10 +91,7 @@ where
     /// # Thread safety
     /// This function operates threadsafely, but you're literally
     /// taking a copy of data that will change. Relying on the data
-    /// that is returned is *not* threadsafe.
-    ///
-    /// # Panics
-    /// Panics if an error occurs in acquiring any locks.
+    /// that is returned *will* race.
     pub(crate) fn snapshot(&self) -> T {
         let data = self.data.lock();
         data.clone()
