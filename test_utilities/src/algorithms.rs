@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 /// A representation of a bare in-memory algorithm, without any bucket
 /// attached.
 #[derive(Debug)]
-pub struct AlgorithmForTest<A: Algorithm>(A::BucketParams);
+pub struct AlgorithmForTest<A: Algorithm>(A);
 
 impl<'a, A> AlgorithmForTest<A>
 where
@@ -27,7 +27,7 @@ where
         )
     }
 
-    pub fn params(&'a self) -> &'a A::BucketParams {
+    pub fn algorithm(&'a self) -> &'a A {
         &self.0
     }
 
@@ -35,23 +35,17 @@ where
         A::BucketState::default()
     }
 
-    pub fn check(
-        &self,
-        state: &A::BucketState,
-        params: &A::BucketParams,
-        t0: Instant,
-    ) -> Result<(), A::NegativeDecision> {
-        A::test_and_update(state, params, t0)
+    pub fn check(&self, state: &A::BucketState, t0: Instant) -> Result<(), A::NegativeDecision> {
+        self.0.test_and_update(state, t0)
     }
 
     pub fn check_n(
         &self,
         state: &A::BucketState,
-        params: &A::BucketParams,
         n: u32,
         t0: Instant,
     ) -> Result<(), NegativeMultiDecision<A::NegativeDecision>> {
-        A::test_n_and_update(state, params, n, t0)
+        self.0.test_n_and_update(state, n, t0)
     }
 }
 

@@ -22,8 +22,8 @@ impl ShallowCopy for State {
     }
 }
 
-impl RateLimitState<Params> for State {
-    fn last_touched(&self, params: &Params) -> Instant {
+impl RateLimitState<GCRA> for State {
+    fn last_touched(&self, params: &GCRA) -> Instant {
         let data = self.0.snapshot();
         data.0.unwrap_or_else(Instant::now) + params.tau
     }
@@ -36,18 +36,6 @@ impl Default for Tat {
     fn default() -> Self {
         Tat(None)
     }
-}
-
-/// Represents the parameters affecting all decisions that a
-/// GCRA-using rate limiter makes - the weight of a single cell, and
-/// the capacity of the bucket.
-#[derive(Debug, Clone)]
-pub struct Params {
-    // The "weight" of a single packet in units of time.
-    t: Duration,
-
-    // The "capacity" of the bucket.
-    tau: Duration,
 }
 
 /// Returned in case of a negative rate-limiting decision. Indicates
@@ -69,7 +57,6 @@ impl NonConformance for NotUntil {
     }
 }
 
-#[derive(Debug, Clone)]
 /// Implements the virtual scheduling description of the Generic Cell
 /// Rate Algorithm, attributed to ITU-T in recommendation I.371
 /// Traffic control and congestion control in B-ISDN; from
@@ -124,12 +111,17 @@ impl NonConformance for NotUntil {
 /// // After a sufficient time period, cells are allowed again:
 /// assert_eq!(Ok(()), limiter.check_at(now + ms*50));
 /// # }
-pub struct GCRA {}
+#[derive(Debug, Clone)]
+pub struct GCRA {
+    // The "weight" of a single packet in units of time.
+    t: Duration,
+
+    // The "capacity" of the bucket.
+    tau: Duration,
+}
 
 impl Algorithm for GCRA {
     type BucketState = State;
-
-    type BucketParams = Params;
 
     type NegativeDecision = NotUntil;
 
@@ -137,14 +129,14 @@ impl Algorithm for GCRA {
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
         per_time_unit: Duration,
-    ) -> Result<Self::BucketParams, InconsistentCapacity> {
+    ) -> Result<Self, InconsistentCapacity> {
         if capacity < cell_weight {
             return Err(InconsistentCapacity {
                 capacity,
                 cell_weight,
             });
         }
-        Ok(Params {
+        Ok(GCRA {
             t: (per_time_unit / capacity.get()) * cell_weight.get(),
             tau: per_time_unit,
         })
@@ -154,12 +146,12 @@ impl Algorithm for GCRA {
     /// rate-limiter. This is a threadsafe implementation of the
     /// method described directly in the GCRA algorithm.
     fn test_and_update(
+        &self,
         state: &Self::BucketState,
-        params: &Self::BucketParams,
         t0: Instant,
     ) -> Result<(), Self::NegativeDecision> {
-        let tau = params.tau;
-        let t = params.t;
+        let tau = self.tau;
+        let t = self.t;
         state.0.measure_and_replace(|tat| {
             let tat = tat.0.unwrap_or(t0);
             if t0 < tat - tau {
@@ -177,13 +169,13 @@ impl Algorithm for GCRA {
     /// it is likely not as fast (and not as obviously "right") as the
     /// single-cell variant.
     fn test_n_and_update(
+        &self,
         state: &Self::BucketState,
-        params: &Self::BucketParams,
         n: u32,
         t0: Instant,
     ) -> Result<(), NegativeMultiDecision<Self::NegativeDecision>> {
-        let tau = params.tau;
-        let t = params.t;
+        let tau = self.tau;
+        let t = self.t;
         state.0.measure_and_replace(|tat| {
             let tat = tat.0.unwrap_or(t0);
             let tat = match n {

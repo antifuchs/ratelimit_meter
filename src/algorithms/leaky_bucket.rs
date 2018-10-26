@@ -12,7 +12,6 @@ use evmap::ShallowCopy;
 use std::cmp;
 use std::time::{Duration, Instant};
 
-#[derive(Debug, Clone)]
 /// Implements the industry-standard leaky bucket rate-limiting
 /// as-a-meter. The bucket keeps a "fill height", pretending to drip
 /// steadily (which reduces the fill height), and increases the fill
@@ -45,7 +44,11 @@ use std::time::{Duration, Instant};
 /// assert_eq!(Ok(()), lb.check());
 /// # }
 /// ```
-pub struct LeakyBucket {}
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct LeakyBucket {
+    full: Duration,
+    token_interval: Duration,
+}
 
 /// Represents the state of a single history of decisions.
 #[derive(Debug, Default, Eq, PartialEq, Clone)]
@@ -57,8 +60,8 @@ impl ShallowCopy for State {
     }
 }
 
-impl RateLimitState<Params> for State {
-    fn last_touched(&self, _params: &Params) -> Instant {
+impl RateLimitState<LeakyBucket> for State {
+    fn last_touched(&self, _params: &LeakyBucket) -> Instant {
         let data = self.0.snapshot();
         data.last_update.unwrap_or_else(Instant::now) + data.level
     }
@@ -82,15 +85,6 @@ impl NonConformance for TooEarly {
     }
 }
 
-/// Represents the parameters affecting all decisions made using a
-/// single rate limiter - the total capacity of the bucket, and the
-/// interval during which a full new token's "volume" drips out.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Params {
-    full: Duration,
-    token_interval: Duration,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct BucketState {
     level: Duration,
@@ -108,7 +102,6 @@ impl Default for BucketState {
 
 impl Algorithm for LeakyBucket {
     type BucketState = State;
-    type BucketParams = Params;
 
     type NegativeDecision = TooEarly;
 
@@ -116,7 +109,7 @@ impl Algorithm for LeakyBucket {
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
         per_time_unit: Duration,
-    ) -> Result<Self::BucketParams, InconsistentCapacity> {
+    ) -> Result<Self, InconsistentCapacity> {
         if capacity < cell_weight {
             return Err(InconsistentCapacity {
                 capacity,
@@ -124,21 +117,21 @@ impl Algorithm for LeakyBucket {
             });
         }
         let token_interval = (per_time_unit * cell_weight.get()) / capacity.get();
-        Ok(Params {
+        Ok(LeakyBucket {
             full: per_time_unit,
             token_interval,
         })
     }
 
     fn test_n_and_update(
+        &self,
         state: &Self::BucketState,
-        params: &Self::BucketParams,
         n: u32,
         t0: Instant,
     ) -> Result<(), NegativeMultiDecision<TooEarly>> {
-        let full = params.full;
-        let weight = params.token_interval * n;
-        if weight > params.full {
+        let full = self.full;
+        let weight = self.token_interval * n;
+        if weight > self.full {
             return Err(NegativeMultiDecision::InsufficientCapacity(n));
         }
         state.0.measure_and_replace(|state| {

@@ -20,9 +20,8 @@ use {
 /// limit.
 #[derive(Debug, Clone)]
 pub struct DirectRateLimiter<A: Algorithm = DefaultAlgorithm> {
-    algorithm: PhantomData<A>,
     state: A::BucketState,
-    params: A::BucketParams,
+    algorithm: A,
 }
 
 impl<A> DirectRateLimiter<A>
@@ -56,9 +55,8 @@ where
     /// ```
     pub fn new(capacity: NonZeroU32, per_time_unit: Duration) -> Self {
         DirectRateLimiter {
-            algorithm: PhantomData,
             state: <A as Algorithm>::BucketState::default(),
-            params: <A as Algorithm>::params_from_constructor(
+            algorithm: <A as Algorithm>::params_from_constructor(
                 capacity,
                 nonzero!(1u32),
                 per_time_unit,
@@ -115,7 +113,7 @@ where
     /// about the earliest time at which a cell could be considered
     /// conforming.
     pub fn check(&mut self) -> Result<(), <A as Algorithm>::NegativeDecision> {
-        <A as Algorithm>::test_and_update(&self.state, &self.params, Instant::now())
+        self.algorithm.test_and_update(&self.state, Instant::now())
     }
 
     /// Tests if `n` cells can be accommodated at the current time
@@ -137,13 +135,14 @@ where
         &mut self,
         n: u32,
     ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
-        <A as Algorithm>::test_n_and_update(&self.state, &self.params, n, Instant::now())
+        self.algorithm
+            .test_n_and_update(&self.state, n, Instant::now())
     }
 
     /// Tests whether a single cell can be accommodated at the given
     /// time stamp. See [`check`](#method.check).
     pub fn check_at(&mut self, at: Instant) -> Result<(), <A as Algorithm>::NegativeDecision> {
-        <A as Algorithm>::test_and_update(&self.state, &self.params, at)
+        self.algorithm.test_and_update(&self.state, at)
     }
 
     /// Tests if `n` cells can be accommodated at the given time
@@ -153,7 +152,7 @@ where
         n: u32,
         at: Instant,
     ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
-        <A as Algorithm>::test_n_and_update(&self.state, &self.params, n, at)
+        self.algorithm.test_n_and_update(&self.state, n, at)
     }
 }
 
@@ -201,9 +200,8 @@ where
     /// Builds a rate limiter of the specified type.
     pub fn build(&self) -> Result<DirectRateLimiter<A>, InconsistentCapacity> {
         Ok(DirectRateLimiter {
-            algorithm: PhantomData,
             state: <A as Algorithm>::BucketState::default(),
-            params: <A as Algorithm>::params_from_constructor(
+            algorithm: <A as Algorithm>::params_from_constructor(
                 self.capacity,
                 self.cell_weight,
                 self.time_unit,

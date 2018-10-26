@@ -51,29 +51,18 @@ pub trait NonConformance {
 /// The trait that implementations of metered rate-limiter algorithms
 /// have to implement.
 ///
-/// This is a stateless trait, which should allow for a variety of
-/// rate-limiting schemes, like Redis or keyed vs. un-keyed
-/// rate-limiting (one bucket per user vs. one bucket for the entire
-/// API).
-pub trait Algorithm {
+/// Implementing structures are expected to represent the "parameters"
+/// (e.g., the allowed requests/s), and keep the information necessary
+/// to make a decision, e.g. concrete usage statistics for an
+/// in-memory rate limiter, in the associated structure
+/// [`BucketState`](#associatedtype.BucketState).
+pub trait Algorithm: Send + Sync + Sized + fmt::Debug {
     /// The state of a single rate limiting bucket.
     ///
     /// Every new rate limiting state is initialized as `Default`. The
     /// states must be safe to share across threads (this crate uses a
     /// `parking_lot` Mutex to allow that).
-    type BucketState: RateLimitState<Self::BucketParams>
-        + Default
-        + Send
-        + Sync
-        + Eq
-        + ShallowCopy
-        + fmt::Debug;
-
-    /// The immutable parameters of the rate limiting bucket (e.g.,
-    /// maximum capacity). The bucket parameters are unique per rate
-    /// limiter instance (there are currently no per-user/per-IP rate
-    /// limiter parameters).
-    type BucketParams: Send + Sync + fmt::Debug;
+    type BucketState: RateLimitState<Self> + Default + Send + Sync + Eq + ShallowCopy + fmt::Debug;
 
     /// The type returned when a rate limiting decision for a single
     /// cell is negative. Each rate limiting algorithm can decide to
@@ -90,7 +79,7 @@ pub trait Algorithm {
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
         per_time_unit: Duration,
-    ) -> Result<Self::BucketParams, InconsistentCapacity>;
+    ) -> Result<Self, InconsistentCapacity>;
 
     /// Tests if `n` cells can be accommodated in the rate limiter at
     /// the instant `at` and updates the rate-limiter state to account
@@ -100,8 +89,8 @@ pub trait Algorithm {
     /// accommodated, the state of the rate limiter will not be
     /// updated.
     fn test_n_and_update(
+        &self,
         state: &Self::BucketState,
-        params: &Self::BucketParams,
         n: u32,
         at: Instant,
     ) -> Result<(), NegativeMultiDecision<Self::NegativeDecision>>;
@@ -113,14 +102,17 @@ pub trait Algorithm {
     /// This method is provided by default, using the `n` test&update
     /// method.
     fn test_and_update(
+        &self,
         state: &Self::BucketState,
-        params: &Self::BucketParams,
         at: Instant,
     ) -> Result<(), Self::NegativeDecision> {
-        match Self::test_n_and_update(state, params, 1, at) {
+        match self.test_n_and_update(state, 1, at) {
             Ok(()) => Ok(()),
             Err(NegativeMultiDecision::BatchNonConforming(1, nc)) => Err(nc),
-            Err(other) => panic!("bug: There's a non-conforming batch: {:?}", other),
+            Err(other) => unreachable!(
+                "BUG: measuring a batch of size 1 reported insufficient capacity: {:?}",
+                other
+            ),
         }
     }
 }

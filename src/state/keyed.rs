@@ -78,8 +78,7 @@ pub struct KeyedRateLimiter<
     A: Algorithm = DefaultAlgorithm,
     H: BuildHasher + Clone = RandomState,
 > {
-    algorithm: PhantomData<A>,
-    params: A::BucketParams,
+    algorithm: A,
     map_reader: ReadHandle<K, A::BucketState, (), H>,
     map_writer: MapWriteHandle<K, A, H>,
 }
@@ -90,7 +89,7 @@ where
     K: Eq + Hash + Clone,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "KeyedRateLimiter{{{params:?}}}", params = self.params)
+        write!(f, "KeyedRateLimiter{{{params:?}}}", params = self.algorithm)
     }
 }
 
@@ -119,8 +118,7 @@ where
         ) = evmap::new();
         w.refresh();
         KeyedRateLimiter {
-            algorithm: PhantomData,
-            params: <A as Algorithm>::params_from_constructor(
+            algorithm: <A as Algorithm>::params_from_constructor(
                 capacity,
                 nonzero!(1u32),
                 per_time_unit,
@@ -226,9 +224,7 @@ where
         key: K,
         at: Instant,
     ) -> Result<(), <A as Algorithm>::NegativeDecision> {
-        self.check_and_update_key(key, |state| {
-            <A as Algorithm>::test_and_update(state, &self.params, at)
-        })
+        self.check_and_update_key(key, |state| self.algorithm.test_and_update(state, at))
     }
 
     /// Tests if `n` cells for the given key can be accommodated at
@@ -240,9 +236,7 @@ where
         n: u32,
         at: Instant,
     ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
-        self.check_and_update_key(key, |state| {
-            <A as Algorithm>::test_n_and_update(state, &self.params, n, at)
-        })
+        self.check_and_update_key(key, |state| self.algorithm.test_n_and_update(state, n, at))
     }
 
     /// Removes the keys from this rate limiter that can be expired
@@ -282,7 +276,7 @@ where
         min_age: D,
         at: I,
     ) -> Vec<K> {
-        let params = &self.params;
+        let params = &self.algorithm;
         let min_age = min_age.into().unwrap_or_else(|| Duration::new(0, 0));
         let at = at.into().unwrap_or_else(Instant::now);
 
@@ -391,8 +385,7 @@ where
 
         w.refresh();
         Ok(KeyedRateLimiter {
-            algorithm: PhantomData,
-            params: <A as Algorithm>::params_from_constructor(
+            algorithm: <A as Algorithm>::params_from_constructor(
                 self.capacity,
                 self.cell_weight,
                 self.per_time_unit,

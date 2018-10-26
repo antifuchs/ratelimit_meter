@@ -7,7 +7,6 @@ use {
 
 use std::time::Instant;
 
-#[derive(Default, Copy, Clone)]
 /// The most naive implementation of a rate-limiter ever: Always
 /// allows every cell through.
 /// # Example
@@ -17,6 +16,7 @@ use std::time::Instant;
 /// let mut allower = Allower::ratelimiter();
 /// assert!(allower.check().is_ok());
 /// ```
+#[derive(Default, Copy, Clone, Debug)]
 pub struct Allower {}
 
 impl Allower {
@@ -28,8 +28,8 @@ impl Allower {
     }
 }
 
-impl RateLimitState<()> for () {
-    fn last_touched(&self, _params: &()) -> Instant {
+impl RateLimitState<Allower> for () {
+    fn last_touched(&self, _params: &Allower) -> Instant {
         Instant::now()
     }
 }
@@ -40,21 +40,20 @@ pub struct Impossible();
 
 impl Algorithm for Allower {
     type BucketState = ();
-    type BucketParams = ();
     type NegativeDecision = Impossible;
 
     fn params_from_constructor(
         _capacity: NonZeroU32,
         _cell_weight: NonZeroU32,
         _per_time_unit: Duration,
-    ) -> Result<Self::BucketParams, InconsistentCapacity> {
-        Ok(())
+    ) -> Result<Self, InconsistentCapacity> {
+        Ok(Allower {})
     }
 
     /// Allows all cells through unconditionally.
     fn test_n_and_update(
+        &self,
         _state: &Self::BucketState,
-        _params: &Self::BucketParams,
         _n: u32,
         _t0: Instant,
     ) -> Result<(), NegativeMultiDecision<Impossible>> {

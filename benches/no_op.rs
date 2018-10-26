@@ -12,12 +12,11 @@ pub fn bench_all(c: &mut Criterion) {
         let algo = AlgorithmForTest::<Allower>::default();
         let now = Instant::now();
         let ms = Duration::from_millis(20);
-        let params = algo.params();
         let state = algo.state();
         let mut i = 0;
         b.iter(|| {
             i += 1;
-            black_box(algo.check(&state, &params, now + (ms * i)).is_ok());
+            black_box(algo.check(&state, now + (ms * i)).is_ok());
         });
     }).throughput(Throughput::Elements(1));
     c.bench(id, bm);
