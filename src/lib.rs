@@ -132,6 +132,7 @@
 pub mod algorithms;
 pub mod example_algorithms;
 pub mod state;
+pub mod test_utilities;
 mod thread_safety;
 
 extern crate failure;

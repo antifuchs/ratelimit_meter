@@ -1,8 +1,0 @@
-[package]
-name = "test_utilities"
-version = "0.1.0"
-authors = ["Andreas Fuchs <asf@boinkor.net>"]
-
-[dependencies]
-ratelimit_meter = {path = "../"}
-nonzero_ext = "0.1.2"

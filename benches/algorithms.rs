@@ -1,6 +1,6 @@
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
+use ratelimit_meter::test_utilities::variants::Variant;
 use std::time::{Duration, Instant};
-use test_utilities::variants::Variant;
 
 pub fn bench_all(c: &mut Criterion) {
     bench_plain_algorithm_1elem(c);

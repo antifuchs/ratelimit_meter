@@ -1,6 +1,6 @@
-use ratelimit_meter::{algorithms::Algorithm, NegativeMultiDecision};
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
+use {algorithms::Algorithm, NegativeMultiDecision};
 
 /// A representation of a bare in-memory algorithm, without any bucket
 /// attached.
@@ -62,14 +62,15 @@ where
 macro_rules! bench_with_algorithm_variants {
     ($variant:expr, $var:ident, $code:block) => {
         match $variant {
-            $crate::variants::Variant::GCRA => {
-                let mut $var =
-                    $crate::algorithms::AlgorithmForTest::<::ratelimit_meter::GCRA>::default();
+            $crate::test_utilities::variants::Variant::GCRA => {
+                let mut $var = $crate::test_utilities::algorithms::AlgorithmForTest::<
+                    $crate::GCRA,
+                >::default();
                 $code
             }
-            $crate::variants::Variant::LeakyBucket => {
-                let mut $var = $crate::algorithms::AlgorithmForTest::<
-                    ::ratelimit_meter::LeakyBucket,
+            $crate::test_utilities::variants::Variant::LeakyBucket => {
+                let mut $var = $crate::test_utilities::algorithms::AlgorithmForTest::<
+                    $crate::LeakyBucket,
                 >::default();
                 $code
             }

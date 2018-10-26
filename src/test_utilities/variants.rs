@@ -1,5 +1,5 @@
-use ratelimit_meter::algorithms::Algorithm;
-use ratelimit_meter::{DirectRateLimiter, KeyedRateLimiter};
+use algorithms::Algorithm;
+use {DirectRateLimiter, KeyedRateLimiter};
 
 #[derive(Debug)]
 pub enum Variant {
@@ -54,11 +54,11 @@ where
 macro_rules! bench_with_variants {
     ($variant:expr, $var:ident : $bucket:tt, $code:block) => {
         match $variant {
-            $crate::variants::Variant::GCRA => {
+            $crate::test_utilities::variants::Variant::GCRA => {
                 let mut $var = $bucket::<::ratelimit_meter::GCRA>::default().limiter();
                 $code
             }
-            $crate::variants::Variant::LeakyBucket => {
+            $crate::test_utilities::variants::Variant::LeakyBucket => {
                 let mut $var = $bucket::<::ratelimit_meter::LeakyBucket>::default().limiter();
                 $code
             }

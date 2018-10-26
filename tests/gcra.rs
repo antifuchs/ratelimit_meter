@@ -1,7 +1,6 @@
 extern crate ratelimit_meter;
 #[macro_use]
 extern crate nonzero_ext;
-extern crate test_utilities;
 
 use ratelimit_meter::algorithms::Algorithm;
 

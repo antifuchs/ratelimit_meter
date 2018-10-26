@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use test_utilities::variants::{DirectBucket, KeyedBucket, Variant};
+use ratelimit_meter::test_utilities::variants::{DirectBucket, KeyedBucket, Variant};
 
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
 

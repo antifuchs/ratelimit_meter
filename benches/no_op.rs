@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use ratelimit_meter::example_algorithms::Allower;
-use test_utilities::algorithms::AlgorithmForTest;
+use ratelimit_meter::test_utilities::algorithms::AlgorithmForTest;
 
 use criterion::{black_box, Benchmark, Criterion, Throughput};
 
