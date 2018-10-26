@@ -42,7 +42,7 @@ impl Algorithm for Allower {
     type BucketState = ();
     type NegativeDecision = Impossible;
 
-    fn params_from_constructor(
+    fn construct(
         _capacity: NonZeroU32,
         _cell_weight: NonZeroU32,
         _per_time_unit: Duration,

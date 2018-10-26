@@ -72,10 +72,10 @@ pub trait Algorithm: Send + Sync + Sized + fmt::Debug {
     /// handling of how long to wait.
     type NegativeDecision: PartialEq + Fail;
 
-    /// Constructs a set of rate limiter parameters from the given
-    /// parameters: `capacity` is the number of cells, weighhing
-    /// `cell_weight`, to allow `per_time_unit`.
-    fn params_from_constructor(
+    /// Constructs a rate limiter with the given parameters:
+    /// `capacity` is the number of cells to allow, weighing
+    /// `cell_weight`, every `per_time_unit`.
+    fn construct(
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
         per_time_unit: Duration,

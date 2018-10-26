@@ -118,11 +118,8 @@ where
         ) = evmap::new();
         w.refresh();
         KeyedRateLimiter {
-            algorithm: <A as Algorithm>::params_from_constructor(
-                capacity,
-                nonzero!(1u32),
-                per_time_unit,
-            ).unwrap(),
+            algorithm: <A as Algorithm>::construct(capacity, nonzero!(1u32), per_time_unit)
+                .unwrap(),
             map_reader: r,
             map_writer: Arc::new(Mutex::new(w)),
         }
@@ -385,7 +382,7 @@ where
 
         w.refresh();
         Ok(KeyedRateLimiter {
-            algorithm: <A as Algorithm>::params_from_constructor(
+            algorithm: <A as Algorithm>::construct(
                 self.capacity,
                 self.cell_weight,
                 self.per_time_unit,

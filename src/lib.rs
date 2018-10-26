@@ -1,8 +1,13 @@
 //! # Leaky Bucket Rate-Limiting (as a meter) in Rust
-//! This crate implements
-//! the
-//! [generic cell rate algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm) (GCRA)
-//! for rate-limiting and scheduling in Rust.
+//!
+//! This crate provides generic rate-limiting interfaces and implements a
+//! few rate-limiting algorithms. The generic rate-limiting interfaces
+//! are extendable to persistence-based rate limiting schemes such as
+//! databases.
+//!
+//! This crate currently provides in-memory implementations of a by-key
+//! (limits enforced per key, e.g. an IP address or a customer ID) and a
+//! simple (one limit per object) state tracker.
 //!
 //! ## Interface
 //!
@@ -150,15 +155,16 @@ pub use self::state::KeyedRateLimiter;
 /// Gives additional information about the negative outcome of a batch
 /// cell decision.
 ///
-/// Since batch queries can be made for batch sizes bigger than a
-/// Decider could accomodate, there are now two possible negative
-/// outcomes:
+/// Since batch queries can be made for batch sizes bigger than the
+/// rate limiter parameter could accomodate, there are now two
+/// possible negative outcomes:
 ///
 ///   * `BatchNonConforming` - the query is valid but the Decider can
 ///     not accomodate them.
 ///
-///   * `InsufficientCapacity` - the Decider can never accomodate the
-///     cells queried for.
+///   * `InsufficientCapacity` - the query was invalid as the rate
+///     limite parameters can never accomodate the number of cells
+///     queried for.
 #[derive(Fail, Debug, PartialEq)]
 pub enum NegativeMultiDecision<E: Fail> {
     /// A batch of cells (the first argument) is non-conforming and
@@ -179,8 +185,8 @@ pub enum NegativeMultiDecision<E: Fail> {
     InsufficientCapacity(u32),
 }
 
-/// An error that is returned when initializing a Decider that is too
-/// small to let a single cell through.
+/// An error that is returned when initializing a rate limiter that is
+/// too small to let a single cell through.
 #[derive(Fail, Debug)]
 #[fail(
     display = "bucket capacity {} too small for a single cell with weight {}",
@@ -191,14 +197,3 @@ pub struct InconsistentCapacity {
     capacity: NonZeroU32,
     cell_weight: NonZeroU32,
 }
-
-// #[test]
-// fn test_wait_time_from() {
-//     let now = Instant::now();
-//     let nc = NonConformance::new(now, Duration::from_secs(20));
-//     assert_eq!(nc.wait_time_from(now), Duration::from_secs(20));
-//     assert_eq!(
-//         nc.wait_time_from(now + Duration::from_secs(5)),
-//         Duration::from_secs(15)
-//     );
-// }

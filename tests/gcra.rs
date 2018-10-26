@@ -11,18 +11,14 @@ use std::time::{Duration, Instant};
 
 #[test]
 fn accepts_first_cell() {
-    let gcra =
-        GCRA::params_from_constructor(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1))
-            .unwrap();
+    let gcra = GCRA::construct(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
     assert_eq!(Ok(()), gcra.test_and_update(&state, Instant::now()));
 }
 
 #[test]
 fn rejects_too_many() {
-    let gcra =
-        GCRA::params_from_constructor(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1))
-            .unwrap();
+    let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
     let now = Instant::now();
     gcra.test_and_update(&state, now).unwrap();
@@ -38,9 +34,7 @@ fn rejects_too_many() {
 
 #[test]
 fn allows_after_interval() {
-    let gcra =
-        GCRA::params_from_constructor(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1))
-            .unwrap();
+    let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
     let now = Instant::now();
     let ms = Duration::from_millis(1);
@@ -54,9 +48,7 @@ fn allows_after_interval() {
 
 #[test]
 fn allows_n_after_interval() {
-    let gcra =
-        GCRA::params_from_constructor(nonzero!(2u32), nonzero!(1u32), Duration::from_secs(1))
-            .unwrap();
+    let gcra = GCRA::construct(nonzero!(2u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
     let now = Instant::now();
     let ms = Duration::from_millis(1);
@@ -78,7 +70,7 @@ fn allows_n_after_interval() {
 #[test]
 fn correctly_handles_per() {
     let ms = Duration::from_millis(1);
-    let gcra = GCRA::params_from_constructor(nonzero!(1u32), nonzero!(1u32), ms * 20).unwrap();
+    let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), ms * 20).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
     let now = Instant::now();
 
@@ -91,9 +83,7 @@ fn correctly_handles_per() {
 #[test]
 fn never_allows_more_than_capacity() {
     let ms = Duration::from_millis(1);
-    let gcra =
-        GCRA::params_from_constructor(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1))
-            .unwrap();
+    let gcra = GCRA::construct(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();
     let now = Instant::now();
 
@@ -116,9 +106,7 @@ fn never_allows_more_than_capacity() {
 #[test]
 fn correct_wait_time() {
     // Bucket adding a new element per 200ms:
-    let gcra =
-        GCRA::params_from_constructor(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1))
-            .unwrap();
+    let gcra = GCRA::construct(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();
     let mut now = Instant::now();
     let ms = Duration::from_millis(1);
@@ -142,9 +130,7 @@ fn correct_wait_time() {
 
 #[test]
 fn actual_threadsafety() {
-    let gcra =
-        GCRA::params_from_constructor(nonzero!(20u32), nonzero!(1u32), Duration::from_secs(1))
-            .unwrap();
+    let gcra = GCRA::construct(nonzero!(20u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();
 
     let now = Instant::now();

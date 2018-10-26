@@ -56,11 +56,8 @@ where
     pub fn new(capacity: NonZeroU32, per_time_unit: Duration) -> Self {
         DirectRateLimiter {
             state: <A as Algorithm>::BucketState::default(),
-            algorithm: <A as Algorithm>::params_from_constructor(
-                capacity,
-                nonzero!(1u32),
-                per_time_unit,
-            ).unwrap(),
+            algorithm: <A as Algorithm>::construct(capacity, nonzero!(1u32), per_time_unit)
+                .unwrap(),
         }
     }
 
@@ -201,7 +198,7 @@ where
     pub fn build(&self) -> Result<DirectRateLimiter<A>, InconsistentCapacity> {
         Ok(DirectRateLimiter {
             state: <A as Algorithm>::BucketState::default(),
-            algorithm: <A as Algorithm>::params_from_constructor(
+            algorithm: <A as Algorithm>::construct(
                 self.capacity,
                 self.cell_weight,
                 self.time_unit,

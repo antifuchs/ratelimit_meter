@@ -17,7 +17,7 @@ where
         duration: D,
     ) -> Self {
         AlgorithmForTest(
-            A::params_from_constructor(
+            A::construct(
                 cap,
                 weight.into().unwrap_or(nonzero!(1u32)),
                 duration

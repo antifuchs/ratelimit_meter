@@ -105,7 +105,7 @@ impl Algorithm for LeakyBucket {
 
     type NegativeDecision = TooEarly;
 
-    fn params_from_constructor(
+    fn construct(
         capacity: NonZeroU32,
         cell_weight: NonZeroU32,
         per_time_unit: Duration,
