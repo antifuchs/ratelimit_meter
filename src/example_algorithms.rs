@@ -1,5 +1,6 @@
-use failure::_core::time::Duration;
+use std::fmt;
 use std::num::NonZeroU32;
+use std::time::Duration;
 use {
     algorithms::{Algorithm, RateLimitState},
     DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision,
@@ -34,9 +35,14 @@ impl RateLimitState<Allower> for () {
     }
 }
 
-#[derive(Fail, Debug, PartialEq)]
-#[fail(display = "Should never happen")]
+#[derive(Debug, PartialEq)]
 pub struct Impossible();
+
+impl fmt::Display for Impossible {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "can't happen")
+    }
+}
 
 impl Algorithm for Allower {
     type BucketState = ();

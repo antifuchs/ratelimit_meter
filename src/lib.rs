@@ -130,21 +130,16 @@
 #![cfg_attr(feature = "cargo-clippy", deny(warnings))]
 
 pub mod algorithms;
+mod errors;
 pub mod example_algorithms;
 pub mod state;
 pub mod test_utilities;
 mod thread_safety;
 
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
 extern crate evmap;
 #[macro_use]
 extern crate nonzero_ext;
 extern crate parking_lot;
-
-use failure::Fail;
-use std::num::NonZeroU32;
 
 pub use self::algorithms::LeakyBucket;
 pub use self::algorithms::NonConformance;
@@ -153,48 +148,4 @@ pub use self::algorithms::GCRA;
 pub use self::state::DirectRateLimiter;
 pub use self::state::KeyedRateLimiter;
 
-/// Gives additional information about the negative outcome of a batch
-/// cell decision.
-///
-/// Since batch queries can be made for batch sizes bigger than the
-/// rate limiter parameter could accomodate, there are now two
-/// possible negative outcomes:
-///
-///   * `BatchNonConforming` - the query is valid but the Decider can
-///     not accomodate them.
-///
-///   * `InsufficientCapacity` - the query was invalid as the rate
-///     limite parameters can never accomodate the number of cells
-///     queried for.
-#[derive(Fail, Debug, PartialEq)]
-pub enum NegativeMultiDecision<E: Fail> {
-    /// A batch of cells (the first argument) is non-conforming and
-    /// can not be let through at this time. The second argument gives
-    /// information about when that batch of cells might be let
-    /// through again (not accounting for thundering herds and other,
-    /// simultaneous decisions).
-    #[fail(display = "{} cells: {}", _0, _1)]
-    BatchNonConforming(u32, E),
-
-    /// The number of cells tested (the first argument) is larger than
-    /// the bucket's capacity, which means the decision can never have
-    /// a conforming result.
-    #[fail(
-        display = "bucket does not have enough capacity to accomodate {} cells",
-        _0
-    )]
-    InsufficientCapacity(u32),
-}
-
-/// An error that is returned when initializing a rate limiter that is
-/// too small to let a single cell through.
-#[derive(Fail, Debug)]
-#[fail(
-    display = "bucket capacity {} too small for a single cell with weight {}",
-    capacity,
-    cell_weight
-)]
-pub struct InconsistentCapacity {
-    capacity: NonZeroU32,
-    cell_weight: NonZeroU32,
-}
+pub use self::errors::*;

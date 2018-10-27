@@ -5,7 +5,6 @@ pub use self::gcra::*;
 pub use self::leaky_bucket::*;
 
 use evmap::ShallowCopy;
-use failure::Fail;
 use std::fmt;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
@@ -70,7 +69,7 @@ pub trait Algorithm: Send + Sync + Sized + fmt::Debug {
     /// decisions also implement
     /// [`NonConformance`](trait.NonConformance.html), to ease
     /// handling of how long to wait.
-    type NegativeDecision: PartialEq + Fail;
+    type NegativeDecision: PartialEq + fmt::Display + fmt::Debug + Send + Sync;
 
     /// Constructs a rate limiter with the given parameters:
     /// `capacity` is the number of cells to allow, weighing

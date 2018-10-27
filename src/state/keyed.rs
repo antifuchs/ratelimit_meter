@@ -346,10 +346,7 @@ where
     /// bucket.
     pub fn with_cell_weight(self, cell_weight: NonZeroU32) -> Result<Self, InconsistentCapacity> {
         if self.cell_weight > self.capacity {
-            return Err(InconsistentCapacity {
-                capacity: self.capacity,
-                cell_weight,
-            });
+            return Err(InconsistentCapacity::new(self.capacity, cell_weight));
         }
         Ok(Builder {
             cell_weight,

@@ -176,10 +176,7 @@ where
         weight: NonZeroU32,
     ) -> Result<&mut Builder<A>, InconsistentCapacity> {
         if self.cell_weight > self.capacity {
-            return Err(InconsistentCapacity {
-                capacity: self.capacity,
-                cell_weight: self.cell_weight,
-            });
+            return Err(InconsistentCapacity::new(self.capacity, self.cell_weight));
         }
         self.cell_weight = weight;
         Ok(self)

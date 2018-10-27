@@ -9,6 +9,7 @@ use {
 use evmap::ShallowCopy;
 
 use std::cmp;
+use std::fmt;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
@@ -43,9 +44,14 @@ impl Default for Tat {
 ///
 /// To avoid thundering herd effects, client code should always add a
 /// random amount of jitter to wait time estimates.
-#[derive(Fail, Debug, PartialEq)]
-#[fail(display = "rate-limited until {:?}", _0)]
+#[derive(Debug, PartialEq)]
 pub struct NotUntil(Instant);
+
+impl fmt::Display for NotUntil {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "rate-limited until {:?}", self.0)
+    }
+}
 
 impl NonConformance for NotUntil {
     fn earliest_possible(&self) -> Instant {
@@ -131,10 +137,7 @@ impl Algorithm for GCRA {
         per_time_unit: Duration,
     ) -> Result<Self, InconsistentCapacity> {
         if capacity < cell_weight {
-            return Err(InconsistentCapacity {
-                capacity,
-                cell_weight,
-            });
+            return Err(InconsistentCapacity::new(capacity, cell_weight));
         }
         Ok(GCRA {
             t: (per_time_unit / capacity.get()) * cell_weight.get(),

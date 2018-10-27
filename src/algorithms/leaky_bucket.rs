@@ -1,5 +1,6 @@
 //! A classic leaky bucket algorithm
 
+use std::fmt;
 use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
 use {
@@ -71,9 +72,14 @@ impl RateLimitState<LeakyBucket> for State {
 ///
 /// To avoid the thundering herd effect, client code should always add
 /// some jitter to the wait time.
-#[derive(Fail, Debug, PartialEq)]
-#[fail(display = "rate-limited, wait at least for {:?}", _0)]
+#[derive(Debug, PartialEq)]
 pub struct TooEarly(Instant, Duration);
+
+impl fmt::Display for TooEarly {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "rate-limited until {:?}", self.0 + self.1)
+    }
+}
 
 impl NonConformance for TooEarly {
     fn earliest_possible(&self) -> Instant {
@@ -111,10 +117,7 @@ impl Algorithm for LeakyBucket {
         per_time_unit: Duration,
     ) -> Result<Self, InconsistentCapacity> {
         if capacity < cell_weight {
-            return Err(InconsistentCapacity {
-                capacity,
-                cell_weight,
-            });
+            return Err(InconsistentCapacity::new(capacity, cell_weight));
         }
         let token_interval = (per_time_unit * cell_weight.get()) / capacity.get();
         Ok(LeakyBucket {
