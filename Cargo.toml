@@ -8,6 +8,7 @@ repository = "https://github.com/antifuchs/ratelimit_meter.git"
 readme = "README.md"
 description = "A leaky-bucket-as-a-meter rate-limiting implementation in Rust"
 documentation = "https://docs.rs/ratelimit_meter"
+categories = ["algorithms", "network-programming", "concurrency"]
 
 # We use criterion, don't infer benchmark files.
 autobenches = false
