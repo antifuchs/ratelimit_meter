@@ -15,7 +15,7 @@ autobenches = false
 
 [badges]
 travis-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
-maintenance = { status = "passively-maintained" }
+maintenance = { status = "actively-developed" }
 
 [package.metadata.release]
 sign-commit = false
