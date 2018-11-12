@@ -150,3 +150,20 @@ fn actual_threadsafety() {
     assert_ne!(Ok(()), gcra.test_and_update(&state, now + ms * 2));
     assert_eq!(Ok(()), gcra.test_and_update(&state, now + ms * 1000));
 }
+
+#[test]
+fn nonconformance_wait_time_from() {
+    let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
+    let state = <GCRA as Algorithm>::BucketState::default();
+    let now = Instant::now();
+    let ms = Duration::from_millis(1);
+    gcra.test_and_update(&state, now).unwrap();
+    gcra.test_and_update(&state, now).unwrap();
+    if let Err(failure) = gcra.test_and_update(&state, now) {
+        assert_eq!(ms * 2000, failure.wait_time_from(now));
+        assert_eq!(Duration::new(0, 0), failure.wait_time_from(now + ms * 2000));
+        assert_eq!(Duration::new(0, 0), failure.wait_time_from(now + ms * 2001));
+    } else {
+        assert!(false, "Second attempt should fail");
+    }
+}

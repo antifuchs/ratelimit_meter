@@ -87,7 +87,8 @@ impl NonConformance for TooEarly {
     }
 
     fn wait_time_from(&self, from: Instant) -> Duration {
-        (self.0 + self.1).duration_since(from)
+        let wait_period_end = self.0 + self.1;
+        wait_period_end.duration_since(wait_period_end.min(from))
     }
 }
 

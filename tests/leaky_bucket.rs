@@ -2,7 +2,9 @@ extern crate ratelimit_meter;
 #[macro_use]
 extern crate nonzero_ext;
 
-use ratelimit_meter::{DirectRateLimiter, LeakyBucket, NegativeMultiDecision, NonConformance};
+use ratelimit_meter::{
+    algorithms::Algorithm, DirectRateLimiter, LeakyBucket, NegativeMultiDecision, NonConformance,
+};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -100,4 +102,21 @@ fn actual_threadsafety() {
     }
     assert!(!lim.check_at(now + ms * 2).is_ok());
     assert_eq!(Ok(()), lim.check_at(now + ms * 1000));
+}
+
+#[test]
+fn tooearly_wait_time_from() {
+    let lim =
+        LeakyBucket::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
+    let state = <LeakyBucket as Algorithm>::BucketState::default();
+    let now = Instant::now();
+    let ms = Duration::from_millis(1);
+    lim.test_and_update(&state, now).unwrap();
+    if let Err(failure) = lim.test_and_update(&state, now) {
+        assert_eq!(ms * 1000, failure.wait_time_from(now));
+        assert_eq!(Duration::new(0, 0), failure.wait_time_from(now + ms * 1000));
+        assert_eq!(Duration::new(0, 0), failure.wait_time_from(now + ms * 2001));
+    } else {
+        assert!(false, "Second attempt should fail");
+    }
 }

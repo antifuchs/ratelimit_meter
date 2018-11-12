@@ -59,7 +59,7 @@ impl NonConformance for NotUntil {
     }
 
     fn wait_time_from(&self, from: Instant) -> Duration {
-        self.0.duration_since(from)
+        self.0.duration_since(from.min(self.0))
     }
 }
 
