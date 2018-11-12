@@ -82,13 +82,9 @@ impl fmt::Display for TooEarly {
 }
 
 impl NonConformance for TooEarly {
+    #[inline]
     fn earliest_possible(&self) -> Instant {
         self.0 + self.1
-    }
-
-    fn wait_time_from(&self, from: Instant) -> Duration {
-        let wait_period_end = self.0 + self.1;
-        wait_period_end.duration_since(wait_period_end.min(from))
     }
 }
 

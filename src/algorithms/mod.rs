@@ -37,7 +37,10 @@ pub trait NonConformance {
     /// decision can be conforming. Since Durations can not be
     /// negative, a zero duration is returned if `from` is already
     /// after that duration.
-    fn wait_time_from(&self, from: Instant) -> Duration;
+    fn wait_time_from(&self, from: Instant) -> Duration {
+        let earliest = self.earliest_possible();
+        earliest.duration_since(earliest.min(from))
+    }
 
     /// Returns the minimum amount of time (down to 0) that needs to
     /// pass from the current instant for the Decider to consider a

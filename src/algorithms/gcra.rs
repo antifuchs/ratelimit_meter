@@ -54,12 +54,9 @@ impl fmt::Display for NotUntil {
 }
 
 impl NonConformance for NotUntil {
+    #[inline]
     fn earliest_possible(&self) -> Instant {
         self.0
-    }
-
-    fn wait_time_from(&self, from: Instant) -> Duration {
-        self.0.duration_since(from.min(self.0))
     }
 }
 
