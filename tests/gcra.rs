@@ -90,10 +90,9 @@ fn never_allows_more_than_capacity() {
     assert!(gcra.test_n_and_update(&state, 15, now).is_err());
 
     // After 3 and 20 seconds, it should not allow 15 on that bucket either:
-    assert!(
-        gcra.test_n_and_update(&state, 15, now + (ms * 3 * 1000))
-            .is_err()
-    );
+    assert!(gcra
+        .test_n_and_update(&state, 15, now + (ms * 3 * 1000))
+        .is_err());
 
     let result = gcra.test_n_and_update(&state, 15, now + (ms * 20 * 1000));
     match result {

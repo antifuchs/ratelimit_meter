@@ -165,7 +165,8 @@ where
                 // entries, but we'll only ever add one):
                 let state = &v[0];
                 update(state)
-            }).unwrap_or_else(|| {
+            })
+            .unwrap_or_else(|| {
                 // entry does not exist, let's add one.
                 let mut w = self.map_writer.lock();
                 let state: A::BucketState = Default::default();

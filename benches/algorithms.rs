@@ -25,7 +25,8 @@ fn bench_plain_algorithm_1elem(c: &mut Criterion) {
             });
         },
         Variant::ALL,
-    ).throughput(|_s| Throughput::Elements(1));
+    )
+    .throughput(|_s| Throughput::Elements(1));
     c.bench(id, bm);
 }
 
@@ -48,6 +49,7 @@ fn bench_plain_algorithm_multi(c: &mut Criterion) {
             });
         },
         Variant::ALL,
-    ).throughput(|_s| Throughput::Elements(1));
+    )
+    .throughput(|_s| Throughput::Elements(1));
     c.bench(id, bm);
 }

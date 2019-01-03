@@ -23,7 +23,8 @@ where
                 duration
                     .into()
                     .unwrap_or(::std::time::Duration::from_secs(1)),
-            ).unwrap(),
+            )
+            .unwrap(),
         )
     }
 

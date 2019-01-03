@@ -42,7 +42,8 @@ fn bench_direct(c: &mut Criterion) {
             });
         },
         Variant::ALL,
-    ).throughput(|_s| Throughput::Elements(1));
+    )
+    .throughput(|_s| Throughput::Elements(1));
     c.bench(id, bm);
 }
 
@@ -79,6 +80,7 @@ fn bench_keyed(c: &mut Criterion) {
             });
         },
         Variant::ALL,
-    ).throughput(|_s| Throughput::Elements(1));
+    )
+    .throughput(|_s| Throughput::Elements(1));
     c.bench(id, bm);
 }

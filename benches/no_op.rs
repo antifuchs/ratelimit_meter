@@ -18,6 +18,7 @@ pub fn bench_all(c: &mut Criterion) {
             i += 1;
             black_box(algo.check(&state, now + (ms * i)).is_ok());
         });
-    }).throughput(Throughput::Elements(1));
+    })
+    .throughput(Throughput::Elements(1));
     c.bench(id, bm);
 }
