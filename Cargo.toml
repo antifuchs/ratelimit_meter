@@ -14,7 +14,7 @@ categories = ["algorithms", "network-programming", "concurrency"]
 autobenches = false
 
 [badges]
-travis-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
+circle-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [package.metadata.release]
@@ -25,9 +25,6 @@ pro-release-commit-message = "Start next development iteration {{version}}"
 tag-message = "Release {{prefix}}{{version}}"
 dev-version-ext = "dev"
 tag-prefix = "v"
-
-[package.metadata.template_ci.clippy]
-allow_failure = false
 
 [package.metadata.template_ci.bench]
 run = true
