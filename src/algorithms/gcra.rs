@@ -3,6 +3,7 @@
 use thread_safety::ThreadsafeWrapper;
 use {
     algorithms::{Algorithm, NonConformance, RateLimitState},
+    instant::Point,
     InconsistentCapacity, NegativeMultiDecision,
 };
 
@@ -14,26 +15,26 @@ use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
 /// The GCRA's state about a single rate limiting history.
-#[derive(Debug, Eq, PartialEq, Default, Clone)]
-pub struct State(ThreadsafeWrapper<Tat>);
+#[derive(Debug, Eq, PartialEq, Clone, Default)]
+pub struct State<P: Point = Instant>(ThreadsafeWrapper<Tat<P>>);
 
-impl ShallowCopy for State {
+impl<P: Point> ShallowCopy for State<P> {
     unsafe fn shallow_copy(&mut self) -> Self {
         State(self.0.shallow_copy())
     }
 }
 
-impl RateLimitState<GCRA> for State {
-    fn last_touched(&self, params: &GCRA) -> Instant {
+impl<P: Point> RateLimitState<GCRA, P> for State<P> {
+    fn last_touched(&self, params: &GCRA) -> P {
         let data = self.0.snapshot();
-        data.0.unwrap_or_else(Instant::now) + params.tau
+        data.0.unwrap_or_else(P::now) + params.tau
     }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-struct Tat(Option<Instant>);
+struct Tat<P: Point>(Option<P>);
 
-impl Default for Tat {
+impl<P: Point> Default for Tat<P> {
     fn default() -> Self {
         Tat(None)
     }
@@ -45,17 +46,19 @@ impl Default for Tat {
 /// To avoid thundering herd effects, client code should always add a
 /// random amount of jitter to wait time estimates.
 #[derive(Debug, PartialEq)]
-pub struct NotUntil(Instant);
+pub struct NotUntil<P = Instant>(P)
+where
+    P: Point;
 
-impl fmt::Display for NotUntil {
+impl<P: Point> fmt::Display for NotUntil<P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "rate-limited until {:?}", self.0)
     }
 }
 
-impl NonConformance for NotUntil {
+impl<P: Point> NonConformance<P> for NotUntil<P> {
     #[inline]
-    fn earliest_possible(&self) -> Instant {
+    fn earliest_possible(&self) -> P {
         self.0
     }
 }
@@ -123,10 +126,10 @@ pub struct GCRA {
     tau: Duration,
 }
 
-impl Algorithm for GCRA {
-    type BucketState = State;
+impl<P: Point> Algorithm<P> for GCRA {
+    type BucketState = State<P>;
 
-    type NegativeDecision = NotUntil;
+    type NegativeDecision = NotUntil<P>;
 
     fn construct(
         capacity: NonZeroU32,
@@ -148,7 +151,7 @@ impl Algorithm for GCRA {
     fn test_and_update(
         &self,
         state: &Self::BucketState,
-        t0: Instant,
+        t0: P,
     ) -> Result<(), Self::NegativeDecision> {
         let tau = self.tau;
         let t = self.t;
@@ -172,7 +175,7 @@ impl Algorithm for GCRA {
         &self,
         state: &Self::BucketState,
         n: u32,
-        t0: Instant,
+        t0: P,
     ) -> Result<(), NegativeMultiDecision<Self::NegativeDecision>> {
         let tau = self.tau;
         let t = self.t;

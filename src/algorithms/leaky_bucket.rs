@@ -5,13 +5,14 @@ use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
 use {
     algorithms::{Algorithm, RateLimitState},
+    instant::Point,
     InconsistentCapacity, NegativeMultiDecision, NonConformance,
 };
 
 use evmap::ShallowCopy;
 
 use std::cmp;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 /// Implements the industry-standard leaky bucket rate-limiting
 /// as-a-meter. The bucket keeps a "fill height", pretending to drip
@@ -53,18 +54,18 @@ pub struct LeakyBucket {
 
 /// Represents the state of a single history of decisions.
 #[derive(Debug, Default, Eq, PartialEq, Clone)]
-pub struct State(ThreadsafeWrapper<BucketState>);
+pub struct State<P: Point>(ThreadsafeWrapper<BucketState<P>>);
 
-impl ShallowCopy for State {
+impl<P: Point> ShallowCopy for State<P> {
     unsafe fn shallow_copy(&mut self) -> Self {
         State(self.0.shallow_copy())
     }
 }
 
-impl RateLimitState<LeakyBucket> for State {
-    fn last_touched(&self, _params: &LeakyBucket) -> Instant {
+impl<P: Point> RateLimitState<LeakyBucket, P> for State<P> {
+    fn last_touched(&self, _params: &LeakyBucket) -> P {
         let data = self.0.snapshot();
-        data.last_update.unwrap_or_else(Instant::now) + data.level
+        data.last_update.unwrap_or_else(P::now) + data.level
     }
 }
 
@@ -73,28 +74,28 @@ impl RateLimitState<LeakyBucket> for State {
 /// To avoid the thundering herd effect, client code should always add
 /// some jitter to the wait time.
 #[derive(Debug, PartialEq)]
-pub struct TooEarly(Instant, Duration);
+pub struct TooEarly<P: Point>(P, Duration);
 
-impl fmt::Display for TooEarly {
+impl<P: Point> fmt::Display for TooEarly<P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "rate-limited until {:?}", self.0 + self.1)
     }
 }
 
-impl NonConformance for TooEarly {
+impl<P: Point> NonConformance for TooEarly<P> {
     #[inline]
-    fn earliest_possible(&self) -> Instant {
+    fn earliest_possible(&self) -> P {
         self.0 + self.1
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct BucketState {
+struct BucketState<P: Point> {
     level: Duration,
-    last_update: Option<Instant>,
+    last_update: Option<P>,
 }
 
-impl Default for BucketState {
+impl<P: Point> Default for BucketState<P> {
     fn default() -> Self {
         BucketState {
             level: Duration::new(0, 0),
@@ -103,10 +104,10 @@ impl Default for BucketState {
     }
 }
 
-impl Algorithm for LeakyBucket {
-    type BucketState = State;
+impl<P: Point> Algorithm<P> for LeakyBucket {
+    type BucketState = State<P>;
 
-    type NegativeDecision = TooEarly;
+    type NegativeDecision = TooEarly<P>;
 
     fn construct(
         capacity: NonZeroU32,
@@ -127,8 +128,8 @@ impl Algorithm for LeakyBucket {
         &self,
         state: &Self::BucketState,
         n: u32,
-        t0: Instant,
-    ) -> Result<(), NegativeMultiDecision<TooEarly>> {
+        t0: P,
+    ) -> Result<(), NegativeMultiDecision<TooEarly<P>>> {
         let full = self.full;
         let weight = self.token_interval * n;
         if weight > self.full {

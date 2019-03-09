@@ -29,7 +29,7 @@ impl Allower {
     }
 }
 
-impl RateLimitState<Allower> for () {
+impl RateLimitState<Allower, Instant> for () {
     fn last_touched(&self, _params: &Allower) -> Instant {
         Instant::now()
     }
