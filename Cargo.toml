@@ -17,6 +17,10 @@ autobenches = false
 circle-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
 maintenance = { status = "actively-developed" }
 
+[features]
+default = ["std"]
+std = []
+
 [package.metadata.release]
 sign-commit = false
 upload-doc = false
