@@ -127,6 +127,9 @@
 //! # }
 //! ```
 
+// Allow using ratelimit_meter without std
+#![cfg_attr(not(feature = "std"), no_std)]
+// Deny warnings
 #![cfg_attr(feature = "cargo-clippy", deny(warnings))]
 
 pub mod algorithms;
