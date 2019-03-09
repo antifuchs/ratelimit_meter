@@ -41,6 +41,7 @@ impl<P: Point> ShallowCopy for State<P> {
 }
 
 impl<P: Point> RateLimitState<GCRA<P>, P> for State<P> {
+    #[cfg(feature = "std")]
     fn last_touched(&self, params: &GCRA<P>) -> P {
         let data = self.0.snapshot();
         data.0.unwrap_or_else(P::now) + params.tau

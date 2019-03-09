@@ -71,6 +71,7 @@ impl<P: Point> ShallowCopy for State<P> {
 }
 
 impl<P: Point> RateLimitState<LeakyBucket<P>, P> for State<P> {
+    #[cfg(feature = "std")]
     fn last_touched(&self, _params: &LeakyBucket<P>) -> P {
         let data = self.0.snapshot();
         data.last_update.unwrap_or_else(P::now) + data.level

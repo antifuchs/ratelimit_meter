@@ -1,12 +1,12 @@
 use std::fmt;
 use std::num::NonZeroU32;
+use std::ops::{Add, Sub};
 use std::time::Duration;
 use {
     algorithms::{Algorithm, RateLimitState},
+    instant::Point,
     DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision,
 };
-
-use std::time::Instant;
 
 /// The most naive implementation of a rate-limiter ever: Always
 /// allows every cell through.
@@ -23,15 +23,16 @@ pub struct Allower {}
 impl Allower {
     /// Return a rate-limiter that lies, i.e. that allows all requests
     /// through.
-    pub fn ratelimiter() -> DirectRateLimiter<Allower> {
+    pub fn ratelimiter() -> DirectRateLimiter<Allower, Always> {
         // These numbers are fake, but we make them up for convenience:
         DirectRateLimiter::per_second(nonzero!(1u32))
     }
 }
 
-impl RateLimitState<Allower, Instant> for () {
-    fn last_touched(&self, _params: &Allower) -> Instant {
-        Instant::now()
+impl RateLimitState<Allower, Always> for () {
+    #[cfg(feature = "std")]
+    fn last_touched(&self, _params: &Allower) -> Always {
+        Always::now()
     }
 }
 
@@ -44,7 +45,7 @@ impl fmt::Display for Impossible {
     }
 }
 
-impl Algorithm for Allower {
+impl Algorithm<Always> for Allower {
     type BucketState = ();
     type NegativeDecision = Impossible;
 
@@ -61,8 +62,45 @@ impl Algorithm for Allower {
         &self,
         _state: &Self::BucketState,
         _n: u32,
-        _t0: Instant,
+        _t0: Always,
     ) -> Result<(), NegativeMultiDecision<Impossible>> {
         Ok(())
+    }
+}
+
+/// A pseudo-instant that never changes.
+///
+/// It is used to implement the `Allower` rate-limiter type, which
+/// never denies any requests.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Always();
+impl Point for Always {
+    fn now() -> Self {
+        Always()
+    }
+
+    fn duration_since(&self, _other: Self) -> Duration {
+        Duration::new(0, 0)
+    }
+}
+
+impl Add<Duration> for Always {
+    type Output = Always;
+    fn add(self, _rhs: Duration) -> Always {
+        Always()
+    }
+}
+
+impl Sub<Duration> for Always {
+    type Output = Always;
+    fn sub(self, _rhs: Duration) -> Always {
+        Always()
+    }
+}
+
+impl Sub<Always> for Always {
+    type Output = Duration;
+    fn sub(self, _rhs: Always) -> Duration {
+        Duration::new(0, 0)
     }
 }

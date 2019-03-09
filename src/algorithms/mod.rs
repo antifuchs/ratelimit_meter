@@ -126,6 +126,7 @@ pub trait RateLimitState<P, I>: Default
 where
     I: Point,
 {
+    #[cfg(feature = "std")]
     /// Returns the last time instant that the state had any relevance
     /// (i.e. the rate limiter would behave exactly as if it was a new
     /// rate limiter after this time).
