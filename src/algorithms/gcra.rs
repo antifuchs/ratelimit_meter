@@ -11,25 +11,9 @@ use evmap::ShallowCopy;
 
 use std::cmp;
 use std::fmt;
+use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
-
-/// The GCRA's state about a single rate limiting history.
-#[derive(Debug, Eq, PartialEq, Clone, Default)]
-pub struct State<P: Point = Instant>(ThreadsafeWrapper<Tat<P>>);
-
-impl<P: Point> ShallowCopy for State<P> {
-    unsafe fn shallow_copy(&mut self) -> Self {
-        State(self.0.shallow_copy())
-    }
-}
-
-impl<P: Point> RateLimitState<GCRA, P> for State<P> {
-    fn last_touched(&self, params: &GCRA) -> P {
-        let data = self.0.snapshot();
-        data.0.unwrap_or_else(P::now) + params.tau
-    }
-}
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 struct Tat<P: Point>(Option<P>);
@@ -40,15 +24,36 @@ impl<P: Point> Default for Tat<P> {
     }
 }
 
+/// The GCRA's state about a single rate limiting history.
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct State<P: Point>(ThreadsafeWrapper<Tat<P>>);
+
+impl<P: Point> Default for State<P> {
+    fn default() -> Self {
+        State(Default::default())
+    }
+}
+
+impl<P: Point> ShallowCopy for State<P> {
+    unsafe fn shallow_copy(&mut self) -> Self {
+        State(self.0.shallow_copy())
+    }
+}
+
+impl<P: Point> RateLimitState<GCRA<P>, P> for State<P> {
+    fn last_touched(&self, params: &GCRA<P>) -> P {
+        let data = self.0.snapshot();
+        data.0.unwrap_or_else(P::now) + params.tau
+    }
+}
+
 /// Returned in case of a negative rate-limiting decision. Indicates
 /// the earliest instant that a cell might get accepted again.
 ///
 /// To avoid thundering herd effects, client code should always add a
 /// random amount of jitter to wait time estimates.
 #[derive(Debug, PartialEq)]
-pub struct NotUntil<P = Instant>(P)
-where
-    P: Point;
+pub struct NotUntil<P: Point>(P);
 
 impl<P: Point> fmt::Display for NotUntil<P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -118,15 +123,17 @@ impl<P: Point> NonConformance<P> for NotUntil<P> {
 /// assert_eq!(Ok(()), limiter.check_at(now + ms*50));
 /// # }
 #[derive(Debug, Clone)]
-pub struct GCRA {
+pub struct GCRA<P: Point = Instant> {
     // The "weight" of a single packet in units of time.
     t: Duration,
 
     // The "capacity" of the bucket.
     tau: Duration,
+
+    point: PhantomData<P>,
 }
 
-impl<P: Point> Algorithm<P> for GCRA {
+impl<P: Point> Algorithm<P> for GCRA<P> {
     type BucketState = State<P>;
 
     type NegativeDecision = NotUntil<P>;
@@ -142,6 +149,7 @@ impl<P: Point> Algorithm<P> for GCRA {
         Ok(GCRA {
             t: (per_time_unit / capacity.get()) * cell_weight.get(),
             tau: per_time_unit,
+            point: PhantomData,
         })
     }
 

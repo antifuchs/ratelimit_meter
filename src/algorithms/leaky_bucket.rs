@@ -12,7 +12,8 @@ use {
 use evmap::ShallowCopy;
 
 use std::cmp;
-use std::time::Duration;
+use std::marker::PhantomData;
+use std::time::{Duration, Instant};
 
 /// Implements the industry-standard leaky bucket rate-limiting
 /// as-a-meter. The bucket keeps a "fill height", pretending to drip
@@ -47,14 +48,21 @@ use std::time::Duration;
 /// # }
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct LeakyBucket {
+pub struct LeakyBucket<P: Point = Instant> {
     full: Duration,
     token_interval: Duration,
+    point: PhantomData<P>,
 }
 
 /// Represents the state of a single history of decisions.
-#[derive(Debug, Default, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct State<P: Point>(ThreadsafeWrapper<BucketState<P>>);
+
+impl<P: Point> Default for State<P> {
+    fn default() -> Self {
+        State(Default::default())
+    }
+}
 
 impl<P: Point> ShallowCopy for State<P> {
     unsafe fn shallow_copy(&mut self) -> Self {
@@ -62,8 +70,8 @@ impl<P: Point> ShallowCopy for State<P> {
     }
 }
 
-impl<P: Point> RateLimitState<LeakyBucket, P> for State<P> {
-    fn last_touched(&self, _params: &LeakyBucket) -> P {
+impl<P: Point> RateLimitState<LeakyBucket<P>, P> for State<P> {
+    fn last_touched(&self, _params: &LeakyBucket<P>) -> P {
         let data = self.0.snapshot();
         data.last_update.unwrap_or_else(P::now) + data.level
     }
@@ -82,7 +90,7 @@ impl<P: Point> fmt::Display for TooEarly<P> {
     }
 }
 
-impl<P: Point> NonConformance for TooEarly<P> {
+impl<P: Point> NonConformance<P> for TooEarly<P> {
     #[inline]
     fn earliest_possible(&self) -> P {
         self.0 + self.1
@@ -104,7 +112,7 @@ impl<P: Point> Default for BucketState<P> {
     }
 }
 
-impl<P: Point> Algorithm<P> for LeakyBucket {
+impl<P: Point> Algorithm<P> for LeakyBucket<P> {
     type BucketState = State<P>;
 
     type NegativeDecision = TooEarly<P>;
@@ -121,6 +129,7 @@ impl<P: Point> Algorithm<P> for LeakyBucket {
         Ok(LeakyBucket {
             full: per_time_unit,
             token_interval,
+            point: PhantomData,
         })
     }
 

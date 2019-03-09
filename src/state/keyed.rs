@@ -1,3 +1,4 @@
+#![cfg(feature = "std")]
 //! An in-memory rate limiter that can keep track of rates for
 //! multiple keys, e.g. per-customer or per-IP rates.
 

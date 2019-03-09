@@ -26,10 +26,7 @@ pub type DefaultAlgorithm = LeakyBucket;
 ///
 /// Since this does not account for effects like thundering herds,
 /// users should always add random jitter to the times given.
-pub trait NonConformance<P = Instant>
-where
-    P: Point,
-{
+pub trait NonConformance<P: Point> {
     /// Returns the earliest time at which a decision could be
     /// conforming (excluding conforming decisions made by the Decider
     /// that are made in the meantime).
@@ -68,13 +65,7 @@ pub trait Algorithm<P: Point = Instant>: Send + Sync + Sized + fmt::Debug {
     /// Every new rate limiting state is initialized as `Default`. The
     /// states must be safe to share across threads (this crate uses a
     /// `parking_lot` Mutex to allow that).
-    type BucketState: RateLimitState<Self, P>
-        + Default
-        + Send
-        + Sync
-        + Eq
-        + ShallowCopy
-        + fmt::Debug;
+    type BucketState: RateLimitState<Self, P> + Send + Sync + Eq + ShallowCopy + fmt::Debug;
 
     /// The type returned when a rate limiting decision for a single
     /// cell is negative. Each rate limiting algorithm can decide to

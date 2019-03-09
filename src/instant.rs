@@ -15,7 +15,6 @@ pub trait Point:
     + Ord
     + Copy
     + Clone
-    // + Default
     + Send
     + Sync
     + Debug
