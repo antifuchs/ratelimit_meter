@@ -11,8 +11,9 @@ use std::time::{Duration, Instant};
 #[test]
 fn accepts_first_cell() {
     let gcra = GCRA::construct(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
-    let state = <GCRA as Algorithm>::BucketState::default();;
-    assert_eq!(Ok(()), gcra.test_and_update(&state, Instant::now()));
+    let state = <GCRA<Duration> as Algorithm<Duration>>::BucketState::default();;
+    let now = Duration::from_secs(1);
+    assert_eq!(Ok(()), gcra.test_and_update(&state, now));
 }
 
 #[test]
