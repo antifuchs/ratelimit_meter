@@ -34,8 +34,10 @@ impl RateLimitStateWithClock<Allower, Always> for () {
     }
 }
 
+/// A non-error - the Allower example rate-limiter always returns a
+/// positive result, so this error is never returned.
 #[derive(Debug, PartialEq)]
-pub struct Impossible();
+pub enum Impossible {}
 
 impl fmt::Display for Impossible {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
