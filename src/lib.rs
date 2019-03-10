@@ -29,10 +29,13 @@
 //!
 //! # #[macro_use] extern crate nonzero_ext;
 //! # extern crate ratelimit_meter;
+//! # #[cfg(feature = "std")]
 //! # fn main () {
 //! let mut lim = DirectRateLimiter::<GCRA>::per_second(nonzero!(50u32)); // Allow 50 units per second
 //! assert_eq!(Ok(()), lim.check());
 //! # }
+//! # #[cfg(not(feature = "std"))]
+//! # fn main() {}
 //! ```
 //!
 //! The rate-limiter interface is intentionally geared towards only
@@ -118,6 +121,7 @@
 //!
 //! # #[macro_use] extern crate nonzero_ext;
 //! # extern crate ratelimit_meter;
+//! # #[cfg(feature = "std")]
 //! # fn main () {
 //! // Allow 50 units/second across all threads:
 //! let mut lim = DirectRateLimiter::<GCRA>::per_second(nonzero!(50u32));
@@ -125,6 +129,8 @@
 //! thread::spawn(move || { assert_eq!(Ok(()), thread_lim.check());});
 //! assert_eq!(Ok(()), lim.check());
 //! # }
+//! # #[cfg(not(feature = "std"))]
+//! # fn main() {}
 //! ```
 
 // Allow using the alloc crate

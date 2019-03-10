@@ -109,6 +109,7 @@ impl<P: RelativeInstant> NonConformance<P> for NotUntil<P> {
 /// # use std::time::{Instant, Duration};
 /// # #[macro_use] extern crate nonzero_ext;
 /// # extern crate ratelimit_meter;
+/// # #[cfg(feature = "std")]
 /// # fn main () {
 /// let mut limiter = DirectRateLimiter::<GCRA>::per_second(nonzero!(20u32));
 /// let now = Instant::now();
@@ -124,6 +125,8 @@ impl<P: RelativeInstant> NonConformance<P> for NotUntil<P> {
 /// // After a sufficient time period, cells are allowed again:
 /// assert_eq!(Ok(()), limiter.check_at(now + ms*50));
 /// # }
+/// # #[cfg(not(feature = "std"))] fn main() {}
+/// ```
 #[derive(Debug, Clone)]
 pub struct GCRA<P: RelativeInstant = DefaultRelativeInstant> {
     // The "weight" of a single packet in units of time.

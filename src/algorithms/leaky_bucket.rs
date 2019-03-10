@@ -35,10 +35,12 @@ use {
 /// # use ratelimit_meter::{DirectRateLimiter, LeakyBucket};
 /// # #[macro_use] extern crate nonzero_ext;
 /// # extern crate ratelimit_meter;
+/// # #[cfg(feature = "std")]
 /// # fn main () {
 /// let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(2u32));
 /// assert_eq!(Ok(()), lb.check());
 /// # }
+/// # #[cfg(not(feature = "std"))] fn main() {}
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LeakyBucket<P: RelativeInstant = DefaultRelativeInstant> {
