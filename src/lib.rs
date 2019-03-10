@@ -1,13 +1,15 @@
 //! # Leaky Bucket Rate-Limiting (as a meter) in Rust
 //!
-//! This crate provides generic rate-limiting interfaces and implements a
-//! few rate-limiting algorithms. The generic rate-limiting interfaces
-//! are extendable to persistence-based rate limiting schemes such as
-//! databases.
+//! This crate provides generic rate-limiting interfaces and
+//! implements a few rate-limiting algorithms for programs that need
+//! to regulate the rate of their outgoing requests.
 //!
 //! This crate currently provides in-memory implementations of a by-key
 //! (limits enforced per key, e.g. an IP address or a customer ID) and a
 //! simple (one limit per object) state tracker.
+//!
+//! The simple (one limit per object) state tracker can be used in
+//! `no_std` environments, such as embedded systems.
 //!
 //! ## Interface
 //!
@@ -131,6 +133,79 @@
 //! # }
 //! # #[cfg(not(feature = "std"))]
 //! # fn main() {}
+//! ```
+//!
+//! ## Usage with `no_std`
+//!
+//! `ratelimit_meter` can be used in `no_std` crates, with a reduced
+//! feature set. These features are available:
+//!
+//! * [`DirectRateLimiter`](state/direct/struct.DirectRateLimiter.html)
+//!   for a single rate-limiting history per limit,
+//! * measurements using relative timestamps (`Duration`) by default,
+//! * extensibility for integrating a custom time source.
+//!
+//! The following things are not available in `no_std` builds by default:
+//!
+//! * `check` and `check_n` - unless you implement a custom time
+//!   source, you have to pass a timestamp to check the rate-limit
+//!   against.
+//! * [`KeyedRateLimiter`](state/keyed/struct.KeyedRateLimiter.html) -
+//!   the keyed state representation requires too much of `std` right
+//!   now to be feasible to implement.
+//!
+//! To use the crate, turn off default features and enable the
+//! `"no_std"` feature, like so:
+//!
+//! ``` toml
+//! ratelimit_meter = { version = "...", no_default_features = true, features = "no_std" }
+//! ```
+//!
+//! ### Implementing your own custom time source in `no_std`
+//!
+//! On platforms that do have a clock or other time source, you can
+//! use that time source to implement a trait provided by
+//! `ratelimit_meter`, which will enable the `check` and `check_n`
+//! methods on rate limiters. Here is an example:
+//!
+//! ```rust,ignore
+//! // MyTimeSource is what provides your timestamps. Since it probably
+//! // doesn't live in your crate, we make a newtype:
+//! struct MyInstant(MyTimeSource);
+//!
+//! impl RelativeInstant for MyInstant {
+//!     fn duration_since(&self, other: Self) -> Duration {
+//!         self.duration_since(other)
+//!     }
+//! }
+//!
+//! impl AbsoluteInstant for MyInstant {
+//!     fn now() -> Self {
+//!         MyTimeSource::now()
+//!     }
+//! }
+//!
+//! impl Add<Duration> for MyInstant {
+//!     type Output = MyInstant;
+//!     fn add(self, rhs: Duration) -> Always {
+//!         self.0 + rhs
+//!     }
+//! }
+//!
+//! impl Sub<Duration> for MyInstant {
+//!     type Output = MyInstant;
+//!     fn sub(self, rhs: Duration) -> Always {
+//!         self.0 - rhs
+//!     }
+//! }
+//! ```
+//!
+//! Then, using that type to create a rate limiter with that time
+//! source is a little more verbose. It looks like this:
+//!
+//! ```rust,ignore
+//! let mut lim = DirectRateLimiter::<GCRA<MyInstant>,MyInstant>::per_second(nonzero!(50u32));
+//! lim.check().ok();
 //! ```
 
 // Allow using the alloc crate

@@ -8,6 +8,9 @@ This crate implements two rate-limiting algorithms in Rust:
   [generic cell rate algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm) (GCRA)
   for rate-limiting and scheduling.
 
+`ratelimit_meter` is usable in `no_std` mode, with a few trade-offs on
+features.
+
 ## Installation
 
 Add the crate `ratelimit_meter` to your `Cargo.toml`
