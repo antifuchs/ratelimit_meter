@@ -15,8 +15,8 @@ impl Variant {
     pub const ALL: &'static [Variant; 2] = &[Variant::GCRA, Variant::LeakyBucket];
 }
 
-pub struct DirectBucket<P: RelativeInstant, A: Algorithm<P>>(DirectRateLimiter<A, P>);
-impl<P, A> Default for DirectBucket<P, A>
+pub struct DirectBucket<A: Algorithm<P>, P: RelativeInstant>(DirectRateLimiter<A, P>);
+impl<A, P> Default for DirectBucket<A, P>
 where
     P: RelativeInstant,
     A: Algorithm<P>,
@@ -25,7 +25,7 @@ where
         DirectBucket(DirectRateLimiter::per_second(nonzero!(50u32)))
     }
 }
-impl<P, A> DirectBucket<P, A>
+impl<A, P> DirectBucket<A, P>
 where
     P: RelativeInstant,
     A: Algorithm<P>,
@@ -65,11 +65,14 @@ macro_rules! bench_with_variants {
     ($variant:expr, $var:ident : $bucket:tt, $code:block) => {
         match $variant {
             $crate::test_utilities::variants::Variant::GCRA => {
-                let mut $var = $bucket::<::ratelimit_meter::GCRA>::default().limiter();
+                let mut $var =
+                    $bucket::<::ratelimit_meter::GCRA<Instant>, Instant>::default().limiter();
                 $code
             }
             $crate::test_utilities::variants::Variant::LeakyBucket => {
-                let mut $var = $bucket::<::ratelimit_meter::LeakyBucket>::default().limiter();
+                let mut $var =
+                    $bucket::<::ratelimit_meter::LeakyBucket<Instant>, Instant>::default()
+                        .limiter();
                 $code
             }
         }
