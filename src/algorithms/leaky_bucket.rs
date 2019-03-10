@@ -4,8 +4,8 @@ use std::fmt;
 use std::num::NonZeroU32;
 use thread_safety::ThreadsafeWrapper;
 use {
-    algorithms::{Algorithm, RateLimitState},
-    instant::Point,
+    algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
+    instant::{AbsoluteInstant, RelativeInstant},
     InconsistentCapacity, NegativeMultiDecision, NonConformance,
 };
 
@@ -48,7 +48,7 @@ use std::time::{Duration, Instant};
 /// # }
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct LeakyBucket<P: Point = Instant> {
+pub struct LeakyBucket<P: RelativeInstant = Instant> {
     full: Duration,
     token_interval: Duration,
     point: PhantomData<P>,
@@ -56,22 +56,23 @@ pub struct LeakyBucket<P: Point = Instant> {
 
 /// Represents the state of a single history of decisions.
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct State<P: Point>(ThreadsafeWrapper<BucketState<P>>);
+pub struct State<P: RelativeInstant>(ThreadsafeWrapper<BucketState<P>>);
 
-impl<P: Point> Default for State<P> {
+impl<P: RelativeInstant> Default for State<P> {
     fn default() -> Self {
         State(Default::default())
     }
 }
 
-impl<P: Point> ShallowCopy for State<P> {
+impl<P: RelativeInstant> ShallowCopy for State<P> {
     unsafe fn shallow_copy(&mut self) -> Self {
         State(self.0.shallow_copy())
     }
 }
 
-impl<P: Point> RateLimitState<LeakyBucket<P>, P> for State<P> {
-    #[cfg(feature = "std")]
+impl<P: RelativeInstant> RateLimitState<LeakyBucket<P>, P> for State<P> {}
+
+impl<P: AbsoluteInstant> RateLimitStateWithClock<LeakyBucket<P>, P> for State<P> {
     fn last_touched(&self, _params: &LeakyBucket<P>) -> P {
         let data = self.0.snapshot();
         data.last_update.unwrap_or_else(P::now) + data.level
@@ -83,15 +84,15 @@ impl<P: Point> RateLimitState<LeakyBucket<P>, P> for State<P> {
 /// To avoid the thundering herd effect, client code should always add
 /// some jitter to the wait time.
 #[derive(Debug, PartialEq)]
-pub struct TooEarly<P: Point>(P, Duration);
+pub struct TooEarly<P: RelativeInstant>(P, Duration);
 
-impl<P: Point> fmt::Display for TooEarly<P> {
+impl<P: RelativeInstant> fmt::Display for TooEarly<P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "rate-limited until {:?}", self.0 + self.1)
     }
 }
 
-impl<P: Point> NonConformance<P> for TooEarly<P> {
+impl<P: RelativeInstant> NonConformance<P> for TooEarly<P> {
     #[inline]
     fn earliest_possible(&self) -> P {
         self.0 + self.1
@@ -99,12 +100,12 @@ impl<P: Point> NonConformance<P> for TooEarly<P> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct BucketState<P: Point> {
+struct BucketState<P: RelativeInstant> {
     level: Duration,
     last_update: Option<P>,
 }
 
-impl<P: Point> Default for BucketState<P> {
+impl<P: RelativeInstant> Default for BucketState<P> {
     fn default() -> Self {
         BucketState {
             level: Duration::new(0, 0),
@@ -113,7 +114,7 @@ impl<P: Point> Default for BucketState<P> {
     }
 }
 
-impl<P: Point> Algorithm<P> for LeakyBucket<P> {
+impl<P: RelativeInstant> Algorithm<P> for LeakyBucket<P> {
     type BucketState = State<P>;
 
     type NegativeDecision = TooEarly<P>;

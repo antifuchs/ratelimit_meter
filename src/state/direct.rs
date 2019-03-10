@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use {
     algorithms::{Algorithm, DefaultAlgorithm},
-    instant::Point,
+    instant::{AbsoluteInstant, RelativeInstant},
     InconsistentCapacity, NegativeMultiDecision,
 };
 
@@ -20,14 +20,14 @@ use {
 /// or to ensure that an API client stays within a server's rate
 /// limit.
 #[derive(Debug, Clone)]
-pub struct DirectRateLimiter<A: Algorithm<P> = DefaultAlgorithm, P: Point = Instant> {
+pub struct DirectRateLimiter<A: Algorithm<P> = DefaultAlgorithm, P: RelativeInstant = Instant> {
     state: A::BucketState,
     algorithm: A,
 }
 
 impl<A, P> DirectRateLimiter<A, P>
 where
-    P: Point,
+    P: RelativeInstant,
     A: Algorithm<P>,
 {
     /// Construct a new rate limiter that allows `capacity` cells per
@@ -103,6 +103,28 @@ where
         }
     }
 
+    /// Tests whether a single cell can be accommodated at the given
+    /// time stamp. See [`check`](#method.check).
+    pub fn check_at(&mut self, at: P) -> Result<(), <A as Algorithm<P>>::NegativeDecision> {
+        self.algorithm.test_and_update(&self.state, at)
+    }
+
+    /// Tests if `n` cells can be accommodated at the given time
+    /// (`Instant::now()`), using [`check_n`](#method.check_n)
+    pub fn check_n_at(
+        &mut self,
+        n: u32,
+        at: P,
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm<P>>::NegativeDecision>> {
+        self.algorithm.test_n_and_update(&self.state, n, at)
+    }
+}
+
+impl<A, P> DirectRateLimiter<A, P>
+where
+    P: AbsoluteInstant,
+    A: Algorithm<P>,
+{
     /// Tests if a single cell can be accommodated at
     /// `Instant::now()`. If it can be, `check` updates the rate
     /// limiter state to account for the conforming cell and returns
@@ -137,29 +159,13 @@ where
     ) -> Result<(), NegativeMultiDecision<<A as Algorithm<P>>::NegativeDecision>> {
         self.algorithm.test_n_and_update(&self.state, n, P::now())
     }
-
-    /// Tests whether a single cell can be accommodated at the given
-    /// time stamp. See [`check`](#method.check).
-    pub fn check_at(&mut self, at: P) -> Result<(), <A as Algorithm<P>>::NegativeDecision> {
-        self.algorithm.test_and_update(&self.state, at)
-    }
-
-    /// Tests if `n` cells can be accommodated at the given time
-    /// (`Instant::now()`), using [`check_n`](#method.check_n)
-    pub fn check_n_at(
-        &mut self,
-        n: u32,
-        at: P,
-    ) -> Result<(), NegativeMultiDecision<<A as Algorithm<P>>::NegativeDecision>> {
-        self.algorithm.test_n_and_update(&self.state, n, at)
-    }
 }
 
 /// An object that allows incrementally constructing rate Limiter
 /// objects.
 pub struct Builder<P, A>
 where
-    P: Point,
+    P: RelativeInstant,
     A: Algorithm<P> + Sized,
 {
     capacity: NonZeroU32,
@@ -171,7 +177,7 @@ where
 
 impl<P, A> Builder<P, A>
 where
-    P: Point,
+    P: RelativeInstant,
     A: Algorithm<P> + Sized,
 {
     /// Sets the "weight" of each cell being checked against the

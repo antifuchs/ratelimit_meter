@@ -3,7 +3,7 @@ pub mod leaky_bucket;
 
 pub use self::gcra::*;
 pub use self::leaky_bucket::*;
-use crate::instant::Point;
+use crate::instant::{AbsoluteInstant, RelativeInstant};
 
 use evmap::ShallowCopy;
 use std::fmt;
@@ -26,7 +26,7 @@ pub type DefaultAlgorithm = LeakyBucket;
 ///
 /// Since this does not account for effects like thundering herds,
 /// users should always add random jitter to the times given.
-pub trait NonConformance<P: Point> {
+pub trait NonConformance<P: RelativeInstant> {
     /// Returns the earliest time at which a decision could be
     /// conforming (excluding conforming decisions made by the Decider
     /// that are made in the meantime).
@@ -42,7 +42,9 @@ pub trait NonConformance<P: Point> {
         let earliest = self.earliest_possible();
         earliest.duration_since(earliest.min(from))
     }
+}
 
+pub trait NonConformanceExt<P: AbsoluteInstant>: NonConformance<P> {
     /// Returns the minimum amount of time (down to 0) that needs to
     /// pass from the current instant for the Decider to consider a
     /// cell conforming again.
@@ -50,6 +52,8 @@ pub trait NonConformance<P: Point> {
         self.wait_time_from(P::now())
     }
 }
+
+impl<P: AbsoluteInstant, T> NonConformanceExt<P> for T where T: NonConformance<P> {}
 
 /// The trait that implementations of metered rate-limiter algorithms
 /// have to implement.
@@ -59,7 +63,7 @@ pub trait NonConformance<P: Point> {
 /// to make a decision, e.g. concrete usage statistics for an
 /// in-memory rate limiter, in the associated structure
 /// [`BucketState`](#associatedtype.BucketState).
-pub trait Algorithm<P: Point = Instant>: Send + Sync + Sized + fmt::Debug {
+pub trait Algorithm<P: RelativeInstant = Instant>: Send + Sync + Sized + fmt::Debug {
     /// The state of a single rate limiting bucket.
     ///
     /// Every new rate limiting state is initialized as `Default`. The
@@ -122,11 +126,11 @@ pub trait Algorithm<P: Point = Instant>: Send + Sync + Sized + fmt::Debug {
 
 /// Trait that all rate limit states have to implement around
 /// housekeeping in keyed rate limiters.
-pub trait RateLimitState<P, I>: Default
-where
-    I: Point,
-{
-    #[cfg(feature = "std")]
+pub trait RateLimitState<P, I: RelativeInstant>: Default {}
+
+/// Trait that all rate limit states implement if there is a real-time
+/// clock available.
+pub trait RateLimitStateWithClock<P, I: AbsoluteInstant>: RateLimitState<P, I> {
     /// Returns the last time instant that the state had any relevance
     /// (i.e. the rate limiter would behave exactly as if it was a new
     /// rate limiter after this time).

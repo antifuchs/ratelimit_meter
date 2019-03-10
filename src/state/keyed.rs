@@ -15,11 +15,13 @@ use std::time::{Duration, Instant};
 use evmap::{self, ReadHandle, WriteHandle};
 
 use {
-    algorithms::{Algorithm, DefaultAlgorithm, RateLimitState},
+    algorithms::{Algorithm, DefaultAlgorithm, RateLimitStateWithClock},
+    instant::AbsoluteInstant,
     InconsistentCapacity, NegativeMultiDecision,
 };
 
-type MapWriteHandle<K, A, H> = Arc<Mutex<WriteHandle<K, <A as Algorithm>::BucketState, (), H>>>;
+type MapWriteHandle<K, P, A, H> =
+    Arc<Mutex<WriteHandle<K, <A as Algorithm<P>>::BucketState, (), H>>>;
 
 /// An in-memory rate limiter that regulates a single rate limit for
 /// multiple keys.
@@ -76,17 +78,18 @@ type MapWriteHandle<K, A, H> = Arc<Mutex<WriteHandle<K, <A as Algorithm>::Bucket
 #[derive(Clone)]
 pub struct KeyedRateLimiter<
     K: Eq + Hash + Clone,
-    A: Algorithm = DefaultAlgorithm,
+    A: Algorithm<P> = DefaultAlgorithm,
+    P: AbsoluteInstant = Instant,
     H: BuildHasher + Clone = RandomState,
 > {
     algorithm: A,
     map_reader: ReadHandle<K, A::BucketState, (), H>,
-    map_writer: MapWriteHandle<K, A, H>,
+    map_writer: MapWriteHandle<K, P, A, H>,
 }
 
-impl<A, K> fmt::Debug for KeyedRateLimiter<K, A>
+impl<A, K, P: AbsoluteInstant> fmt::Debug for KeyedRateLimiter<K, A, P>
 where
-    A: Algorithm,
+    A: Algorithm<P>,
     K: Eq + Hash + Clone,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -94,9 +97,11 @@ where
     }
 }
 
-impl<A, K> KeyedRateLimiter<K, A>
+impl<P, A, K> KeyedRateLimiter<K, A, P>
 where
-    A: Algorithm,
+    P: AbsoluteInstant,
+    A: Algorithm<P>,
+    A::BucketState: RateLimitStateWithClock<A, P>,
     K: Eq + Hash + Clone,
 {
     /// Construct a new rate limiter that allows `capacity` cells per
@@ -119,7 +124,7 @@ where
         ) = evmap::new();
         w.refresh();
         KeyedRateLimiter {
-            algorithm: <A as Algorithm>::construct(capacity, nonzero!(1u32), per_time_unit)
+            algorithm: <A as Algorithm<P>>::construct(capacity, nonzero!(1u32), per_time_unit)
                 .unwrap(),
             map_reader: r,
             map_writer: Arc::new(Mutex::new(w)),
@@ -148,7 +153,7 @@ where
 
     /// Return a constructor that can be used to construct a keyed
     /// rate limiter with the builder pattern.
-    pub fn build_with_capacity(capacity: NonZeroU32) -> Builder<K, A, RandomState> {
+    pub fn build_with_capacity(capacity: NonZeroU32) -> Builder<K, P, A, RandomState> {
         Builder {
             capacity,
             ..Default::default()
@@ -187,8 +192,8 @@ where
     /// at this time stamp), `check_at` returns `Err` with information
     /// about the earliest time at which a cell could be considered
     /// conforming under that key.
-    pub fn check(&mut self, key: K) -> Result<(), <A as Algorithm>::NegativeDecision> {
-        self.check_at(key, Instant::now())
+    pub fn check(&mut self, key: K) -> Result<(), <A as Algorithm<P>>::NegativeDecision> {
+        self.check_at(key, P::now())
     }
 
     /// Tests if `n` cells for the given key can be accommodated at
@@ -211,18 +216,14 @@ where
         &mut self,
         key: K,
         n: u32,
-    ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
-        self.check_n_at(key, n, Instant::now())
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm<P>>::NegativeDecision>> {
+        self.check_n_at(key, n, P::now())
     }
 
     /// Tests whether a single cell for the given key can be
     /// accommodated at the given time stamp. See
     /// [`check`](#method.check).
-    pub fn check_at(
-        &mut self,
-        key: K,
-        at: Instant,
-    ) -> Result<(), <A as Algorithm>::NegativeDecision> {
+    pub fn check_at(&mut self, key: K, at: P) -> Result<(), <A as Algorithm<P>>::NegativeDecision> {
         self.check_and_update_key(key, |state| self.algorithm.test_and_update(state, at))
     }
 
@@ -233,8 +234,8 @@ where
         &mut self,
         key: K,
         n: u32,
-        at: Instant,
-    ) -> Result<(), NegativeMultiDecision<<A as Algorithm>::NegativeDecision>> {
+        at: P,
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm<P>>::NegativeDecision>> {
         self.check_and_update_key(key, |state| self.algorithm.test_n_and_update(state, n, at))
     }
 
@@ -243,7 +244,7 @@ where
     ///
     /// To be eligible for expiration, a key's rate limiter state must
     /// be at least `min_age` past its last relevance (see
-    /// [`RateLimitState.last_touched`](../../algorithms/trait.RateLimitState.html#method.last_touched)).
+    /// [`RateLimitStateWithClock.last_touched`](../../algorithms/trait.RateLimitStateWithClock.html#method.last_touched)).
     ///
     /// This method works in two parts, but both parts block new keys
     /// from getting added while they're running:
@@ -258,26 +259,26 @@ where
     /// Since this is happening concurrently with other operations,
     /// race conditions can & will occur. It's possible that cells are
     /// accounted between the time `cleanup_at` is called and their
-    /// expiry.  These cells will lost.
+    /// expiry.  These cells will be lost.
     ///
     /// The time window in which this can occur is hopefully short
     /// enough that this is an acceptable risk of loss in accuracy.
     pub fn cleanup<D: Into<Option<Duration>>>(&mut self, min_age: D) -> Vec<K> {
-        self.cleanup_at(min_age, Instant::now())
+        self.cleanup_at(min_age, P::now())
     }
 
     /// Removes the keys from this rate limiter that can be expired
     /// safely at the given time stamp. See
     /// [`cleanup`](#method.cleanup). It returns the list of expired
     /// keys.
-    pub fn cleanup_at<D: Into<Option<Duration>>, I: Into<Option<Instant>>>(
+    pub fn cleanup_at<D: Into<Option<Duration>>, I: Into<Option<P>>>(
         &mut self,
         min_age: D,
         at: I,
     ) -> Vec<K> {
         let params = &self.algorithm;
         let min_age = min_age.into().unwrap_or_else(|| Duration::new(0, 0));
-        let at = at.into().unwrap_or_else(Instant::now);
+        let at = at.into().unwrap_or_else(P::now);
 
         let mut expireable: Vec<K> = vec![];
         self.map_reader.for_each(|k, v| {
@@ -300,8 +301,8 @@ where
 }
 
 /// A constructor for keyed rate limiters.
-pub struct Builder<K: Eq + Hash + Clone, A: Algorithm, H: BuildHasher> {
-    end_result: PhantomData<(K, A)>,
+pub struct Builder<K: Eq + Hash + Clone, P: AbsoluteInstant, A: Algorithm<P>, H: BuildHasher> {
+    end_result: PhantomData<(K, P, A)>,
     capacity: NonZeroU32,
     cell_weight: NonZeroU32,
     per_time_unit: Duration,
@@ -309,12 +310,13 @@ pub struct Builder<K: Eq + Hash + Clone, A: Algorithm, H: BuildHasher> {
     map_capacity: Option<usize>,
 }
 
-impl<K, A> Default for Builder<K, A, RandomState>
+impl<K, A, P> Default for Builder<K, P, A, RandomState>
 where
     K: Eq + Hash + Clone,
-    A: Algorithm,
+    P: AbsoluteInstant,
+    A: Algorithm<P>,
 {
-    fn default() -> Builder<K, A, RandomState> {
+    fn default() -> Builder<K, P, A, RandomState> {
         Builder {
             end_result: PhantomData,
             map_capacity: None,
@@ -326,14 +328,15 @@ where
     }
 }
 
-impl<K, A, H> Builder<K, A, H>
+impl<K, P, A, H> Builder<K, P, A, H>
 where
     K: Eq + Hash + Clone,
-    A: Algorithm,
+    P: AbsoluteInstant,
+    A: Algorithm<P>,
     H: BuildHasher,
 {
     /// Sets the hashing method used for the map.
-    pub fn with_hasher<H2: BuildHasher>(self, hash_builder: H2) -> Builder<K, A, H2> {
+    pub fn with_hasher<H2: BuildHasher>(self, hash_builder: H2) -> Builder<K, P, A, H2> {
         Builder {
             hasher: hash_builder,
             end_result: self.end_result,
@@ -366,7 +369,7 @@ where
     }
 
     /// Constructs a keyed rate limiter with the given options.
-    pub fn build(self) -> Result<KeyedRateLimiter<K, A, H>, InconsistentCapacity>
+    pub fn build(self) -> Result<KeyedRateLimiter<K, A, P, H>, InconsistentCapacity>
     where
         H: Clone,
     {
@@ -381,7 +384,7 @@ where
 
         w.refresh();
         Ok(KeyedRateLimiter {
-            algorithm: <A as Algorithm>::construct(
+            algorithm: <A as Algorithm<P>>::construct(
                 self.capacity,
                 self.cell_weight,
                 self.per_time_unit,

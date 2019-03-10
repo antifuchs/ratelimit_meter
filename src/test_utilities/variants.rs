@@ -1,6 +1,9 @@
 use algorithms::Algorithm;
-use std::time::Instant;
-use {instant::Point, DirectRateLimiter, KeyedRateLimiter};
+use {
+    algorithms::RateLimitStateWithClock,
+    instant::{AbsoluteInstant, RelativeInstant},
+    DirectRateLimiter, KeyedRateLimiter,
+};
 
 #[derive(Debug)]
 pub enum Variant {
@@ -12,10 +15,10 @@ impl Variant {
     pub const ALL: &'static [Variant; 2] = &[Variant::GCRA, Variant::LeakyBucket];
 }
 
-pub struct DirectBucket<P: Point, A: Algorithm<P>>(DirectRateLimiter<A, P>);
+pub struct DirectBucket<P: RelativeInstant, A: Algorithm<P>>(DirectRateLimiter<A, P>);
 impl<P, A> Default for DirectBucket<P, A>
 where
-    P: Point,
+    P: RelativeInstant,
     A: Algorithm<P>,
 {
     fn default() -> Self {
@@ -24,7 +27,7 @@ where
 }
 impl<P, A> DirectBucket<P, A>
 where
-    P: Point,
+    P: RelativeInstant,
     A: Algorithm<P>,
 {
     pub fn limiter(self) -> DirectRateLimiter<A, P> {
@@ -32,20 +35,23 @@ where
     }
 }
 
-pub struct KeyedBucket<A: Algorithm<Instant>>(KeyedRateLimiter<u32, A>);
-impl<A> Default for KeyedBucket<A>
+pub struct KeyedBucket<A: Algorithm<P>, P: AbsoluteInstant>(KeyedRateLimiter<u32, A, P>);
+impl<A, P> Default for KeyedBucket<A, P>
 where
-    A: Algorithm<Instant>,
+    A: Algorithm<P>,
+    A::BucketState: RateLimitStateWithClock<A, P>,
+    P: AbsoluteInstant,
 {
     fn default() -> Self {
         KeyedBucket(KeyedRateLimiter::per_second(nonzero!(50u32)))
     }
 }
-impl<A> KeyedBucket<A>
+impl<A, P> KeyedBucket<A, P>
 where
-    A: Algorithm<Instant>,
+    A: Algorithm<P>,
+    P: AbsoluteInstant,
 {
-    pub fn limiter(self) -> KeyedRateLimiter<u32, A> {
+    pub fn limiter(self) -> KeyedRateLimiter<u32, A, P> {
         self.0
     }
 }

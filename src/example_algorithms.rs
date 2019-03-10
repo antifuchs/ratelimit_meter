@@ -3,8 +3,8 @@ use std::num::NonZeroU32;
 use std::ops::{Add, Sub};
 use std::time::Duration;
 use {
-    algorithms::{Algorithm, RateLimitState},
-    instant::Point,
+    algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
+    instant::{AbsoluteInstant, RelativeInstant},
     DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision,
 };
 
@@ -29,8 +29,9 @@ impl Allower {
     }
 }
 
-impl RateLimitState<Allower, Always> for () {
-    #[cfg(feature = "std")]
+impl RateLimitState<Allower, Always> for () {}
+
+impl RateLimitStateWithClock<Allower, Always> for () {
     fn last_touched(&self, _params: &Allower) -> Always {
         Always::now()
     }
@@ -74,13 +75,15 @@ impl Algorithm<Always> for Allower {
 /// never denies any requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Always();
-impl Point for Always {
-    fn now() -> Self {
-        Always()
-    }
-
+impl RelativeInstant for Always {
     fn duration_since(&self, _other: Self) -> Duration {
         Duration::new(0, 0)
+    }
+}
+
+impl AbsoluteInstant for Always {
+    fn now() -> Self {
+        Always()
     }
 }
 

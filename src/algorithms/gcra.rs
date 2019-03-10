@@ -2,8 +2,8 @@
 
 use thread_safety::ThreadsafeWrapper;
 use {
-    algorithms::{Algorithm, NonConformance, RateLimitState},
-    instant::Point,
+    algorithms::{Algorithm, NonConformance, RateLimitState, RateLimitStateWithClock},
+    instant::{AbsoluteInstant, RelativeInstant},
     InconsistentCapacity, NegativeMultiDecision,
 };
 
@@ -16,9 +16,9 @@ use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-struct Tat<P: Point>(Option<P>);
+struct Tat<P: RelativeInstant>(Option<P>);
 
-impl<P: Point> Default for Tat<P> {
+impl<P: RelativeInstant> Default for Tat<P> {
     fn default() -> Self {
         Tat(None)
     }
@@ -26,22 +26,23 @@ impl<P: Point> Default for Tat<P> {
 
 /// The GCRA's state about a single rate limiting history.
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct State<P: Point>(ThreadsafeWrapper<Tat<P>>);
+pub struct State<P: RelativeInstant>(ThreadsafeWrapper<Tat<P>>);
 
-impl<P: Point> Default for State<P> {
+impl<P: RelativeInstant> Default for State<P> {
     fn default() -> Self {
         State(Default::default())
     }
 }
 
-impl<P: Point> ShallowCopy for State<P> {
+impl<P: RelativeInstant> ShallowCopy for State<P> {
     unsafe fn shallow_copy(&mut self) -> Self {
         State(self.0.shallow_copy())
     }
 }
 
-impl<P: Point> RateLimitState<GCRA<P>, P> for State<P> {
-    #[cfg(feature = "std")]
+impl<P: RelativeInstant> RateLimitState<GCRA<P>, P> for State<P> {}
+
+impl<P: AbsoluteInstant> RateLimitStateWithClock<GCRA<P>, P> for State<P> {
     fn last_touched(&self, params: &GCRA<P>) -> P {
         let data = self.0.snapshot();
         data.0.unwrap_or_else(P::now) + params.tau
@@ -54,15 +55,15 @@ impl<P: Point> RateLimitState<GCRA<P>, P> for State<P> {
 /// To avoid thundering herd effects, client code should always add a
 /// random amount of jitter to wait time estimates.
 #[derive(Debug, PartialEq)]
-pub struct NotUntil<P: Point>(P);
+pub struct NotUntil<P: RelativeInstant>(P);
 
-impl<P: Point> fmt::Display for NotUntil<P> {
+impl<P: RelativeInstant> fmt::Display for NotUntil<P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "rate-limited until {:?}", self.0)
     }
 }
 
-impl<P: Point> NonConformance<P> for NotUntil<P> {
+impl<P: RelativeInstant> NonConformance<P> for NotUntil<P> {
     #[inline]
     fn earliest_possible(&self) -> P {
         self.0
@@ -124,7 +125,7 @@ impl<P: Point> NonConformance<P> for NotUntil<P> {
 /// assert_eq!(Ok(()), limiter.check_at(now + ms*50));
 /// # }
 #[derive(Debug, Clone)]
-pub struct GCRA<P: Point = Instant> {
+pub struct GCRA<P: RelativeInstant = Instant> {
     // The "weight" of a single packet in units of time.
     t: Duration,
 
@@ -134,7 +135,7 @@ pub struct GCRA<P: Point = Instant> {
     point: PhantomData<P>,
 }
 
-impl<P: Point> Algorithm<P> for GCRA<P> {
+impl<P: RelativeInstant> Algorithm<P> for GCRA<P> {
     type BucketState = State<P>;
 
     type NegativeDecision = NotUntil<P>;
