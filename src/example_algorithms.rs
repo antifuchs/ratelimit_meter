@@ -97,10 +97,3 @@ impl Sub<Duration> for Always {
         Always()
     }
 }
-
-impl Sub<Always> for Always {
-    type Output = Duration;
-    fn sub(self, _rhs: Always) -> Duration {
-        Duration::new(0, 0)
-    }
-}
