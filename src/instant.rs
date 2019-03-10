@@ -1,5 +1,23 @@
 use lib::*;
 
+#[cfg(feature = "std")]
+/// The default time representation in use by rate limiters. To
+/// override it, pass a different `P` type argument to the algorithm
+/// and rate limiter bucket.
+///
+/// This is `Instant` when using std.
+pub type DefaultRelativeInstant = Instant;
+
+#[cfg(not(feature = "std"))]
+/// The default time representation in use by rate limiters. To
+/// override it, pass a different `P` type argument to the algorithm
+/// and rate limiter bucket.
+///
+/// This is `Duration` when not using std, and only allows comparisons
+/// to a relative, fixed, point in time. Users are expected to provide
+/// that point in time.
+pub type DefaultRelativeInstant = Duration;
+
 /// A point in time that is used as a reference for measuring a rate
 /// limit. On the clock, it has meaning only relative to some other point in time.
 ///

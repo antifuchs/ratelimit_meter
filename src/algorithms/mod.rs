@@ -3,7 +3,7 @@ pub mod leaky_bucket;
 
 pub use self::gcra::*;
 pub use self::leaky_bucket::*;
-use crate::instant::{AbsoluteInstant, RelativeInstant};
+use crate::instant::{AbsoluteInstant, DefaultRelativeInstant, RelativeInstant};
 
 use {InconsistentCapacity, NegativeMultiDecision};
 
@@ -61,7 +61,9 @@ impl<P: AbsoluteInstant, T> NonConformanceExt<P> for T where T: NonConformance<P
 /// to make a decision, e.g. concrete usage statistics for an
 /// in-memory rate limiter, in the associated structure
 /// [`BucketState`](#associatedtype.BucketState).
-pub trait Algorithm<P: RelativeInstant = Instant>: Send + Sync + Sized + fmt::Debug {
+pub trait Algorithm<P: RelativeInstant = DefaultRelativeInstant>:
+    Send + Sync + Sized + fmt::Debug
+{
     /// The state of a single rate limiting bucket.
     ///
     /// Every new rate limiting state is initialized as `Default`. The

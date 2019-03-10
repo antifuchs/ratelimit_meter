@@ -4,7 +4,7 @@ use lib::*;
 
 use {
     algorithms::{Algorithm, NonConformance, RateLimitState, RateLimitStateWithClock},
-    instant::{AbsoluteInstant, RelativeInstant},
+    instant::{AbsoluteInstant, DefaultRelativeInstant, RelativeInstant},
     thread_safety::ThreadsafeWrapper,
     InconsistentCapacity, NegativeMultiDecision,
 };
@@ -125,7 +125,7 @@ impl<P: RelativeInstant> NonConformance<P> for NotUntil<P> {
 /// assert_eq!(Ok(()), limiter.check_at(now + ms*50));
 /// # }
 #[derive(Debug, Clone)]
-pub struct GCRA<P: RelativeInstant = Instant> {
+pub struct GCRA<P: RelativeInstant = DefaultRelativeInstant> {
     // The "weight" of a single packet in units of time.
     t: Duration,
 

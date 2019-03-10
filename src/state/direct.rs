@@ -5,7 +5,7 @@ use lib::*;
 
 use {
     algorithms::{Algorithm, DefaultAlgorithm},
-    instant::{AbsoluteInstant, RelativeInstant},
+    instant::{AbsoluteInstant, DefaultRelativeInstant, RelativeInstant},
     InconsistentCapacity, NegativeMultiDecision,
 };
 
@@ -15,7 +15,10 @@ use {
 /// or to ensure that an API client stays within a server's rate
 /// limit.
 #[derive(Debug, Clone)]
-pub struct DirectRateLimiter<A: Algorithm<P> = DefaultAlgorithm, P: RelativeInstant = Instant> {
+pub struct DirectRateLimiter<
+    A: Algorithm<P> = DefaultAlgorithm,
+    P: RelativeInstant = DefaultRelativeInstant,
+> {
     state: A::BucketState,
     algorithm: A,
 }

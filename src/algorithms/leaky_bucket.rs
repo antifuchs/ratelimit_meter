@@ -4,7 +4,7 @@ use lib::*;
 use thread_safety::ThreadsafeWrapper;
 use {
     algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
-    instant::{AbsoluteInstant, RelativeInstant},
+    instant::{AbsoluteInstant, DefaultRelativeInstant, RelativeInstant},
     InconsistentCapacity, NegativeMultiDecision, NonConformance,
 };
 
@@ -41,7 +41,7 @@ use {
 /// # }
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct LeakyBucket<P: RelativeInstant = Instant> {
+pub struct LeakyBucket<P: RelativeInstant = DefaultRelativeInstant> {
     full: Duration,
     token_interval: Duration,
     point: PhantomData<P>,
