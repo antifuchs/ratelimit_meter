@@ -58,6 +58,12 @@ mod std {
     // }
 }
 
+impl RelativeInstant for Duration {
+    fn duration_since(&self, earlier: Self) -> Duration {
+        *self - earlier
+    }
+}
+
 mod lib {
     mod core {
         #[cfg(not(feature = "std"))]
