@@ -9,11 +9,7 @@ use {
 
 use evmap::ShallowCopy;
 
-use std::cmp;
-use std::fmt;
-use std::marker::PhantomData;
-use std::num::NonZeroU32;
-use std::time::{Duration, Instant};
+use lib::*;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 struct Tat<P: RelativeInstant>(Option<P>);

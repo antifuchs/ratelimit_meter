@@ -1,7 +1,6 @@
 //! A classic leaky bucket algorithm
 
-use std::fmt;
-use std::num::NonZeroU32;
+use lib::*;
 use thread_safety::ThreadsafeWrapper;
 use {
     algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
@@ -10,10 +9,6 @@ use {
 };
 
 use evmap::ShallowCopy;
-
-use std::cmp;
-use std::marker::PhantomData;
-use std::time::{Duration, Instant};
 
 /// Implements the industry-standard leaky bucket rate-limiting
 /// as-a-meter. The bucket keeps a "fill height", pretending to drip

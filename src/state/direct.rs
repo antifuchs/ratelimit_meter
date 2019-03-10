@@ -1,12 +1,7 @@
 //! An in-memory rate limiter that can make decisions for a single
 //! situation.
 
-// #![feature(trace_macros)]
-// trace_macros!(true);
-
-use std::marker::PhantomData;
-use std::num::NonZeroU32;
-use std::time::{Duration, Instant};
+use lib::*;
 
 use {
     algorithms::{Algorithm, DefaultAlgorithm},

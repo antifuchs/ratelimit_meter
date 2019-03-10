@@ -2,17 +2,10 @@
 //! An in-memory rate limiter that can keep track of rates for
 //! multiple keys, e.g. per-customer or per-IP rates.
 
-use parking_lot::Mutex;
-use std::collections::hash_map::RandomState;
-use std::fmt;
-use std::hash::BuildHasher;
-use std::hash::Hash;
-use std::marker::PhantomData;
-use std::num::NonZeroU32;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use lib::*;
 
 use evmap::{self, ReadHandle, WriteHandle};
+use parking_lot::Mutex;
 
 use {
     algorithms::{Algorithm, DefaultAlgorithm, RateLimitStateWithClock},

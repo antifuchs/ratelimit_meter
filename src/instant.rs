@@ -1,4 +1,4 @@
-use self::lib::{Add, Clone, Copy, Debug, Duration, Eq, Ord, PartialEq, Send, Sized, Sub, Sync};
+use lib::*;
 
 /// A point in time that is used as a reference for measuring a rate
 /// limit. On the clock, it has meaning only relative to some other point in time.
@@ -71,27 +71,4 @@ impl RelativeInstant for Duration {
     fn duration_since(&self, earlier: Self) -> Duration {
         *self - earlier
     }
-}
-
-mod lib {
-    mod core {
-        #[cfg(not(feature = "std"))]
-        pub use core::*;
-
-        #[cfg(feature = "std")]
-        pub use std::*;
-    }
-
-    pub use self::core::borrow::Borrow;
-    pub use self::core::clone::Clone;
-    pub use self::core::cmp::{Eq, Ord, PartialEq};
-    pub use self::core::default::Default;
-    pub use self::core::fmt::Debug;
-    pub use self::core::marker::Copy;
-    pub use self::core::marker::Send;
-    pub use self::core::marker::Sized;
-    pub use self::core::marker::Sync;
-    pub use self::core::ops::Add;
-    pub use self::core::ops::Sub;
-    pub use self::core::time::Duration;
 }

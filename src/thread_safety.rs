@@ -1,7 +1,8 @@
+#![cfg(feature = "std")]
+use lib::*;
+
 use evmap::ShallowCopy;
 use parking_lot::Mutex;
-use std::fmt;
-use std::sync::Arc;
 
 #[derive(Clone)]
 /// Wraps the atomic operations on a Decider's state in a threadsafe

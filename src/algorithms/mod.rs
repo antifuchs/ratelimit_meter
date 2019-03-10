@@ -6,10 +6,9 @@ pub use self::leaky_bucket::*;
 use crate::instant::{AbsoluteInstant, RelativeInstant};
 
 use evmap::ShallowCopy;
-use std::fmt;
-use std::num::NonZeroU32;
-use std::time::{Duration, Instant};
 use {InconsistentCapacity, NegativeMultiDecision};
+
+use lib::*;
 
 /// The default rate limiting algorithm in this crate: The ["leaky
 /// bucket"](leaky_bucket/struct.LeakyBucket.html).

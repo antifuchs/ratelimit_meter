@@ -1,6 +1,4 @@
-use std::marker::PhantomData;
-use std::num::NonZeroU32;
-use std::time::Duration;
+use lib::*;
 use {algorithms::Algorithm, instant::RelativeInstant, NegativeMultiDecision};
 
 /// A representation of a bare in-memory algorithm, without any bucket
