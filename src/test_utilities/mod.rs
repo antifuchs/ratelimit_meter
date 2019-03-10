@@ -4,11 +4,12 @@
 pub mod algorithms;
 pub mod variants;
 
-use instant::DefaultRelativeInstant;
 use lib::*;
 
+use instant;
+
 /// Returns a "current" moment that's suitable for tests.
-pub fn current_moment() -> DefaultRelativeInstant {
+pub fn current_moment() -> instant::TimeSource {
     #[cfg(feature = "std")]
     return Instant::now();
 

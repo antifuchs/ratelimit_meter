@@ -1,7 +1,8 @@
 use lib::*;
 use {
     algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
-    instant::{AbsoluteInstant, RelativeInstant},
+    instant,
+    instant::Absolute,
     DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision,
 };
 
@@ -74,13 +75,13 @@ impl Algorithm<Always> for Allower {
 /// never denies any requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Always();
-impl RelativeInstant for Always {
+impl instant::Relative for Always {
     fn duration_since(&self, _other: Self) -> Duration {
         Duration::new(0, 0)
     }
 }
 
-impl AbsoluteInstant for Always {
+impl instant::Absolute for Always {
     fn now() -> Self {
         Always()
     }

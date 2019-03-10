@@ -1,5 +1,6 @@
 use algorithms::Algorithm;
-use {instant::RelativeInstant, DirectRateLimiter};
+use instant;
+use state::DirectRateLimiter;
 
 #[derive(Debug)]
 pub enum Variant {
@@ -11,10 +12,10 @@ impl Variant {
     pub const ALL: &'static [Variant; 2] = &[Variant::GCRA, Variant::LeakyBucket];
 }
 
-pub struct DirectBucket<A: Algorithm<P>, P: RelativeInstant>(DirectRateLimiter<A, P>);
+pub struct DirectBucket<A: Algorithm<P>, P: instant::Relative>(DirectRateLimiter<A, P>);
 impl<A, P> Default for DirectBucket<A, P>
 where
-    P: RelativeInstant,
+    P: instant::Relative,
     A: Algorithm<P>,
 {
     fn default() -> Self {
@@ -23,7 +24,7 @@ where
 }
 impl<A, P> DirectBucket<A, P>
 where
-    P: RelativeInstant,
+    P: instant::Relative,
     A: Algorithm<P>,
 {
     pub fn limiter(self) -> DirectRateLimiter<A, P> {
@@ -34,9 +35,9 @@ where
 #[cfg(feature = "std")]
 mod std {
     use super::*;
-    use {algorithms::KeyableRateLimitState, instant::AbsoluteInstant, KeyedRateLimiter};
+    use {algorithms::KeyableRateLimitState, instant::Absolute, KeyedRateLimiter};
 
-    pub struct KeyedBucket<A: Algorithm<P>, P: AbsoluteInstant>(KeyedRateLimiter<u32, A, P>)
+    pub struct KeyedBucket<A: Algorithm<P>, P: Absolute>(KeyedRateLimiter<u32, A, P>)
     where
         A::BucketState: KeyableRateLimitState<A, P>;
 
@@ -44,7 +45,7 @@ mod std {
     where
         A: Algorithm<P>,
         A::BucketState: KeyableRateLimitState<A, P>,
-        P: AbsoluteInstant,
+        P: Absolute,
     {
         fn default() -> Self {
             KeyedBucket(KeyedRateLimiter::per_second(nonzero!(50u32)))
@@ -54,7 +55,7 @@ mod std {
     where
         A: Algorithm<P>,
         A::BucketState: KeyableRateLimitState<A, P>,
-        P: AbsoluteInstant,
+        P: Absolute,
     {
         pub fn limiter(self) -> KeyedRateLimiter<u32, A, P> {
             self.0

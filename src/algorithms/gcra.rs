@@ -4,7 +4,7 @@ use lib::*;
 
 use {
     algorithms::{Algorithm, NonConformance, RateLimitState, RateLimitStateWithClock},
-    instant::{AbsoluteInstant, DefaultRelativeInstant, RelativeInstant},
+    instant,
     thread_safety::ThreadsafeWrapper,
     InconsistentCapacity, NegativeMultiDecision,
 };
@@ -12,9 +12,9 @@ use {
 #[cfg(feature = "std")]
 mod std {
     use evmap::ShallowCopy;
-    use instant::RelativeInstant;
+    use instant::Relative;
 
-    impl<P: RelativeInstant> ShallowCopy for super::State<P> {
+    impl<P: Relative> ShallowCopy for super::State<P> {
         unsafe fn shallow_copy(&mut self) -> Self {
             super::State(self.0.shallow_copy())
         }
@@ -22,9 +22,9 @@ mod std {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-struct Tat<P: RelativeInstant>(Option<P>);
+struct Tat<P: instant::Relative>(Option<P>);
 
-impl<P: RelativeInstant> Default for Tat<P> {
+impl<P: instant::Relative> Default for Tat<P> {
     fn default() -> Self {
         Tat(None)
     }
@@ -32,17 +32,17 @@ impl<P: RelativeInstant> Default for Tat<P> {
 
 /// The GCRA's state about a single rate limiting history.
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct State<P: RelativeInstant>(ThreadsafeWrapper<Tat<P>>);
+pub struct State<P: instant::Relative>(ThreadsafeWrapper<Tat<P>>);
 
-impl<P: RelativeInstant> Default for State<P> {
+impl<P: instant::Relative> Default for State<P> {
     fn default() -> Self {
         State(Default::default())
     }
 }
 
-impl<P: RelativeInstant> RateLimitState<GCRA<P>, P> for State<P> {}
+impl<P: instant::Relative> RateLimitState<GCRA<P>, P> for State<P> {}
 
-impl<P: AbsoluteInstant> RateLimitStateWithClock<GCRA<P>, P> for State<P> {
+impl<P: instant::Absolute> RateLimitStateWithClock<GCRA<P>, P> for State<P> {
     fn last_touched(&self, params: &GCRA<P>) -> P {
         let data = self.0.snapshot();
         data.0.unwrap_or_else(P::now) + params.tau
@@ -55,15 +55,15 @@ impl<P: AbsoluteInstant> RateLimitStateWithClock<GCRA<P>, P> for State<P> {
 /// To avoid thundering herd effects, client code should always add a
 /// random amount of jitter to wait time estimates.
 #[derive(Debug, PartialEq)]
-pub struct NotUntil<P: RelativeInstant>(P);
+pub struct NotUntil<P: instant::Relative>(P);
 
-impl<P: RelativeInstant> fmt::Display for NotUntil<P> {
+impl<P: instant::Relative> fmt::Display for NotUntil<P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "rate-limited until {:?}", self.0)
     }
 }
 
-impl<P: RelativeInstant> NonConformance<P> for NotUntil<P> {
+impl<P: instant::Relative> NonConformance<P> for NotUntil<P> {
     #[inline]
     fn earliest_possible(&self) -> P {
         self.0
@@ -128,7 +128,7 @@ impl<P: RelativeInstant> NonConformance<P> for NotUntil<P> {
 /// # #[cfg(not(feature = "std"))] fn main() {}
 /// ```
 #[derive(Debug, Clone)]
-pub struct GCRA<P: RelativeInstant = DefaultRelativeInstant> {
+pub struct GCRA<P: instant::Relative = instant::TimeSource> {
     // The "weight" of a single packet in units of time.
     t: Duration,
 
@@ -138,7 +138,7 @@ pub struct GCRA<P: RelativeInstant = DefaultRelativeInstant> {
     point: PhantomData<P>,
 }
 
-impl<P: RelativeInstant> Algorithm<P> for GCRA<P> {
+impl<P: instant::Relative> Algorithm<P> for GCRA<P> {
     type BucketState = State<P>;
 
     type NegativeDecision = NotUntil<P>;

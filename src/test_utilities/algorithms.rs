@@ -1,15 +1,15 @@
 use lib::*;
-use {algorithms::Algorithm, instant::RelativeInstant, NegativeMultiDecision};
+use {algorithms::Algorithm, instant, NegativeMultiDecision};
 
 /// A representation of a bare in-memory algorithm, without any bucket
 /// attached.
 #[derive(Debug)]
-pub struct AlgorithmForTest<A: Algorithm<P>, P: RelativeInstant>(A, PhantomData<P>);
+pub struct AlgorithmForTest<A: Algorithm<P>, P: instant::Relative>(A, PhantomData<P>);
 
 impl<'a, A, P> AlgorithmForTest<A, P>
 where
     A: Algorithm<P>,
-    P: RelativeInstant,
+    P: instant::Relative,
 {
     pub fn new<U: Into<Option<NonZeroU32>>, D: Into<Option<Duration>>>(
         cap: NonZeroU32,
@@ -54,7 +54,7 @@ where
 impl<A, P> Default for AlgorithmForTest<A, P>
 where
     A: Algorithm<P>,
-    P: RelativeInstant,
+    P: instant::Relative,
 {
     fn default() -> Self {
         Self::new(nonzero!(1u32), None, None)

@@ -9,8 +9,7 @@ use parking_lot::Mutex;
 
 use {
     algorithms::{Algorithm, DefaultAlgorithm, KeyableRateLimitState, RateLimitStateWithClock},
-    instant::AbsoluteInstant,
-    InconsistentCapacity, NegativeMultiDecision,
+    instant, InconsistentCapacity, NegativeMultiDecision,
 };
 
 type MapWriteHandle<K, P, A, H> =
@@ -72,7 +71,7 @@ type MapWriteHandle<K, P, A, H> =
 pub struct KeyedRateLimiter<
     K: Eq + Hash + Clone,
     A: Algorithm<P> = DefaultAlgorithm,
-    P: AbsoluteInstant = Instant,
+    P: instant::Absolute = Instant,
     H: BuildHasher + Clone = RandomState,
 > where
     A::BucketState: KeyableRateLimitState<A, P>,
@@ -82,7 +81,7 @@ pub struct KeyedRateLimiter<
     map_writer: MapWriteHandle<K, P, A, H>,
 }
 
-impl<A, K, P: AbsoluteInstant> fmt::Debug for KeyedRateLimiter<K, A, P>
+impl<A, K, P: instant::Absolute> fmt::Debug for KeyedRateLimiter<K, A, P>
 where
     A: Algorithm<P>,
     A::BucketState: KeyableRateLimitState<A, P>,
@@ -95,7 +94,7 @@ where
 
 impl<P, A, K> KeyedRateLimiter<K, A, P>
 where
-    P: AbsoluteInstant,
+    P: instant::Absolute,
     A: Algorithm<P>,
     A::BucketState: KeyableRateLimitState<A, P>,
     K: Eq + Hash + Clone,
@@ -297,7 +296,7 @@ where
 }
 
 /// A constructor for keyed rate limiters.
-pub struct Builder<K: Eq + Hash + Clone, P: AbsoluteInstant, A: Algorithm<P>, H: BuildHasher> {
+pub struct Builder<K: Eq + Hash + Clone, P: instant::Absolute, A: Algorithm<P>, H: BuildHasher> {
     end_result: PhantomData<(K, P, A)>,
     capacity: NonZeroU32,
     cell_weight: NonZeroU32,
@@ -309,7 +308,7 @@ pub struct Builder<K: Eq + Hash + Clone, P: AbsoluteInstant, A: Algorithm<P>, H:
 impl<K, A, P> Default for Builder<K, P, A, RandomState>
 where
     K: Eq + Hash + Clone,
-    P: AbsoluteInstant,
+    P: instant::Absolute,
     A: Algorithm<P>,
     A::BucketState: KeyableRateLimitState<A, P>,
 {
@@ -328,7 +327,7 @@ where
 impl<K, P, A, H> Builder<K, P, A, H>
 where
     K: Eq + Hash + Clone,
-    P: AbsoluteInstant,
+    P: instant::Absolute,
     A: Algorithm<P>,
     A::BucketState: KeyableRateLimitState<A, P>,
     H: BuildHasher,

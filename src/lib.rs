@@ -171,15 +171,16 @@
 //! ```rust,ignore
 //! // MyTimeSource is what provides your timestamps. Since it probably
 //! // doesn't live in your crate, we make a newtype:
+//! use ratelimit_meter::instant;
 //! struct MyInstant(MyTimeSource);
 //!
-//! impl RelativeInstant for MyInstant {
+//! impl instant::Relative for MyInstant {
 //!     fn duration_since(&self, other: Self) -> Duration {
 //!         self.duration_since(other)
 //!     }
 //! }
 //!
-//! impl AbsoluteInstant for MyInstant {
+//! impl instant::Absolute for MyInstant {
 //!     fn now() -> Self {
 //!         MyTimeSource::now()
 //!     }

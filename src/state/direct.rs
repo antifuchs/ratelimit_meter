@@ -5,8 +5,7 @@ use lib::*;
 
 use {
     algorithms::{Algorithm, DefaultAlgorithm},
-    instant::{AbsoluteInstant, DefaultRelativeInstant, RelativeInstant},
-    InconsistentCapacity, NegativeMultiDecision,
+    instant, InconsistentCapacity, NegativeMultiDecision,
 };
 
 /// An in-memory rate limiter that makes direct (un-keyed)
@@ -17,7 +16,7 @@ use {
 #[derive(Debug, Clone)]
 pub struct DirectRateLimiter<
     A: Algorithm<P> = DefaultAlgorithm,
-    P: RelativeInstant = DefaultRelativeInstant,
+    P: instant::Relative = instant::TimeSource,
 > {
     state: A::BucketState,
     algorithm: A,
@@ -25,7 +24,7 @@ pub struct DirectRateLimiter<
 
 impl<A, P> DirectRateLimiter<A, P>
 where
-    P: RelativeInstant,
+    P: instant::Relative,
     A: Algorithm<P>,
 {
     /// Construct a new rate limiter that allows `capacity` cells per
@@ -120,7 +119,7 @@ where
 
 impl<A, P> DirectRateLimiter<A, P>
 where
-    P: AbsoluteInstant,
+    P: instant::Absolute,
     A: Algorithm<P>,
 {
     /// Tests if a single cell can be accommodated at
@@ -163,7 +162,7 @@ where
 /// objects.
 pub struct Builder<P, A>
 where
-    P: RelativeInstant,
+    P: instant::Relative,
     A: Algorithm<P> + Sized,
 {
     capacity: NonZeroU32,
@@ -175,7 +174,7 @@ where
 
 impl<P, A> Builder<P, A>
 where
-    P: RelativeInstant,
+    P: instant::Relative,
     A: Algorithm<P> + Sized,
 {
     /// Sets the "weight" of each cell being checked against the
