@@ -5,7 +5,7 @@ pub(crate) struct ThreadsafeWrapper<T>
 where
     T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
-    data: T,
+    data: Option<T>,
 }
 
 impl<T> ThreadsafeWrapper<T>
@@ -23,9 +23,10 @@ where
     where
         F: Fn(&T) -> (Result<(), E>, Option<T>),
     {
-        let (decision, new_data) = f(&self.data);
+        let data = self.data.unwrap_or_else(Default::default);
+        let (decision, new_data) = f(&data);
         if let Some(new_data) = new_data {
-            self.data = new_data
+            self.data.replace(new_data);
         }
         decision
     }
@@ -34,6 +35,6 @@ where
     /// state. This can be used to restore an old copy of the bucket
     /// if necessary.
     pub(crate) fn snapshot(&self) -> T {
-        self.data
+        self.data.unwrap_or_else(Default::default).clone()
     }
 }
