@@ -19,7 +19,8 @@ maintenance = { status = "actively-developed" }
 
 [features]
 default = ["std"]
-std = []
+std = ["parking_lot", "evmap"]
+no_std = ["spin"]
 
 [package.metadata.release]
 sign-commit = false
@@ -39,9 +40,10 @@ name = "criterion"
 harness = false
 
 [dependencies]
-parking_lot = "0.6.4"
-evmap = "4.0.0"
 nonzero_ext = "0.1.2"
+spin = {version = "0.5.0", optional = true}
+parking_lot = {version = "0.6.4", optional = true}
+evmap = {version = "4.0.0", optional = true}
 
 [dev_dependencies]
 libc = "0.2.41"

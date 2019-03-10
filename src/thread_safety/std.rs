@@ -1,7 +1,12 @@
 use lib::*;
 
 use evmap::ShallowCopy;
+
+#[cfg(feature = "std")]
 use parking_lot::Mutex;
+
+#[cfg(not(feature = "std"))]
+use spin::Mutex;
 
 #[derive(Clone)]
 /// Wraps the atomic operations on a Decider's state in a threadsafe
@@ -47,13 +52,16 @@ where
     }
 }
 
-impl<T> ShallowCopy for ThreadsafeWrapper<T>
-where
-    T: fmt::Debug + Default + Clone + PartialEq + Eq,
-{
-    unsafe fn shallow_copy(&mut self) -> Self {
-        ThreadsafeWrapper {
-            data: self.data.shallow_copy(),
+#[cfg(feature = "std")]
+mod std {
+    impl<T> ShallowCopy for ThreadsafeWrapper<T>
+    where
+        T: fmt::Debug + Default + Clone + PartialEq + Eq,
+    {
+        unsafe fn shallow_copy(&mut self) -> Self {
+            ThreadsafeWrapper {
+                data: self.data.shallow_copy(),
+            }
         }
     }
 }

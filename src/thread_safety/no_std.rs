@@ -1,5 +1,7 @@
 use lib::*;
 
+use spin::Mutex;
+
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub(crate) struct ThreadsafeWrapper<T>
 where

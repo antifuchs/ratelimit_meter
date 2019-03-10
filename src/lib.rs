@@ -127,6 +127,8 @@
 //! # }
 //! ```
 
+// Allow using the alloc crate
+#![cfg_attr(not(feature = "std"), feature(alloc))]
 // Allow using ratelimit_meter without std
 #![cfg_attr(not(feature = "std"), no_std)]
 // Deny warnings
@@ -140,10 +142,18 @@ pub mod state;
 pub mod test_utilities;
 mod thread_safety;
 
-extern crate evmap;
 #[macro_use]
 extern crate nonzero_ext;
+
+#[cfg(feature = "std")]
+extern crate evmap;
+#[cfg(feature = "std")]
 extern crate parking_lot;
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
+extern crate spin;
 
 pub use self::algorithms::LeakyBucket;
 pub use self::algorithms::NonConformance;
@@ -188,6 +198,14 @@ mod lib {
         pub use std::time::Instant;
     }
 
+    #[cfg(feature = "no_std")]
+    mod no_std {
+        pub use alloc::sync::Arc;
+    }
+
     #[cfg(feature = "std")]
     pub use self::std::*;
+
+    #[cfg(not(feature = "std"))]
+    pub use self::no_std::*;
 }
