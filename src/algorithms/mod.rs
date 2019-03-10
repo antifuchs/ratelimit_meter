@@ -4,11 +4,9 @@ pub mod leaky_bucket;
 pub use self::gcra::*;
 pub use self::leaky_bucket::*;
 
-use evmap::ShallowCopy;
-use std::fmt;
-use std::num::NonZeroU32;
-use std::time::{Duration, Instant};
-use {InconsistentCapacity, NegativeMultiDecision};
+use {instant, InconsistentCapacity, NegativeMultiDecision};
+
+use lib::*;
 
 /// The default rate limiting algorithm in this crate: The ["leaky
 /// bucket"](leaky_bucket/struct.LeakyBucket.html).
@@ -25,11 +23,11 @@ pub type DefaultAlgorithm = LeakyBucket;
 ///
 /// Since this does not account for effects like thundering herds,
 /// users should always add random jitter to the times given.
-pub trait NonConformance {
+pub trait NonConformance<P: instant::Relative> {
     /// Returns the earliest time at which a decision could be
     /// conforming (excluding conforming decisions made by the Decider
     /// that are made in the meantime).
-    fn earliest_possible(&self) -> Instant;
+    fn earliest_possible(&self) -> P;
 
     /// Returns the minimum amount of time from the time that the
     /// decision was made (relative to the `at` argument in a
@@ -37,18 +35,22 @@ pub trait NonConformance {
     /// decision can be conforming. Since Durations can not be
     /// negative, a zero duration is returned if `from` is already
     /// after that duration.
-    fn wait_time_from(&self, from: Instant) -> Duration {
+    fn wait_time_from(&self, from: P) -> Duration {
         let earliest = self.earliest_possible();
         earliest.duration_since(earliest.min(from))
     }
+}
 
+pub trait NonConformanceExt<P: instant::Absolute>: NonConformance<P> {
     /// Returns the minimum amount of time (down to 0) that needs to
     /// pass from the current instant for the Decider to consider a
     /// cell conforming again.
     fn wait_time(&self) -> Duration {
-        self.wait_time_from(Instant::now())
+        self.wait_time_from(P::now())
     }
 }
+
+impl<P: instant::Absolute, T> NonConformanceExt<P> for T where T: NonConformance<P> {}
 
 /// The trait that implementations of metered rate-limiter algorithms
 /// have to implement.
@@ -58,13 +60,15 @@ pub trait NonConformance {
 /// to make a decision, e.g. concrete usage statistics for an
 /// in-memory rate limiter, in the associated structure
 /// [`BucketState`](#associatedtype.BucketState).
-pub trait Algorithm: Send + Sync + Sized + fmt::Debug {
+pub trait Algorithm<P: instant::Relative = instant::TimeSource>:
+    Send + Sync + Sized + fmt::Debug
+{
     /// The state of a single rate limiting bucket.
     ///
     /// Every new rate limiting state is initialized as `Default`. The
     /// states must be safe to share across threads (this crate uses a
     /// `parking_lot` Mutex to allow that).
-    type BucketState: RateLimitState<Self> + Default + Send + Sync + Eq + ShallowCopy + fmt::Debug;
+    type BucketState: RateLimitState<Self, P>;
 
     /// The type returned when a rate limiting decision for a single
     /// cell is negative. Each rate limiting algorithm can decide to
@@ -94,7 +98,7 @@ pub trait Algorithm: Send + Sync + Sized + fmt::Debug {
         &self,
         state: &Self::BucketState,
         n: u32,
-        at: Instant,
+        at: P,
     ) -> Result<(), NegativeMultiDecision<Self::NegativeDecision>>;
 
     /// Tests if a single cell can be accommodated in the rate limiter
@@ -106,7 +110,7 @@ pub trait Algorithm: Send + Sync + Sized + fmt::Debug {
     fn test_and_update(
         &self,
         state: &Self::BucketState,
-        at: Instant,
+        at: P,
     ) -> Result<(), Self::NegativeDecision> {
         match self.test_n_and_update(state, 1, at) {
             Ok(()) => Ok(()),
@@ -121,7 +125,11 @@ pub trait Algorithm: Send + Sync + Sized + fmt::Debug {
 
 /// Trait that all rate limit states have to implement around
 /// housekeeping in keyed rate limiters.
-pub trait RateLimitState<P> {
+pub trait RateLimitState<P, I: instant::Relative>: Default + Send + Sync + Eq + fmt::Debug {}
+
+/// Trait that all rate limit states implement if there is a real-time
+/// clock available.
+pub trait RateLimitStateWithClock<P, I: instant::Absolute>: RateLimitState<P, I> {
     /// Returns the last time instant that the state had any relevance
     /// (i.e. the rate limiter would behave exactly as if it was a new
     /// rate limiter after this time).
@@ -132,5 +140,29 @@ pub trait RateLimitState<P> {
     /// # Thread safety
     /// This uses a bucket state snapshot to determine eligibility;
     /// race conditions can occur.
-    fn last_touched(&self, params: &P) -> Instant;
+    fn last_touched(&self, params: &P) -> I;
 }
+
+#[cfg(feature = "std")]
+mod std {
+    use evmap::ShallowCopy;
+    use instant;
+
+    /// Trait implemented by all rate limit states that are compatible
+    /// with the KeyedRateLimiters.
+    pub trait KeyableRateLimitState<P, I: instant::Absolute>:
+        super::RateLimitStateWithClock<P, I> + ShallowCopy
+    {
+    }
+
+    #[cfg(feature = "std")]
+    impl<T, P, I> KeyableRateLimitState<P, I> for T
+    where
+        T: super::RateLimitStateWithClock<P, I> + ShallowCopy,
+        I: instant::Absolute,
+    {
+    }
+}
+
+#[cfg(feature = "std")]
+pub use self::std::*;

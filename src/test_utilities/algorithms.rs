@@ -1,15 +1,15 @@
-use std::num::NonZeroU32;
-use std::time::{Duration, Instant};
-use {algorithms::Algorithm, NegativeMultiDecision};
+use lib::*;
+use {algorithms::Algorithm, instant, NegativeMultiDecision};
 
 /// A representation of a bare in-memory algorithm, without any bucket
 /// attached.
 #[derive(Debug)]
-pub struct AlgorithmForTest<A: Algorithm>(A);
+pub struct AlgorithmForTest<A: Algorithm<P>, P: instant::Relative>(A, PhantomData<P>);
 
-impl<'a, A> AlgorithmForTest<A>
+impl<'a, A, P> AlgorithmForTest<A, P>
 where
-    A: Algorithm,
+    A: Algorithm<P>,
+    P: instant::Relative,
 {
     pub fn new<U: Into<Option<NonZeroU32>>, D: Into<Option<Duration>>>(
         cap: NonZeroU32,
@@ -22,9 +22,10 @@ where
                 weight.into().unwrap_or(nonzero!(1u32)),
                 duration
                     .into()
-                    .unwrap_or(::std::time::Duration::from_secs(1)),
+                    .unwrap_or(crate::lib::Duration::from_secs(1)),
             )
             .unwrap(),
+            PhantomData,
         )
     }
 
@@ -36,7 +37,7 @@ where
         A::BucketState::default()
     }
 
-    pub fn check(&self, state: &A::BucketState, t0: Instant) -> Result<(), A::NegativeDecision> {
+    pub fn check(&self, state: &A::BucketState, t0: P) -> Result<(), A::NegativeDecision> {
         self.0.test_and_update(state, t0)
     }
 
@@ -44,15 +45,16 @@ where
         &self,
         state: &A::BucketState,
         n: u32,
-        t0: Instant,
+        t0: P,
     ) -> Result<(), NegativeMultiDecision<A::NegativeDecision>> {
         self.0.test_n_and_update(state, n, t0)
     }
 }
 
-impl<A> Default for AlgorithmForTest<A>
+impl<A, P> Default for AlgorithmForTest<A, P>
 where
-    A: Algorithm,
+    A: Algorithm<P>,
+    P: instant::Relative,
 {
     fn default() -> Self {
         Self::new(nonzero!(1u32), None, None)
@@ -65,13 +67,16 @@ macro_rules! bench_with_algorithm_variants {
     ($variant:expr, $var:ident, $code:block) => {
         match $variant {
             $crate::test_utilities::variants::Variant::GCRA => {
-                let mut $var =
-                    $crate::test_utilities::algorithms::AlgorithmForTest::<$crate::GCRA>::default();
+                let mut $var = $crate::test_utilities::algorithms::AlgorithmForTest::<
+                    $crate::GCRA<Instant>,
+                    Instant,
+                >::default();
                 $code
             }
             $crate::test_utilities::variants::Variant::LeakyBucket => {
                 let mut $var = $crate::test_utilities::algorithms::AlgorithmForTest::<
-                    $crate::LeakyBucket,
+                    $crate::LeakyBucket<Instant>,
+                    Instant,
                 >::default();
                 $code
             }

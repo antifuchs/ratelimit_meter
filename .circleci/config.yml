@@ -1,4 +1,4 @@
-# TemplateCIConfig { bench: BenchEntry(MatrixEntry { run: true, version: "stable", install_commandline: None, commandline: "cargo bench" }), clippy: ClippyEntry(MatrixEntry { run: true, version: "stable", install_commandline: Some("rustup component add clippy"), commandline: "cargo clippy -- -D warnings" }), rustfmt: RustfmtEntry(MatrixEntry { run: true, version: "stable", install_commandline: Some("rustup component add rustfmt"), commandline: "cargo fmt -v -- --check" }), additional_matrix_entries: {}, cache: "cargo", os: "linux", dist: "xenial", versions: ["stable", "nightly"], test_commandline: "cargo test --verbose --all" }
+# TemplateCIConfig { bench: BenchEntry(MatrixEntry { run: true, version: "stable", install_commandline: None, commandline: "cargo bench" }), clippy: ClippyEntry(MatrixEntry { run: true, version: "stable", install_commandline: Some("rustup component add clippy"), commandline: "cargo clippy -- -D warnings" }), rustfmt: RustfmtEntry(MatrixEntry { run: true, version: "stable", install_commandline: Some("rustup component add rustfmt"), commandline: "cargo fmt -v -- --check" }), additional_matrix_entries: {"no_std": CustomEntry(MatrixEntry { run: true, version: "nightly", install_commandline: None, commandline: "cargo +nightly test --no-default-features --features no_std" })}, cache: "cargo", os: "linux", dist: "xenial", versions: ["stable", "nightly"], test_commandline: "cargo test --verbose --all", scheduled_test_branches: ["master"], test_schedule: "0 0 * * 0" }
 version: "2.1"
 
 executors:
@@ -78,6 +78,20 @@ jobs:
       - run:
           name: Bench
           command: cargo bench
+  no_std:
+    parameters:
+      version:
+        type: executor
+      version_name:
+        type: string
+    executor: << parameters.version >>
+    environment:
+      CI_RUST_VERSION: << parameters.version_name >>
+    steps:
+      - checkout
+      - run:
+          name: cargo +nightly test --no-default-features --features no_std
+          command: cargo +nightly test --no-default-features --features no_std
 
   ci_success:
     docker:
@@ -164,6 +178,10 @@ workflows:
     ]
   }
 }
+      - no_std:
+          name: "no_std"
+          version: nightly
+          version_name: nightly
       - ci_success:
           requires:
           - test-stable
@@ -171,3 +189,22 @@ workflows:
           - rustfmt
           - clippy
           - bench
+          - no_std
+  scheduled_tests:
+    jobs:
+      - test:
+          name: test-stable
+          version: stable
+          version_name: stable
+      - test:
+          name: test-nightly
+          version: nightly
+          version_name: nightly
+    triggers:
+      - schedule:
+          cron: 0 0 * * 0
+          filters:
+            branches:
+              only: [
+  "master"
+]

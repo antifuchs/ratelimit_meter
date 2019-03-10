@@ -1,41 +1,51 @@
 //! The Generic Cell Rate Algorithm
 
-use thread_safety::ThreadsafeWrapper;
+use lib::*;
+
 use {
-    algorithms::{Algorithm, NonConformance, RateLimitState},
+    algorithms::{Algorithm, NonConformance, RateLimitState, RateLimitStateWithClock},
+    instant,
+    thread_safety::ThreadsafeWrapper,
     InconsistentCapacity, NegativeMultiDecision,
 };
 
-use evmap::ShallowCopy;
+#[cfg(feature = "std")]
+mod std {
+    use evmap::ShallowCopy;
+    use instant::Relative;
 
-use std::cmp;
-use std::fmt;
-use std::num::NonZeroU32;
-use std::time::{Duration, Instant};
-
-/// The GCRA's state about a single rate limiting history.
-#[derive(Debug, Eq, PartialEq, Default, Clone)]
-pub struct State(ThreadsafeWrapper<Tat>);
-
-impl ShallowCopy for State {
-    unsafe fn shallow_copy(&mut self) -> Self {
-        State(self.0.shallow_copy())
-    }
-}
-
-impl RateLimitState<GCRA> for State {
-    fn last_touched(&self, params: &GCRA) -> Instant {
-        let data = self.0.snapshot();
-        data.0.unwrap_or_else(Instant::now) + params.tau
+    impl<P: Relative> ShallowCopy for super::State<P> {
+        unsafe fn shallow_copy(&mut self) -> Self {
+            super::State(self.0.shallow_copy())
+        }
     }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-struct Tat(Option<Instant>);
+struct Tat<P: instant::Relative>(Option<P>);
 
-impl Default for Tat {
+impl<P: instant::Relative> Default for Tat<P> {
     fn default() -> Self {
         Tat(None)
+    }
+}
+
+/// The GCRA's state about a single rate limiting history.
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct State<P: instant::Relative>(ThreadsafeWrapper<Tat<P>>);
+
+impl<P: instant::Relative> Default for State<P> {
+    fn default() -> Self {
+        State(Default::default())
+    }
+}
+
+impl<P: instant::Relative> RateLimitState<GCRA<P>, P> for State<P> {}
+
+impl<P: instant::Absolute> RateLimitStateWithClock<GCRA<P>, P> for State<P> {
+    fn last_touched(&self, params: &GCRA<P>) -> P {
+        let data = self.0.snapshot();
+        data.0.unwrap_or_else(P::now) + params.tau
     }
 }
 
@@ -45,17 +55,17 @@ impl Default for Tat {
 /// To avoid thundering herd effects, client code should always add a
 /// random amount of jitter to wait time estimates.
 #[derive(Debug, PartialEq)]
-pub struct NotUntil(Instant);
+pub struct NotUntil<P: instant::Relative>(P);
 
-impl fmt::Display for NotUntil {
+impl<P: instant::Relative> fmt::Display for NotUntil<P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "rate-limited until {:?}", self.0)
     }
 }
 
-impl NonConformance for NotUntil {
+impl<P: instant::Relative> NonConformance<P> for NotUntil<P> {
     #[inline]
-    fn earliest_possible(&self) -> Instant {
+    fn earliest_possible(&self) -> P {
         self.0
     }
 }
@@ -99,6 +109,7 @@ impl NonConformance for NotUntil {
 /// # use std::time::{Instant, Duration};
 /// # #[macro_use] extern crate nonzero_ext;
 /// # extern crate ratelimit_meter;
+/// # #[cfg(feature = "std")]
 /// # fn main () {
 /// let mut limiter = DirectRateLimiter::<GCRA>::per_second(nonzero!(20u32));
 /// let now = Instant::now();
@@ -114,19 +125,23 @@ impl NonConformance for NotUntil {
 /// // After a sufficient time period, cells are allowed again:
 /// assert_eq!(Ok(()), limiter.check_at(now + ms*50));
 /// # }
+/// # #[cfg(not(feature = "std"))] fn main() {}
+/// ```
 #[derive(Debug, Clone)]
-pub struct GCRA {
+pub struct GCRA<P: instant::Relative = instant::TimeSource> {
     // The "weight" of a single packet in units of time.
     t: Duration,
 
     // The "capacity" of the bucket.
     tau: Duration,
+
+    point: PhantomData<P>,
 }
 
-impl Algorithm for GCRA {
-    type BucketState = State;
+impl<P: instant::Relative> Algorithm<P> for GCRA<P> {
+    type BucketState = State<P>;
 
-    type NegativeDecision = NotUntil;
+    type NegativeDecision = NotUntil<P>;
 
     fn construct(
         capacity: NonZeroU32,
@@ -139,6 +154,7 @@ impl Algorithm for GCRA {
         Ok(GCRA {
             t: (per_time_unit / capacity.get()) * cell_weight.get(),
             tau: per_time_unit,
+            point: PhantomData,
         })
     }
 
@@ -148,7 +164,7 @@ impl Algorithm for GCRA {
     fn test_and_update(
         &self,
         state: &Self::BucketState,
-        t0: Instant,
+        t0: P,
     ) -> Result<(), Self::NegativeDecision> {
         let tau = self.tau;
         let t = self.t;
@@ -172,7 +188,7 @@ impl Algorithm for GCRA {
         &self,
         state: &Self::BucketState,
         n: u32,
-        t0: Instant,
+        t0: P,
     ) -> Result<(), NegativeMultiDecision<Self::NegativeDecision>> {
         let tau = self.tau;
         let t = self.t;

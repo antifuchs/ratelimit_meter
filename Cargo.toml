@@ -1,6 +1,6 @@
 [package]
 name = "ratelimit_meter"
-version = "4.0.2-dev"
+version = "4.1.0-dev"
 authors = ["Andreas Fuchs <asf@boinkor.net>"]
 license = "MIT"
 homepage = "https://github.com/antifuchs/ratelimit_meter"
@@ -17,6 +17,11 @@ autobenches = false
 circle-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
 maintenance = { status = "actively-developed" }
 
+[features]
+default = ["std"]
+std = ["parking_lot", "evmap", "nonzero_ext/std"]
+no_std = ["spin"]
+
 [package.metadata.release]
 sign-commit = false
 upload-doc = false
@@ -30,14 +35,22 @@ tag-prefix = "v"
 run = true
 version = "stable"
 
+[package.metadata.template_ci.additional_matrix_entries]
+
+[package.metadata.template_ci.additional_matrix_entries.no_std]
+run = true
+version = "nightly"
+commandline = "cargo +nightly test --no-default-features --features no_std"
+
 [[bench]]
 name = "criterion"
 harness = false
 
 [dependencies]
-parking_lot = "0.6.4"
-evmap = "4.0.0"
-nonzero_ext = "0.1.2"
+nonzero_ext = {version = "0.1.5", default-features = false}
+spin = {version = "0.5.0", optional = true}
+parking_lot = {version = "0.6.4", optional = true}
+evmap = {version = "4.0.0", optional = true}
 
 [dev_dependencies]
 libc = "0.2.41"

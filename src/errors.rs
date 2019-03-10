@@ -1,5 +1,4 @@
-use std::fmt;
-use std::num::NonZeroU32;
+use lib::*;
 
 /// An error that is returned when initializing a rate limiter that is
 /// too small to let a single cell through.

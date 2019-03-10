@@ -3,3 +3,16 @@
 
 pub mod algorithms;
 pub mod variants;
+
+use lib::*;
+
+use instant;
+
+/// Returns a "current" moment that's suitable for tests.
+pub fn current_moment() -> instant::TimeSource {
+    #[cfg(feature = "std")]
+    return Instant::now();
+
+    #[cfg(not(feature = "std"))]
+    return Duration::from_secs(90);
+}

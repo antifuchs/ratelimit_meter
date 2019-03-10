@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 // This test uses procinfo, so can only be run on Linux.
 extern crate libc;
 extern crate ratelimit_meter;

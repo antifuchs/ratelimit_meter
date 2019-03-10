@@ -3,21 +3,22 @@ extern crate ratelimit_meter;
 extern crate nonzero_ext;
 
 use ratelimit_meter::{
-    algorithms::Algorithm, DirectRateLimiter, LeakyBucket, NegativeMultiDecision, NonConformance,
+    algorithms::Algorithm, test_utilities::current_moment, DirectRateLimiter, LeakyBucket,
+    NegativeMultiDecision, NonConformance,
 };
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 #[test]
 fn accepts_first_cell() {
     let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-    assert_eq!(Ok(()), lb.check_at(Instant::now()));
+    assert_eq!(Ok(()), lb.check_at(current_moment()));
 }
 
 #[test]
 fn rejects_too_many() {
     let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(2u32));
-    let now = Instant::now();
+    let now = current_moment();
     let ms = Duration::from_millis(1);
     assert_eq!(Ok(()), lb.check_at(now));
     assert_eq!(Ok(()), lb.check_at(now));
@@ -35,7 +36,7 @@ fn rejects_too_many() {
 #[test]
 fn never_allows_more_than_capacity() {
     let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-    let now = Instant::now();
+    let now = current_moment();
     let ms = Duration::from_millis(1);
 
     // Should not allow the first 15 cells on a capacity 5 bucket:
@@ -54,7 +55,7 @@ fn never_allows_more_than_capacity() {
 fn correct_wait_time() {
     // Bucket adding a new element per 200ms:
     let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-    let mut now = Instant::now();
+    let mut now = current_moment();
     let ms = Duration::from_millis(1);
     let mut conforming = 0;
     for _i in 0..20 {
@@ -77,7 +78,7 @@ fn correct_wait_time() {
 #[test]
 fn prevents_time_travel() {
     let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-    let now = Instant::now();
+    let now = current_moment();
     let ms = Duration::from_millis(1);
 
     assert!(lb.check_at(now).is_ok());
@@ -88,7 +89,7 @@ fn prevents_time_travel() {
 #[test]
 fn actual_threadsafety() {
     let mut lim = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(20u32));
-    let now = Instant::now();
+    let now = current_moment();
     let ms = Duration::from_millis(1);
     let mut children = vec![];
 
@@ -109,7 +110,7 @@ fn tooearly_wait_time_from() {
     let lim =
         LeakyBucket::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <LeakyBucket as Algorithm>::BucketState::default();
-    let now = Instant::now();
+    let now = current_moment();
     let ms = Duration::from_millis(1);
     lim.test_and_update(&state, now).unwrap();
     if let Err(failure) = lim.test_and_update(&state, now) {
