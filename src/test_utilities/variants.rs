@@ -1,9 +1,5 @@
 use algorithms::Algorithm;
-use {
-    algorithms::RateLimitStateWithClock,
-    instant::{AbsoluteInstant, RelativeInstant},
-    DirectRateLimiter, KeyedRateLimiter,
-};
+use {instant::RelativeInstant, DirectRateLimiter};
 
 #[derive(Debug)]
 pub enum Variant {
@@ -35,26 +31,34 @@ where
     }
 }
 
-pub struct KeyedBucket<A: Algorithm<P>, P: AbsoluteInstant>(KeyedRateLimiter<u32, A, P>);
-impl<A, P> Default for KeyedBucket<A, P>
-where
-    A: Algorithm<P>,
-    A::BucketState: RateLimitStateWithClock<A, P>,
-    P: AbsoluteInstant,
-{
-    fn default() -> Self {
-        KeyedBucket(KeyedRateLimiter::per_second(nonzero!(50u32)))
+#[cfg(feature = "std")]
+mod std {
+    use super::*;
+    use {algorithms::RateLimitStateWithClock, instant::AbsoluteInstant, KeyedRateLimiter};
+
+    pub struct KeyedBucket<A: Algorithm<P>, P: AbsoluteInstant>(KeyedRateLimiter<u32, A, P>);
+    impl<A, P> Default for KeyedBucket<A, P>
+    where
+        A: Algorithm<P>,
+        A::BucketState: RateLimitStateWithClock<A, P>,
+        P: AbsoluteInstant,
+    {
+        fn default() -> Self {
+            KeyedBucket(KeyedRateLimiter::per_second(nonzero!(50u32)))
+        }
+    }
+    impl<A, P> KeyedBucket<A, P>
+    where
+        A: Algorithm<P>,
+        P: AbsoluteInstant,
+    {
+        pub fn limiter(self) -> KeyedRateLimiter<u32, A, P> {
+            self.0
+        }
     }
 }
-impl<A, P> KeyedBucket<A, P>
-where
-    A: Algorithm<P>,
-    P: AbsoluteInstant,
-{
-    pub fn limiter(self) -> KeyedRateLimiter<u32, A, P> {
-        self.0
-    }
-}
+#[cfg(feature = "std")]
+pub use self::std::*;
 
 // I really wish I could just have a function that returns an impl
 // Trait that was usable in all the benchmarks, but alas it should not

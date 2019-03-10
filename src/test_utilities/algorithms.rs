@@ -22,7 +22,7 @@ where
                 weight.into().unwrap_or(nonzero!(1u32)),
                 duration
                     .into()
-                    .unwrap_or(::std::time::Duration::from_secs(1)),
+                    .unwrap_or(crate::lib::Duration::from_secs(1)),
             )
             .unwrap(),
             PhantomData,

@@ -1,4 +1,3 @@
-#![cfg(feature = "std")]
 use lib::*;
 
 use evmap::ShallowCopy;
