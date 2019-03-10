@@ -34,13 +34,16 @@ where
 #[cfg(feature = "std")]
 mod std {
     use super::*;
-    use {algorithms::RateLimitStateWithClock, instant::AbsoluteInstant, KeyedRateLimiter};
+    use {algorithms::KeyableRateLimitState, instant::AbsoluteInstant, KeyedRateLimiter};
 
-    pub struct KeyedBucket<A: Algorithm<P>, P: AbsoluteInstant>(KeyedRateLimiter<u32, A, P>);
+    pub struct KeyedBucket<A: Algorithm<P>, P: AbsoluteInstant>(KeyedRateLimiter<u32, A, P>)
+    where
+        A::BucketState: KeyableRateLimitState<A, P>;
+
     impl<A, P> Default for KeyedBucket<A, P>
     where
         A: Algorithm<P>,
-        A::BucketState: RateLimitStateWithClock<A, P>,
+        A::BucketState: KeyableRateLimitState<A, P>,
         P: AbsoluteInstant,
     {
         fn default() -> Self {
@@ -50,6 +53,7 @@ mod std {
     impl<A, P> KeyedBucket<A, P>
     where
         A: Algorithm<P>,
+        A::BucketState: KeyableRateLimitState<A, P>,
         P: AbsoluteInstant,
     {
         pub fn limiter(self) -> KeyedRateLimiter<u32, A, P> {

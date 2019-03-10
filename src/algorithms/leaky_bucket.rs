@@ -8,8 +8,6 @@ use {
     InconsistentCapacity, NegativeMultiDecision, NonConformance,
 };
 
-use evmap::ShallowCopy;
-
 /// Implements the industry-standard leaky bucket rate-limiting
 /// as-a-meter. The bucket keeps a "fill height", pretending to drip
 /// steadily (which reduces the fill height), and increases the fill
@@ -59,18 +57,24 @@ impl<P: RelativeInstant> Default for State<P> {
     }
 }
 
-impl<P: RelativeInstant> ShallowCopy for State<P> {
-    unsafe fn shallow_copy(&mut self) -> Self {
-        State(self.0.shallow_copy())
-    }
-}
-
 impl<P: RelativeInstant> RateLimitState<LeakyBucket<P>, P> for State<P> {}
 
 impl<P: AbsoluteInstant> RateLimitStateWithClock<LeakyBucket<P>, P> for State<P> {
     fn last_touched(&self, _params: &LeakyBucket<P>) -> P {
         let data = self.0.snapshot();
         data.last_update.unwrap_or_else(P::now) + data.level
+    }
+}
+
+#[cfg(feature = "std")]
+mod std {
+    use evmap::ShallowCopy;
+    use instant::RelativeInstant;
+
+    impl<P: RelativeInstant> ShallowCopy for super::State<P> {
+        unsafe fn shallow_copy(&mut self) -> Self {
+            super::State(self.0.shallow_copy())
+        }
     }
 }
 

@@ -5,7 +5,6 @@ pub use self::gcra::*;
 pub use self::leaky_bucket::*;
 use crate::instant::{AbsoluteInstant, RelativeInstant};
 
-use evmap::ShallowCopy;
 use {InconsistentCapacity, NegativeMultiDecision};
 
 use lib::*;
@@ -68,7 +67,7 @@ pub trait Algorithm<P: RelativeInstant = Instant>: Send + Sync + Sized + fmt::De
     /// Every new rate limiting state is initialized as `Default`. The
     /// states must be safe to share across threads (this crate uses a
     /// `parking_lot` Mutex to allow that).
-    type BucketState: RateLimitState<Self, P> + Send + Sync + Eq + ShallowCopy + fmt::Debug;
+    type BucketState: RateLimitState<Self, P>;
 
     /// The type returned when a rate limiting decision for a single
     /// cell is negative. Each rate limiting algorithm can decide to
@@ -125,7 +124,7 @@ pub trait Algorithm<P: RelativeInstant = Instant>: Send + Sync + Sized + fmt::De
 
 /// Trait that all rate limit states have to implement around
 /// housekeeping in keyed rate limiters.
-pub trait RateLimitState<P, I: RelativeInstant>: Default {}
+pub trait RateLimitState<P, I: RelativeInstant>: Default + Send + Sync + Eq + fmt::Debug {}
 
 /// Trait that all rate limit states implement if there is a real-time
 /// clock available.
@@ -142,3 +141,25 @@ pub trait RateLimitStateWithClock<P, I: AbsoluteInstant>: RateLimitState<P, I> {
     /// race conditions can occur.
     fn last_touched(&self, params: &P) -> I;
 }
+
+#[cfg(feature = "std")]
+mod std {
+    use evmap::ShallowCopy;
+    /// Trait implemented by all rate limit states that are compatible
+    /// with the KeyedRateLimiters.
+    pub trait KeyableRateLimitState<P, I: super::AbsoluteInstant>:
+        super::RateLimitStateWithClock<P, I> + ShallowCopy
+    {
+    }
+
+    #[cfg(feature = "std")]
+    impl<T, P, I> KeyableRateLimitState<P, I> for T
+    where
+        T: super::RateLimitStateWithClock<P, I> + ShallowCopy,
+        I: super::AbsoluteInstant,
+    {
+    }
+}
+
+#[cfg(feature = "std")]
+pub use self::std::*;

@@ -1,15 +1,25 @@
 //! The Generic Cell Rate Algorithm
 
-use thread_safety::ThreadsafeWrapper;
+use lib::*;
+
 use {
     algorithms::{Algorithm, NonConformance, RateLimitState, RateLimitStateWithClock},
     instant::{AbsoluteInstant, RelativeInstant},
+    thread_safety::ThreadsafeWrapper,
     InconsistentCapacity, NegativeMultiDecision,
 };
 
-use evmap::ShallowCopy;
+#[cfg(feature = "std")]
+mod std {
+    use evmap::ShallowCopy;
+    use instant::RelativeInstant;
 
-use lib::*;
+    impl<P: RelativeInstant> ShallowCopy for super::State<P> {
+        unsafe fn shallow_copy(&mut self) -> Self {
+            super::State(self.0.shallow_copy())
+        }
+    }
+}
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 struct Tat<P: RelativeInstant>(Option<P>);
@@ -27,12 +37,6 @@ pub struct State<P: RelativeInstant>(ThreadsafeWrapper<Tat<P>>);
 impl<P: RelativeInstant> Default for State<P> {
     fn default() -> Self {
         State(Default::default())
-    }
-}
-
-impl<P: RelativeInstant> ShallowCopy for State<P> {
-    unsafe fn shallow_copy(&mut self) -> Self {
-        State(self.0.shallow_copy())
     }
 }
 

@@ -8,7 +8,7 @@ use evmap::{self, ReadHandle, WriteHandle};
 use parking_lot::Mutex;
 
 use {
-    algorithms::{Algorithm, DefaultAlgorithm, RateLimitStateWithClock},
+    algorithms::{Algorithm, DefaultAlgorithm, KeyableRateLimitState, RateLimitStateWithClock},
     instant::AbsoluteInstant,
     InconsistentCapacity, NegativeMultiDecision,
 };
@@ -74,7 +74,9 @@ pub struct KeyedRateLimiter<
     A: Algorithm<P> = DefaultAlgorithm,
     P: AbsoluteInstant = Instant,
     H: BuildHasher + Clone = RandomState,
-> {
+> where
+    A::BucketState: KeyableRateLimitState<A, P>,
+{
     algorithm: A,
     map_reader: ReadHandle<K, A::BucketState, (), H>,
     map_writer: MapWriteHandle<K, P, A, H>,
@@ -83,6 +85,7 @@ pub struct KeyedRateLimiter<
 impl<A, K, P: AbsoluteInstant> fmt::Debug for KeyedRateLimiter<K, A, P>
 where
     A: Algorithm<P>,
+    A::BucketState: KeyableRateLimitState<A, P>,
     K: Eq + Hash + Clone,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -94,7 +97,7 @@ impl<P, A, K> KeyedRateLimiter<K, A, P>
 where
     P: AbsoluteInstant,
     A: Algorithm<P>,
-    A::BucketState: RateLimitStateWithClock<A, P>,
+    A::BucketState: KeyableRateLimitState<A, P>,
     K: Eq + Hash + Clone,
 {
     /// Construct a new rate limiter that allows `capacity` cells per
@@ -308,6 +311,7 @@ where
     K: Eq + Hash + Clone,
     P: AbsoluteInstant,
     A: Algorithm<P>,
+    A::BucketState: KeyableRateLimitState<A, P>,
 {
     fn default() -> Builder<K, P, A, RandomState> {
         Builder {
@@ -326,6 +330,7 @@ where
     K: Eq + Hash + Clone,
     P: AbsoluteInstant,
     A: Algorithm<P>,
+    A::BucketState: KeyableRateLimitState<A, P>,
     H: BuildHasher,
 {
     /// Sets the hashing method used for the map.
