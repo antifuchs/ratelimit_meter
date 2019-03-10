@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 extern crate ratelimit_meter;
 #[macro_use]
 extern crate nonzero_ext;

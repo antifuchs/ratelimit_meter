@@ -2,17 +2,18 @@ extern crate ratelimit_meter;
 #[macro_use]
 extern crate nonzero_ext;
 
-use ratelimit_meter::algorithms::Algorithm;
-
-use ratelimit_meter::{NegativeMultiDecision, NonConformance, GCRA};
+use ratelimit_meter::{
+    algorithms::Algorithm, test_utilities::current_moment, NegativeMultiDecision, NonConformance,
+    GCRA,
+};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 #[test]
 fn accepts_first_cell() {
     let gcra = GCRA::construct(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
-    let state = <GCRA<Duration> as Algorithm<Duration>>::BucketState::default();;
-    let now = Duration::from_secs(1);
+    let state = <GCRA as Algorithm>::BucketState::default();;
+    let now = current_moment();
     assert_eq!(Ok(()), gcra.test_and_update(&state, now));
 }
 
@@ -20,7 +21,7 @@ fn accepts_first_cell() {
 fn rejects_too_many() {
     let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
-    let now = Instant::now();
+    let now = current_moment();
     gcra.test_and_update(&state, now).unwrap();
     gcra.test_and_update(&state, now).unwrap();
     assert_ne!(
@@ -36,7 +37,7 @@ fn rejects_too_many() {
 fn allows_after_interval() {
     let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
-    let now = Instant::now();
+    let now = current_moment();
     let ms = Duration::from_millis(1);
     gcra.test_and_update(&state, now).unwrap();
     assert_eq!(Ok(()), gcra.test_and_update(&state, now + ms));
@@ -50,7 +51,7 @@ fn allows_after_interval() {
 fn allows_n_after_interval() {
     let gcra = GCRA::construct(nonzero!(2u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
-    let now = Instant::now();
+    let now = current_moment();
     let ms = Duration::from_millis(1);
     assert_eq!(Ok(()), gcra.test_n_and_update(&state, 2, now));
     assert!(!gcra.test_n_and_update(&state, 2, now + ms).is_ok());
@@ -72,7 +73,7 @@ fn correctly_handles_per() {
     let ms = Duration::from_millis(1);
     let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), ms * 20).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
-    let now = Instant::now();
+    let now = current_moment();
 
     assert_eq!(Ok(()), gcra.test_and_update(&state, now));
     assert_eq!(Ok(()), gcra.test_and_update(&state, now + ms));
@@ -85,7 +86,7 @@ fn never_allows_more_than_capacity() {
     let ms = Duration::from_millis(1);
     let gcra = GCRA::construct(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();
-    let now = Instant::now();
+    let now = current_moment();
 
     // Should not allow the first 15 cells on a capacity 5 bucket:
     assert!(gcra.test_n_and_update(&state, 15, now).is_err());
@@ -107,7 +108,7 @@ fn correct_wait_time() {
     // Bucket adding a new element per 200ms:
     let gcra = GCRA::construct(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();
-    let mut now = Instant::now();
+    let mut now = current_moment();
     let ms = Duration::from_millis(1);
     let mut conforming = 0;
     for _i in 0..20 {
@@ -132,7 +133,7 @@ fn actual_threadsafety() {
     let gcra = GCRA::construct(nonzero!(20u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();
 
-    let now = Instant::now();
+    let now = current_moment();
     let ms = Duration::from_millis(1);
     let mut children = vec![];
 
@@ -155,7 +156,7 @@ fn actual_threadsafety() {
 fn nonconformance_wait_time_from() {
     let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();
-    let now = Instant::now();
+    let now = current_moment();
     let ms = Duration::from_millis(1);
     gcra.test_and_update(&state, now).unwrap();
     gcra.test_and_update(&state, now).unwrap();
