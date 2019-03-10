@@ -55,7 +55,8 @@ mod std {
         /// returns the zero duration if a negative duration would
         /// result (e.g. due to system clock adjustments).
         fn duration_since(&self, earlier: Self) -> Duration {
-            self.duration_since(earlier).unwrap_or(Duration::new(0, 0))
+            self.duration_since(earlier)
+                .unwrap_or_else(|_| Duration::new(0, 0))
         }
     }
 
