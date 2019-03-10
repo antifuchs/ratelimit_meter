@@ -158,7 +158,10 @@
 //! `"no_std"` feature, like so:
 //!
 //! ``` toml
-//! ratelimit_meter = { version = "...", no_default_features = true, features = "no_std" }
+//! [dependencies.ratelimit_meter]
+//! version = "..."
+//! default-features = false
+//! features = ["no_std"]
 //! ```
 //!
 //! ### Implementing your own custom time source in `no_std`
