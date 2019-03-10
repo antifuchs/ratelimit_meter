@@ -8,7 +8,6 @@ use self::lib::{Add, Clone, Copy, Debug, Duration, Eq, Ord, PartialEq, Send, Siz
 pub trait RelativeInstant:
     Sized
     + Sub<Duration, Output = Self>
-    + Sub<Self, Output = Duration>
     + Add<Duration, Output = Self>
     + PartialEq
     + Eq
@@ -48,14 +47,24 @@ mod std {
         }
     }
 
-    // TODO: would love to have this but duration_since is not infallible:
-    // use std::time::SystemTime
-    // impl super::RelativeInstant for SystemTime {
-    //     #[inline]
-    //     fn now() -> Self {
-    //         SystemTime::now()
-    //     }
-    // }
+    use std::time::SystemTime;
+
+    impl super::RelativeInstant for SystemTime {
+        /// Returns the difference in times between the two
+        /// SystemTimes. Due to the fallible nature of SystemTimes,
+        /// returns the zero duration if a negative duration would
+        /// result (e.g. due to system clock adjustments).
+        fn duration_since(&self, earlier: Self) -> Duration {
+            self.duration_since(earlier).unwrap_or(Duration::new(0, 0))
+        }
+    }
+
+    impl super::AbsoluteInstant for SystemTime {
+        #[inline]
+        fn now() -> Self {
+            SystemTime::now()
+        }
+    }
 }
 
 impl RelativeInstant for Duration {

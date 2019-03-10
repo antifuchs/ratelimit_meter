@@ -158,7 +158,7 @@ impl<P: RelativeInstant> Algorithm<P> for LeakyBucket<P> {
             let t0 = cmp::max(t0, last);
             // Decrement the level by the amount the bucket
             // has dripped in the meantime:
-            new.level = state.level - cmp::min(t0 - last, state.level);
+            new.level = state.level - cmp::min(t0.duration_since(last), state.level);
             if weight + new.level <= full {
                 new.level += weight;
                 (Ok(()), Some(new))
