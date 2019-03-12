@@ -22,6 +22,7 @@ default = ["std", "sync"]
 std = ["parking_lot", "evmap", "nonzero_ext/std"]
 no_std = ["spin"]
 sync = []
+no_sync = []
 
 [package.metadata.release]
 sign-commit = false
@@ -38,10 +39,10 @@ version = "stable"
 
 [package.metadata.template_ci.additional_matrix_entries]
 
-[package.metadata.template_ci.additional_matrix_entries.no_std]
+[package.metadata.template_ci.additional_matrix_entries.no_std_no_sync]
 run = true
 version = "stable"
-commandline = "cargo +nightly test --no-default-features --features no_std"
+commandline = "cargo test --no-default-features --features no_std"
 
 [package.metadata.template_ci.additional_matrix_entries.no_std_sync]
 run = true
@@ -51,7 +52,7 @@ commandline = "cargo +nightly test --no-default-features --features 'no_std sync
 [package.metadata.template_ci.additional_matrix_entries.no_sync]
 run = true
 version = "stable"
-commandline = "cargo +nightly test --no-default-features --features std"
+commandline = "cargo test --no-default-features --features std"
 
 [[bench]]
 name = "criterion"
