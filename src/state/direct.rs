@@ -13,7 +13,7 @@ use {
 /// e.g. regulate the transmission of packets on a single connection,
 /// or to ensure that an API client stays within a server's rate
 /// limit.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DirectRateLimiter<
     A: Algorithm<P> = DefaultAlgorithm,
     P: instant::Relative = instant::TimeSource,
@@ -155,6 +155,22 @@ where
         n: u32,
     ) -> Result<(), NegativeMultiDecision<<A as Algorithm<P>>::NegativeDecision>> {
         self.algorithm.test_n_and_update(&self.state, n, P::now())
+    }
+}
+
+/// A direct rate-limiter is only Clone if the bucket's state is
+/// Clone.
+impl<A, P> Clone for DirectRateLimiter<A, P>
+where
+    P: instant::Absolute,
+    A: Algorithm<P> + Clone,
+    A::BucketState: Clone,
+{
+    fn clone(&self) -> Self {
+        DirectRateLimiter {
+            algorithm: self.algorithm.clone(),
+            state: self.state.clone(),
+        }
     }
 }
 
