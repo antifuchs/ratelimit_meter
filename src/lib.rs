@@ -262,6 +262,7 @@ mod lib {
         pub use std::*;
     }
 
+    pub use self::core::cell::Cell;
     pub use self::core::clone::Clone;
     pub use self::core::cmp::{Eq, Ord, PartialEq};
     pub use self::core::default::Default;

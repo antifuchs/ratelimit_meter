@@ -5,7 +5,7 @@ use lib::*;
 use {
     algorithms::{Algorithm, NonConformance, RateLimitState, RateLimitStateWithClock},
     instant,
-    thread_safety::ThreadsafeWrapper,
+    thread_safety::{StateWrapper, Wrapper},
     InconsistentCapacity, NegativeMultiDecision,
 };
 
@@ -32,7 +32,7 @@ impl<P: instant::Relative> Default for Tat<P> {
 
 /// The GCRA's state about a single rate limiting history.
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct State<P: instant::Relative>(ThreadsafeWrapper<Tat<P>>);
+pub struct State<P: instant::Relative>(Wrapper<Tat<P>>);
 
 impl<P: instant::Relative> Default for State<P> {
     fn default() -> Self {

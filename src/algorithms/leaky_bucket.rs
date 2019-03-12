@@ -1,7 +1,7 @@
 //! A classic leaky bucket algorithm
 
 use lib::*;
-use thread_safety::ThreadsafeWrapper;
+use thread_safety::{StateWrapper, Wrapper};
 use {
     algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
     instant, InconsistentCapacity, NegativeMultiDecision, NonConformance,
@@ -50,7 +50,7 @@ pub struct LeakyBucket<P: instant::Relative = instant::TimeSource> {
 
 /// Represents the state of a single history of decisions.
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct State<P: instant::Relative>(ThreadsafeWrapper<BucketState<P>>);
+pub struct State<P: instant::Relative>(Wrapper<BucketState<P>>);
 
 impl<P: instant::Relative> Default for State<P> {
     fn default() -> Self {
