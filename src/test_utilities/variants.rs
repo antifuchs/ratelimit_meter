@@ -32,8 +32,8 @@ where
     }
 }
 
-#[cfg(feature = "std")]
-mod std {
+#[cfg(all(feature = "std", feature = "sync"))]
+mod std_sync {
     use super::*;
     use {algorithms::KeyableRateLimitState, instant::Absolute, KeyedRateLimiter};
 
@@ -62,8 +62,8 @@ mod std {
         }
     }
 }
-#[cfg(feature = "std")]
-pub use self::std::*;
+#[cfg(all(feature = "std", feature = "sync"))]
+pub use self::std_sync::*;
 
 // I really wish I could just have a function that returns an impl
 // Trait that was usable in all the benchmarks, but alas it should not

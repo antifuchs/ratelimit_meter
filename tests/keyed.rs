@@ -1,4 +1,4 @@
-#![cfg(feature = "std")]
+#![cfg(all(feature = "std", feature = "sync"))]
 
 extern crate ratelimit_meter;
 #[macro_use]

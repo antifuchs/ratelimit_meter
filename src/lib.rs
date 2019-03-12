@@ -123,7 +123,7 @@
 //!
 //! # #[macro_use] extern crate nonzero_ext;
 //! # extern crate ratelimit_meter;
-//! # #[cfg(feature = "std")]
+//! # #[cfg(all(feature = "std", feature = "sync"))]
 //! # fn main () {
 //! // Allow 50 units/second across all threads:
 //! let mut lim = DirectRateLimiter::<GCRA>::per_second(nonzero!(50u32));
@@ -131,7 +131,7 @@
 //! thread::spawn(move || { assert_eq!(Ok(()), thread_lim.check());});
 //! assert_eq!(Ok(()), lim.check());
 //! # }
-//! # #[cfg(not(feature = "std"))]
+//! # #[cfg(not(all(feature = "std", feature = "sync")))]
 //! # fn main() {}
 //! ```
 //!
@@ -230,14 +230,14 @@ mod thread_safety;
 #[macro_use]
 extern crate nonzero_ext;
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "sync"))]
 extern crate evmap;
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "sync"))]
 extern crate parking_lot;
 
-#[cfg(not(feature = "std"))]
+#[cfg(all(not(feature = "std"), feature = "sync"))]
 extern crate alloc;
-#[cfg(not(feature = "std"))]
+#[cfg(all(not(feature = "std"), feature = "sync"))]
 extern crate spin;
 
 pub use self::algorithms::LeakyBucket;
@@ -246,7 +246,7 @@ pub use self::algorithms::GCRA;
 
 pub use self::state::DirectRateLimiter;
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "sync"))]
 pub use self::state::KeyedRateLimiter;
 
 pub use self::errors::*;
@@ -262,7 +262,7 @@ mod lib {
         pub use std::*;
     }
 
-    pub use self::core::cell::Cell;
+    pub use self::core::cell::RefCell;
     pub use self::core::clone::Clone;
     pub use self::core::cmp::{Eq, Ord, PartialEq};
     pub use self::core::default::Default;

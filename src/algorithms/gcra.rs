@@ -9,7 +9,7 @@ use {
     InconsistentCapacity, NegativeMultiDecision,
 };
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "sync"))]
 mod std {
     use evmap::ShallowCopy;
     use instant::Relative;
@@ -31,8 +31,15 @@ impl<P: instant::Relative> Default for Tat<P> {
 }
 
 /// The GCRA's state about a single rate limiting history.
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct State<P: instant::Relative>(Wrapper<Tat<P>>);
+
+#[cfg(all(feature = "std", feature = "sync"))]
+impl<P: instant::Relative> Clone for State<P> {
+    fn clone(&self) -> Self {
+        State(self.0.clone())
+    }
+}
 
 impl<P: instant::Relative> Default for State<P> {
     fn default() -> Self {

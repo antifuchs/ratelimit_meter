@@ -1,9 +1,9 @@
 pub mod direct;
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "sync"))]
 pub mod keyed;
 
 pub use self::direct::DirectRateLimiter;
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "sync"))]
 pub use self::keyed::KeyedRateLimiter;

@@ -6,6 +6,7 @@ use ratelimit_meter::{
     algorithms::Algorithm, test_utilities::current_moment, DirectRateLimiter, LeakyBucket,
     NegativeMultiDecision, NonConformance,
 };
+#[cfg(feature = "sync")]
 use std::thread;
 use std::time::Duration;
 
@@ -86,6 +87,7 @@ fn prevents_time_travel() {
     assert!(lb.check_at(now - ms * 500).is_ok());
 }
 
+#[cfg(feature = "sync")]
 #[test]
 fn actual_threadsafety() {
     let mut lim = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(20u32));

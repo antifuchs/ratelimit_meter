@@ -49,12 +49,19 @@ pub struct LeakyBucket<P: instant::Relative = instant::TimeSource> {
 }
 
 /// Represents the state of a single history of decisions.
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct State<P: instant::Relative>(Wrapper<BucketState<P>>);
 
 impl<P: instant::Relative> Default for State<P> {
     fn default() -> Self {
         State(Default::default())
+    }
+}
+
+#[cfg(all(feature = "std", feature = "sync"))]
+impl<P: instant::Relative> Clone for State<P> {
+    fn clone(&self) -> Self {
+        State(self.0.clone())
     }
 }
 
@@ -67,7 +74,7 @@ impl<P: instant::Absolute> RateLimitStateWithClock<LeakyBucket<P>, P> for State<
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "sync"))]
 mod std {
     use evmap::ShallowCopy;
     use instant::Relative;

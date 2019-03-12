@@ -6,6 +6,7 @@ use ratelimit_meter::{
     algorithms::Algorithm, test_utilities::current_moment, NegativeMultiDecision, NonConformance,
     GCRA,
 };
+#[cfg(feature = "sync")]
 use std::thread;
 use std::time::Duration;
 
@@ -128,6 +129,7 @@ fn correct_wait_time() {
     assert_eq!(20, conforming);
 }
 
+#[cfg(feature = "sync")]
 #[test]
 fn actual_threadsafety() {
     let gcra = GCRA::construct(nonzero!(20u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();

@@ -7,6 +7,7 @@ extern crate ratelimit_meter;
 extern crate nonzero_ext;
 
 use ratelimit_meter::{DirectRateLimiter, LeakyBucket, GCRA};
+#[cfg(feature = "sync")]
 use std::thread;
 
 fn resident_memsize() -> i64 {
@@ -68,6 +69,7 @@ fn memleak_gcra_multi() {
     }
 }
 
+#[cfg(feature = "sync")]
 #[test]
 fn memleak_gcra_threaded() {
     let bucket = DirectRateLimiter::<GCRA>::build_with_capacity(nonzero!(1_000_000u32))
@@ -91,6 +93,7 @@ fn memleak_leakybucket() {
     }
 }
 
+#[cfg(feature = "sync")]
 #[test]
 fn memleak_leakybucket_threaded() {
     let bucket = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(1_000_000u32));

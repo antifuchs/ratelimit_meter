@@ -146,8 +146,8 @@ pub trait RateLimitStateWithClock<P, I: instant::Absolute>: RateLimitState<P, I>
     fn last_touched(&self, params: &P) -> I;
 }
 
-#[cfg(feature = "std")]
-mod std {
+#[cfg(all(feature = "std", feature = "sync"))]
+mod std_sync {
     use evmap::ShallowCopy;
     use instant;
 
@@ -158,7 +158,7 @@ mod std {
     {
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", feature = "sync"))]
     impl<T, P, I> KeyableRateLimitState<P, I> for T
     where
         T: super::RateLimitStateWithClock<P, I> + ShallowCopy,
@@ -167,5 +167,5 @@ mod std {
     }
 }
 
-#[cfg(feature = "std")]
-pub use self::std::*;
+#[cfg(all(feature = "std", feature = "sync"))]
+pub use self::std_sync::*;

@@ -18,9 +18,10 @@ circle-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-default = ["std"]
+default = ["std", "sync"]
 std = ["parking_lot", "evmap", "nonzero_ext/std"]
 no_std = ["spin"]
+sync = []
 
 [package.metadata.release]
 sign-commit = false
