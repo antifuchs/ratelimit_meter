@@ -87,7 +87,7 @@ fn prevents_time_travel() {
     assert!(lb.check_at(now - ms * 500).is_ok());
 }
 
-#[cfg(feature = "sync")]
+#[cfg(all(feature = "std", feature = "sync"))]
 #[test]
 fn actual_threadsafety() {
     let mut lim = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(20u32));

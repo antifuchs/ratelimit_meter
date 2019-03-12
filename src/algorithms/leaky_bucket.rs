@@ -58,7 +58,7 @@ impl<P: instant::Relative> Default for State<P> {
     }
 }
 
-#[cfg(all(feature = "std", feature = "sync"))]
+#[cfg(all(feature = "sync"))]
 impl<P: instant::Relative> Clone for State<P> {
     fn clone(&self) -> Self {
         State(self.0.clone())

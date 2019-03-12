@@ -213,7 +213,7 @@
 //! ```
 
 // Allow using the alloc crate
-#![cfg_attr(not(feature = "std"), feature(alloc))]
+#![cfg_attr(all(not(feature = "std"), feature = "sync"), feature(alloc))]
 // Allow using ratelimit_meter without std
 #![cfg_attr(not(feature = "std"), no_std)]
 // Deny warnings
@@ -286,6 +286,7 @@ mod lib {
 
     #[cfg(feature = "no_std")]
     mod no_std {
+        #[cfg(feature = "sync")]
         pub use alloc::sync::Arc;
     }
 

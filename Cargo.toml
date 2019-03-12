@@ -40,8 +40,18 @@ version = "stable"
 
 [package.metadata.template_ci.additional_matrix_entries.no_std]
 run = true
-version = "nightly"
+version = "stable"
 commandline = "cargo +nightly test --no-default-features --features no_std"
+
+[package.metadata.template_ci.additional_matrix_entries.no_std_sync]
+run = true
+version = "nightly"
+commandline = "cargo +nightly test --no-default-features --features 'no_std sync'"
+
+[package.metadata.template_ci.additional_matrix_entries.no_sync]
+run = true
+version = "stable"
+commandline = "cargo +nightly test --no-default-features --features std"
 
 [[bench]]
 name = "criterion"

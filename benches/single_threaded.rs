@@ -1,11 +1,15 @@
 use std::time::{Duration, Instant};
 
-use ratelimit_meter::test_utilities::variants::{DirectBucket, KeyedBucket, Variant};
-
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
+use ratelimit_meter::test_utilities::variants::{DirectBucket, Variant};
+
+#[cfg(all(feature = "std", feature = "sync"))]
+use ratelimit_meter::test_utilities::variants::KeyedBucket;
 
 pub fn bench_all(c: &mut Criterion) {
     bench_direct(c);
+
+    #[cfg(all(feature = "std", feature = "sync"))]
     bench_keyed(c);
 }
 
@@ -30,6 +34,7 @@ fn bench_direct(c: &mut Criterion) {
     c.bench(id, bm);
 }
 
+#[cfg(all(feature = "std", feature = "sync"))]
 fn bench_keyed(c: &mut Criterion) {
     let id = "single_threaded/keyed";
     let bm = ParameterizedBenchmark::new(
