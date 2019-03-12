@@ -124,8 +124,11 @@ pub trait Algorithm<P: instant::Relative = instant::TimeSource>:
 }
 
 /// Trait that all rate limit states have to implement around
-/// housekeeping in keyed rate limiters.
-pub trait RateLimitState<P, I: instant::Relative>: Default + Send + Sync + Eq + fmt::Debug {}
+/// housekeeping in keyed rate limiters. The rate limiter state is
+/// expected to provide interior mutability, either in a thread-safe
+/// manner (e.g. using `Arc<Mutex<T>>>`), or otherwise (e.g., using
+/// `Cell<T>`).
+pub trait RateLimitState<P, I: instant::Relative>: Default + Send + Eq + fmt::Debug {}
 
 /// Trait that all rate limit states implement if there is a real-time
 /// clock available.
