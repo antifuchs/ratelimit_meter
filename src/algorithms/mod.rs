@@ -23,7 +23,7 @@ pub type DefaultAlgorithm = LeakyBucket;
 ///
 /// Since this does not account for effects like thundering herds,
 /// users should always add random jitter to the times given.
-pub trait NonConformance<P: instant::Relative> {
+pub trait NonConformance<P: instant::Relative = instant::TimeSource> {
     /// Returns the earliest time at which a decision could be
     /// conforming (excluding conforming decisions made by the Decider
     /// that are made in the meantime).
