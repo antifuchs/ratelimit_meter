@@ -230,15 +230,8 @@ mod thread_safety;
 #[macro_use]
 extern crate nonzero_ext;
 
-#[cfg(feature = "std")]
-extern crate evmap;
-#[cfg(feature = "std")]
-extern crate parking_lot;
-
 #[cfg(not(feature = "std"))]
 extern crate alloc;
-#[cfg(not(feature = "std"))]
-extern crate spin;
 
 pub use self::algorithms::LeakyBucket;
 pub use self::algorithms::NonConformance;
