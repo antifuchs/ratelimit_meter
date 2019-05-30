@@ -1,4 +1,4 @@
-use lib::*;
+use crate::lib::*;
 
 #[cfg(feature = "std")]
 use parking_lot::Mutex;

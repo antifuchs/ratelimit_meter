@@ -4,9 +4,9 @@ pub mod leaky_bucket;
 pub use self::gcra::*;
 pub use self::leaky_bucket::*;
 
-use {instant, InconsistentCapacity, NegativeMultiDecision};
+use crate::{instant, InconsistentCapacity, NegativeMultiDecision};
 
-use lib::*;
+use crate::lib::*;
 
 /// The default rate limiting algorithm in this crate: The ["leaky
 /// bucket"](leaky_bucket/struct.LeakyBucket.html).
@@ -146,7 +146,7 @@ pub trait RateLimitStateWithClock<P, I: instant::Absolute>: RateLimitState<P, I>
 #[cfg(feature = "std")]
 mod std {
     use evmap::ShallowCopy;
-    use instant;
+    use crate::instant;
 
     /// Trait implemented by all rate limit states that are compatible
     /// with the KeyedRateLimiters.

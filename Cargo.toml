@@ -1,4 +1,5 @@
 [package]
+edition = "2018"
 name = "ratelimit_meter"
 version = "4.1.2-dev"
 authors = ["Andreas Fuchs <asf@boinkor.net>"]

@@ -4,9 +4,9 @@
 pub mod algorithms;
 pub mod variants;
 
-use lib::*;
+use crate::lib::*;
 
-use instant;
+use crate::instant;
 
 /// Returns a "current" moment that's suitable for tests.
 pub fn current_moment() -> instant::TimeSource {

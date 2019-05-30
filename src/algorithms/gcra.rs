@@ -1,8 +1,8 @@
 //! The Generic Cell Rate Algorithm
 
-use lib::*;
+use crate::lib::*;
 
-use {
+use crate::{
     algorithms::{Algorithm, NonConformance, RateLimitState, RateLimitStateWithClock},
     instant,
     thread_safety::ThreadsafeWrapper,
@@ -12,7 +12,7 @@ use {
 #[cfg(feature = "std")]
 mod std {
     use evmap::ShallowCopy;
-    use instant::Relative;
+    use crate::instant::Relative;
 
     impl<P: Relative> ShallowCopy for super::State<P> {
         unsafe fn shallow_copy(&mut self) -> Self {

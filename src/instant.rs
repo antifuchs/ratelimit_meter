@@ -1,4 +1,4 @@
-use lib::*;
+use crate::lib::*;
 
 /// The default time representation in use by rate limiters. To
 /// override it, pass a different `P` type argument to the algorithm

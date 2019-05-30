@@ -1,8 +1,8 @@
 //! A classic leaky bucket algorithm
 
-use lib::*;
-use thread_safety::ThreadsafeWrapper;
-use {
+use crate::lib::*;
+use crate::thread_safety::ThreadsafeWrapper;
+use crate::{
     algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
     instant, InconsistentCapacity, NegativeMultiDecision, NonConformance,
 };
@@ -70,7 +70,7 @@ impl<P: instant::Absolute> RateLimitStateWithClock<LeakyBucket<P>, P> for State<
 #[cfg(feature = "std")]
 mod std {
     use evmap::ShallowCopy;
-    use instant::Relative;
+    use crate::instant::Relative;
 
     impl<P: Relative> ShallowCopy for super::State<P> {
         unsafe fn shallow_copy(&mut self) -> Self {

@@ -2,12 +2,12 @@
 //! An in-memory rate limiter that can keep track of rates for
 //! multiple keys, e.g. per-customer or per-IP rates.
 
-use lib::*;
+use crate::lib::*;
 
 use evmap::{self, ReadHandle, WriteHandle};
 use parking_lot::Mutex;
 
-use {
+use crate::{
     algorithms::{Algorithm, DefaultAlgorithm, KeyableRateLimitState, RateLimitStateWithClock},
     instant, InconsistentCapacity, NegativeMultiDecision,
 };
