@@ -8,13 +8,13 @@ use std::time::SystemTime;
 /// and returns that.
 #[derive(Debug, Clone)]
 pub struct FakeClock {
-    now: Arc<Mutex<Duration>>,
+    now: Arc<Mutex<Instant>>,
 }
 
 impl Default for FakeClock {
     fn default() -> Self {
         FakeClock {
-            now: Arc::new(Mutex::new(Duration::from_nanos(0))),
+            now: Arc::new(Mutex::new(Instant::now())),
         }
     }
 }
@@ -27,11 +27,11 @@ impl FakeClock {
 }
 
 impl Clock for FakeClock {
-    type Instant = Duration;
+    type Instant = Instant;
     type Duration = Duration;
 
     fn now(&self) -> Self::Instant {
-        self.now.lock().clone()
+        *self.now.lock()
     }
 }
 
