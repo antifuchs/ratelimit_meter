@@ -6,33 +6,11 @@
 
 use crate::lib::*;
 
-/// A point in time that is used as a reference for measuring a rate
-/// limit. On a clock, it has meaning only relative to some other
-/// point in time.
-pub trait Relative:
-    Sized
-    + Sub<Self, Output = Self>
-    + Add<Self, Output = Self>
-    + PartialEq
-    + Eq
-    + Ord
-    + Copy
-    + Clone
-    + Send
-    + Sync
-    + Debug
-{
-    /// Returns the amount of time elapsed from an earlier point in time.
-    fn duration_since(&self, earlier: Self) -> Self {
-        *self - earlier
-    }
-}
-
 /// A measurement from a clock.
-pub trait Reference<Relative>:
+pub trait Reference:
     Sized
-    + Sub<Relative, Output = Self>
-    + Add<Relative, Output = Self>
+    + Sub<Duration, Output = Self>
+    + Add<Duration, Output = Self>
     + PartialEq
     + Eq
     + Ord
@@ -43,27 +21,23 @@ pub trait Reference<Relative>:
     + Debug
 {
     /// Determines the time that separates two measurements of a clock.
-    fn duration_since(&self, earlier: Self) -> Relative;
+    fn duration_since(&self, earlier: Self) -> Duration;
 }
 
 /// A time source used by rate limiters.
 pub trait Clock: Default {
     /// A measurement of a monotonically increasing clock.
-    type Instant: Reference<Self::Duration>;
-
-    /// An interval between two measurements.
-    type Duration: Relative;
+    type Instant: Reference;
 
     /// Returns a measurement of the clock.
     fn now(&self) -> Self::Instant;
 }
 
-impl Reference<Duration> for Duration {
+impl Reference for Duration {
     fn duration_since(&self, earlier: Self) -> Duration {
         *self - earlier
     }
 }
-impl Relative for Duration {}
 
 #[cfg(not(feature = "std"))]
 mod no_std;

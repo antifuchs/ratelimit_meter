@@ -26,7 +26,6 @@ impl FakeClock {
 
 impl Clock for FakeClock {
     type Instant = Duration;
-    type Duration = Duration;
 
     fn now(&self) -> Self::Instant {
         self.now

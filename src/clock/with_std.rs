@@ -28,7 +28,6 @@ impl FakeClock {
 
 impl Clock for FakeClock {
     type Instant = Instant;
-    type Duration = Duration;
 
     fn now(&self) -> Self::Instant {
         *self.now.lock()
@@ -44,7 +43,7 @@ impl Default for MonotonicClock {
     }
 }
 
-impl Reference<Duration> for Instant {
+impl Reference for Instant {
     fn duration_since(&self, earlier: Self) -> Duration {
         *self - earlier
     }
@@ -52,7 +51,6 @@ impl Reference<Duration> for Instant {
 
 impl Clock for MonotonicClock {
     type Instant = Instant;
-    type Duration = Duration;
 
     fn now(&self) -> Self::Instant {
         Instant::now()
@@ -68,7 +66,7 @@ impl Default for SystemClock {
     }
 }
 
-impl Reference<Duration> for SystemTime {
+impl Reference for SystemTime {
     /// Returns the difference in times between the two
     /// SystemTimes. Due to the fallible nature of SystemTimes,
     /// returns the zero duration if a negative duration would
@@ -81,7 +79,6 @@ impl Reference<Duration> for SystemTime {
 
 impl Clock for SystemClock {
     type Instant = SystemTime;
-    type Duration = Duration;
 
     fn now(&self) -> Self::Instant {
         SystemTime::now()
