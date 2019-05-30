@@ -12,7 +12,7 @@ pub struct FakeClock {
 impl Default for FakeClock {
     fn default() -> Self {
         FakeClock {
-            Duration::from_nanos(0)
+            now: Duration::from_nanos(0),
         }
     }
 }
