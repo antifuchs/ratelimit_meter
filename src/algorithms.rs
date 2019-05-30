@@ -145,8 +145,8 @@ pub trait RateLimitStateWithClock<P, I: instant::Absolute>: RateLimitState<P, I>
 
 #[cfg(feature = "std")]
 mod std {
-    use evmap::ShallowCopy;
     use crate::instant;
+    use evmap::ShallowCopy;
 
     /// Trait implemented by all rate limit states that are compatible
     /// with the KeyedRateLimiters.

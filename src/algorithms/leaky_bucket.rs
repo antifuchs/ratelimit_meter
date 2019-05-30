@@ -69,8 +69,8 @@ impl<P: instant::Absolute> RateLimitStateWithClock<LeakyBucket<P>, P> for State<
 
 #[cfg(feature = "std")]
 mod std {
-    use evmap::ShallowCopy;
     use crate::instant::Relative;
+    use evmap::ShallowCopy;
 
     impl<P: Relative> ShallowCopy for super::State<P> {
         unsafe fn shallow_copy(&mut self) -> Self {
