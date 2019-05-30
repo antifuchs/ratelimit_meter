@@ -1,4 +1,4 @@
-use lib::*;
+use crate::lib::*;
 
 /// An error that is returned when initializing a rate limiter that is
 /// too small to let a single cell through.

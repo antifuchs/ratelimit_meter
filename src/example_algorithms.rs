@@ -1,5 +1,5 @@
-use lib::*;
-use {
+use crate::lib::*;
+use crate::{
     algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
     instant,
     instant::Absolute,

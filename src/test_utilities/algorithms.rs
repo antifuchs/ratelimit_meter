@@ -1,5 +1,5 @@
-use lib::*;
-use {algorithms::Algorithm, instant, NegativeMultiDecision};
+use crate::lib::*;
+use crate::{algorithms::Algorithm, instant, NegativeMultiDecision};
 
 /// A representation of a bare in-memory algorithm, without any bucket
 /// attached.

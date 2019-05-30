@@ -1,6 +1,6 @@
-use algorithms::Algorithm;
-use instant;
-use state::DirectRateLimiter;
+use crate::algorithms::Algorithm;
+use crate::instant;
+use crate::state::DirectRateLimiter;
 
 #[derive(Debug)]
 pub enum Variant {
@@ -35,7 +35,7 @@ where
 #[cfg(feature = "std")]
 mod std {
     use super::*;
-    use {algorithms::KeyableRateLimitState, instant::Absolute, KeyedRateLimiter};
+    use crate::{algorithms::KeyableRateLimitState, instant::Absolute, KeyedRateLimiter};
 
     pub struct KeyedBucket<A: Algorithm<P>, P: Absolute>(KeyedRateLimiter<u32, A, P>)
     where

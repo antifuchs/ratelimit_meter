@@ -1,9 +1,9 @@
 //! An in-memory rate limiter that can make decisions for a single
 //! situation.
 
-use lib::*;
+use crate::lib::*;
 
-use {
+use crate::{
     algorithms::{Algorithm, DefaultAlgorithm},
     instant, InconsistentCapacity, NegativeMultiDecision,
 };
