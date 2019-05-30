@@ -11,6 +11,14 @@ pub struct FakeClock {
     now: Arc<Mutex<Duration>>,
 }
 
+impl Default for FakeClock {
+    fn default() -> Self {
+        FakeClock {
+            now: Arc::new(Mutex::new(Duration::from_nanos(0))),
+        }
+    }
+}
+
 impl FakeClock {
     /// Advances the fake clock by the given amount.
     pub fn advance(&mut self, by: Duration) {
@@ -30,6 +38,12 @@ impl Clock for FakeClock {
 /// The monotonic clock implemented by [`Instant`].
 pub struct MonotonicClock();
 
+impl Default for MonotonicClock {
+    fn default() -> Self {
+        MonotonicClock()
+    }
+}
+
 impl Reference<Duration> for Instant {
     fn duration_since(&self, earlier: Self) -> Duration {
         *self - earlier
@@ -47,6 +61,12 @@ impl Clock for MonotonicClock {
 
 /// The non-monotonic clock implemented by [`SystemTime`].
 pub struct SystemClock();
+
+impl Default for SystemClock {
+    fn default() -> Self {
+        SystemClock()
+    }
+}
 
 impl Reference<Duration> for SystemTime {
     /// Returns the difference in times between the two

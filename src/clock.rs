@@ -47,7 +47,7 @@ pub trait Reference<Relative>:
 }
 
 /// A time source used by rate limiters.
-pub trait Clock {
+pub trait Clock: Default {
     /// A measurement of a monotonically increasing clock.
     type Instant: Reference<Self::Duration>;
 

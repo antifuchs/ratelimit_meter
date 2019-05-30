@@ -9,6 +9,14 @@ pub struct FakeClock {
     now: Duration,
 }
 
+impl Default for FakeClock {
+    fn default() -> Self {
+        FakeClock {
+            Duration::from_nanos(0)
+        }
+    }
+}
+
 impl FakeClock {
     /// Advances the fake clock by the given amount.
     pub fn advance(&mut self, by: Duration) {
