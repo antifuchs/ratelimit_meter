@@ -43,14 +43,8 @@ impl Clock for FakeAbsoluteClock {
 }
 
 /// The monotonic clock implemented by [`Instant`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MonotonicClock();
-
-impl Default for MonotonicClock {
-    fn default() -> Self {
-        MonotonicClock()
-    }
-}
 
 impl Reference for Instant {
     fn duration_since(&self, earlier: Self) -> Duration {
@@ -67,14 +61,8 @@ impl Clock for MonotonicClock {
 }
 
 /// The non-monotonic clock implemented by [`SystemTime`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SystemClock();
-
-impl Default for SystemClock {
-    fn default() -> Self {
-        SystemClock()
-    }
-}
 
 impl Reference for SystemTime {
     /// Returns the difference in times between the two
