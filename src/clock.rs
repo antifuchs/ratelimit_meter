@@ -39,6 +39,37 @@ impl Reference for Duration {
     }
 }
 
+/// A mock implementation of a clock. All it does is keep track of
+/// what "now" is (relative to some point meaningful to the program),
+/// and returns that.
+#[derive(Debug, PartialEq, Clone)]
+pub struct FakeRelativeClock {
+    now: Duration,
+}
+
+impl Default for FakeRelativeClock {
+    fn default() -> Self {
+        FakeRelativeClock {
+            now: Duration::from_nanos(0),
+        }
+    }
+}
+
+impl FakeRelativeClock {
+    /// Advances the fake clock by the given amount.
+    pub fn advance(&mut self, by: Duration) {
+        self.now += by
+    }
+}
+
+impl Clock for FakeRelativeClock {
+    type Instant = Duration;
+
+    fn now(&self) -> Self::Instant {
+        self.now
+    }
+}
+
 #[cfg(not(feature = "std"))]
 mod no_std;
 #[cfg(not(feature = "std"))]

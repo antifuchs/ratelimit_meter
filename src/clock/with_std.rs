@@ -3,30 +3,31 @@ use crate::lib::*;
 use parking_lot::Mutex;
 use std::time::SystemTime;
 
-/// A mock implementation of a clock. All it does is keep track of
-/// what "now" is (relative to some point meaningful to the program),
-/// and returns that.
+/// A mock implementation of a clock tracking [`Instant`]s. All it
+/// does is keep track of what "now" is by allowing the program to
+/// increment the current time (taken at time of construction) by some
+/// arbitrary [`Duration`].
 #[derive(Debug, Clone)]
-pub struct FakeClock {
+pub struct FakeAbsoluteClock {
     now: Arc<Mutex<Instant>>,
 }
 
-impl Default for FakeClock {
+impl Default for FakeAbsoluteClock {
     fn default() -> Self {
-        FakeClock {
+        FakeAbsoluteClock {
             now: Arc::new(Mutex::new(Instant::now())),
         }
     }
 }
 
-impl FakeClock {
+impl FakeAbsoluteClock {
     /// Advances the fake clock by the given amount.
     pub fn advance(&mut self, by: Duration) {
         *(self.now.lock()) += by
     }
 }
 
-impl Clock for FakeClock {
+impl Clock for FakeAbsoluteClock {
     type Instant = Instant;
 
     fn now(&self) -> Self::Instant {
