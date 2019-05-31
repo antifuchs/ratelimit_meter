@@ -1,7 +1,7 @@
 use crate::lib::*;
 use crate::{
-    algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
-    instant,
+    algorithms::{Algorithm, RateLimitState},
+    clock,
     instant::Absolute,
     DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision,
 };
@@ -27,9 +27,7 @@ impl Allower {
     }
 }
 
-impl RateLimitState<Allower, Always> for () {}
-
-impl RateLimitStateWithClock<Allower, Always> for () {
+impl RateLimitState<Allower, Always> for () {
     fn last_touched(&self, _params: &Allower) -> Always {
         Always::now()
     }
@@ -75,15 +73,9 @@ impl Algorithm<Always> for Allower {
 /// never denies any requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Always();
-impl instant::Relative for Always {
+impl clock::Reference for Always {
     fn duration_since(&self, _other: Self) -> Duration {
         Duration::new(0, 0)
-    }
-}
-
-impl instant::Absolute for Always {
-    fn now() -> Self {
-        Always()
     }
 }
 

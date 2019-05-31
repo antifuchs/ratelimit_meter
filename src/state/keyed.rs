@@ -8,7 +8,7 @@ use evmap::{self, ReadHandle, WriteHandle};
 use parking_lot::Mutex;
 
 use crate::{
-    algorithms::{Algorithm, DefaultAlgorithm, KeyableRateLimitState, RateLimitStateWithClock},
+    algorithms::{Algorithm, DefaultAlgorithm, KeyableRateLimitState},
     instant, InconsistentCapacity, NegativeMultiDecision,
 };
 
@@ -239,7 +239,7 @@ where
     ///
     /// To be eligible for expiration, a key's rate limiter state must
     /// be at least `min_age` past its last relevance (see
-    /// [`RateLimitStateWithClock.last_touched`](../../algorithms/trait.RateLimitStateWithClock.html#method.last_touched)).
+    /// [`RateLimitState.last_touched`](../../algorithms/trait.RateLimitState.html#method.last_touched)).
     ///
     /// This method works in two parts, but both parts block new keys
     /// from getting added while they're running:

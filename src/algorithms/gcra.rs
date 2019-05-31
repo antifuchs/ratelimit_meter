@@ -3,18 +3,18 @@
 use crate::lib::*;
 
 use crate::{
-    algorithms::{Algorithm, NonConformance, RateLimitState, RateLimitStateWithClock},
-    instant,
+    algorithms::{Algorithm, NonConformance, RateLimitState},
+    clock,
     thread_safety::ThreadsafeWrapper,
     InconsistentCapacity, NegativeMultiDecision,
 };
 
 #[cfg(feature = "std")]
 mod std {
-    use crate::instant::Relative;
+    use crate::clock;
     use evmap::ShallowCopy;
 
-    impl<P: Relative> ShallowCopy for super::State<P> {
+    impl<P: clock::Reference> ShallowCopy for super::State<P> {
         unsafe fn shallow_copy(&mut self) -> Self {
             super::State(self.0.shallow_copy())
         }
@@ -22,9 +22,9 @@ mod std {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-struct Tat<P: instant::Relative>(Option<P>);
+struct Tat<P: clock::Reference>(Option<P>);
 
-impl<P: instant::Relative> Default for Tat<P> {
+impl<P: clock::Reference> Default for Tat<P> {
     fn default() -> Self {
         Tat(None)
     }
@@ -32,17 +32,15 @@ impl<P: instant::Relative> Default for Tat<P> {
 
 /// The GCRA's state about a single rate limiting history.
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct State<P: instant::Relative>(ThreadsafeWrapper<Tat<P>>);
+pub struct State<P: clock::Reference>(ThreadsafeWrapper<Tat<P>>);
 
-impl<P: instant::Relative> Default for State<P> {
+impl<P: clock::Reference> Default for State<P> {
     fn default() -> Self {
         State(Default::default())
     }
 }
 
-impl<P: instant::Relative> RateLimitState<GCRA<P>, P> for State<P> {}
-
-impl<P: instant::Absolute> RateLimitStateWithClock<GCRA<P>, P> for State<P> {
+impl<P: clock::Reference> RateLimitState<GCRA<P>, P> for State<P> {
     fn last_touched(&self, params: &GCRA<P>) -> P {
         let data = self.0.snapshot();
         data.0.unwrap_or_else(P::now) + params.tau
@@ -55,15 +53,15 @@ impl<P: instant::Absolute> RateLimitStateWithClock<GCRA<P>, P> for State<P> {
 /// To avoid thundering herd effects, client code should always add a
 /// random amount of jitter to wait time estimates.
 #[derive(Debug, PartialEq)]
-pub struct NotUntil<P: instant::Relative>(P);
+pub struct NotUntil<P: clock::Reference>(P);
 
-impl<P: instant::Relative> fmt::Display for NotUntil<P> {
+impl<P: clock::Reference> fmt::Display for NotUntil<P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "rate-limited until {:?}", self.0)
     }
 }
 
-impl<P: instant::Relative> NonConformance<P> for NotUntil<P> {
+impl<P: clock::Reference> NonConformance<P> for NotUntil<P> {
     #[inline]
     fn earliest_possible(&self) -> P {
         self.0
@@ -128,7 +126,7 @@ impl<P: instant::Relative> NonConformance<P> for NotUntil<P> {
 /// # #[cfg(not(feature = "std"))] fn main() {}
 /// ```
 #[derive(Debug, Clone)]
-pub struct GCRA<P: instant::Relative = instant::TimeSource> {
+pub struct GCRA<P: clock::Reference = clock::DefaultReference> {
     // The "weight" of a single packet in units of time.
     t: Duration,
 
@@ -138,7 +136,7 @@ pub struct GCRA<P: instant::Relative = instant::TimeSource> {
     point: PhantomData<P>,
 }
 
-impl<P: instant::Relative> Algorithm<P> for GCRA<P> {
+impl<P: clock::Reference> Algorithm<P> for GCRA<P> {
     type BucketState = State<P>;
 
     type NegativeDecision = NotUntil<P>;

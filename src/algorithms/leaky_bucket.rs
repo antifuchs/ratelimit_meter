@@ -3,7 +3,7 @@
 use crate::lib::*;
 use crate::thread_safety::ThreadsafeWrapper;
 use crate::{
-    algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
+    algorithms::{Algorithm, RateLimitState},
     instant, InconsistentCapacity, NegativeMultiDecision, NonConformance,
 };
 
@@ -58,9 +58,7 @@ impl<P: instant::Relative> Default for State<P> {
     }
 }
 
-impl<P: instant::Relative> RateLimitState<LeakyBucket<P>, P> for State<P> {}
-
-impl<P: instant::Absolute> RateLimitStateWithClock<LeakyBucket<P>, P> for State<P> {
+impl<P: instant::Relative> RateLimitState<LeakyBucket<P>, P> for State<P> {
     fn last_touched(&self, _params: &LeakyBucket<P>) -> P {
         let data = self.0.snapshot();
         data.last_update.unwrap_or_else(P::now) + data.level

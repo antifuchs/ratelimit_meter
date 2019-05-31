@@ -5,7 +5,7 @@ use crate::lib::*;
 
 use crate::{
     algorithms::{Algorithm, DefaultAlgorithm},
-    instant, InconsistentCapacity, NegativeMultiDecision,
+    clock, InconsistentCapacity, NegativeMultiDecision,
 };
 
 /// An in-memory rate limiter that makes direct (un-keyed)
@@ -15,17 +15,18 @@ use crate::{
 /// limit.
 #[derive(Debug, Clone)]
 pub struct DirectRateLimiter<
-    A: Algorithm<P> = DefaultAlgorithm,
-    P: instant::Relative = instant::TimeSource,
+    A: Algorithm<C::Instant> = DefaultAlgorithm,
+    C: clock::Clock = clock::DefaultClock,
 > {
     state: A::BucketState,
     algorithm: A,
+    clock: C,
 }
 
-impl<A, P> DirectRateLimiter<A, P>
+impl<A, C> DirectRateLimiter<A, C>
 where
-    P: instant::Relative,
-    A: Algorithm<P>,
+    C: clock::Clock,
+    A: Algorithm<C::Instant>,
 {
     /// Construct a new rate limiter that allows `capacity` cells per
     /// time unit through.
@@ -54,9 +55,14 @@ where
     /// ```
     pub fn new(capacity: NonZeroU32, per_time_unit: Duration) -> Self {
         DirectRateLimiter {
-            state: <A as Algorithm<P>>::BucketState::default(),
-            algorithm: <A as Algorithm<P>>::construct(capacity, nonzero!(1u32), per_time_unit)
-                .unwrap(),
+            state: <A as Algorithm<C::Instant>>::BucketState::default(),
+            algorithm: <A as Algorithm<C::Instant>>::construct(
+                capacity,
+                nonzero!(1u32),
+                per_time_unit,
+            )
+            .unwrap(),
+            clock: Default::default(),
         }
     }
 
@@ -90,19 +96,22 @@ where
 
     /// Return a builder that can be used to construct a rate limiter using
     /// the parameters passed to the Builder.
-    pub fn build_with_capacity(capacity: NonZeroU32) -> Builder<P, A> {
+    pub fn build_with_capacity(capacity: NonZeroU32) -> Builder<C, A> {
         Builder {
             capacity,
             cell_weight: nonzero!(1u32),
             time_unit: Duration::from_secs(1),
             end_result: PhantomData,
-            point_result: PhantomData,
+            clock: Default::default(),
         }
     }
 
     /// Tests whether a single cell can be accommodated at the given
     /// time stamp. See [`check`](#method.check).
-    pub fn check_at(&mut self, at: P) -> Result<(), <A as Algorithm<P>>::NegativeDecision> {
+    pub fn check_at(
+        &mut self,
+        at: C::Instant,
+    ) -> Result<(), <A as Algorithm<C::Instant>>::NegativeDecision> {
         self.algorithm.test_and_update(&self.state, at)
     }
 
@@ -111,19 +120,13 @@ where
     pub fn check_n_at(
         &mut self,
         n: u32,
-        at: P,
-    ) -> Result<(), NegativeMultiDecision<<A as Algorithm<P>>::NegativeDecision>> {
+        at: C::Instant,
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm<C::Instant>>::NegativeDecision>> {
         self.algorithm.test_n_and_update(&self.state, n, at)
     }
-}
 
-impl<A, P> DirectRateLimiter<A, P>
-where
-    P: instant::Absolute,
-    A: Algorithm<P>,
-{
-    /// Tests if a single cell can be accommodated at
-    /// `Instant::now()`. If it can be, `check` updates the rate
+    /// Tests if a single cell can be accommodated at the clock's
+    /// current reading. If it can be, `check` updates the rate
     /// limiter state to account for the conforming cell and returns
     /// `Ok(())`.
     ///
@@ -131,12 +134,13 @@ where
     /// at this time stamp), `check_at` returns `Err` with information
     /// about the earliest time at which a cell could be considered
     /// conforming.
-    pub fn check(&mut self) -> Result<(), <A as Algorithm<P>>::NegativeDecision> {
-        self.algorithm.test_and_update(&self.state, P::now())
+    pub fn check(&mut self) -> Result<(), <A as Algorithm<C::Instant>>::NegativeDecision> {
+        self.algorithm
+            .test_and_update(&self.state, self.clock.now())
     }
 
-    /// Tests if `n` cells can be accommodated at the current time
-    /// stamp. If (and only if) all cells in the batch can be
+    /// Tests if `n` cells can be accommodated at the clock's current
+    /// reading. If (and only if) all cells in the batch can be
     /// accomodated, the `MultiDecider` updates the internal state to
     /// account for all cells and returns `Ok(())`.
     ///
@@ -153,36 +157,37 @@ where
     pub fn check_n(
         &mut self,
         n: u32,
-    ) -> Result<(), NegativeMultiDecision<<A as Algorithm<P>>::NegativeDecision>> {
-        self.algorithm.test_n_and_update(&self.state, n, P::now())
+    ) -> Result<(), NegativeMultiDecision<<A as Algorithm<C::Instant>>::NegativeDecision>> {
+        self.algorithm
+            .test_n_and_update(&self.state, n, self.clock.now())
     }
 }
 
 /// An object that allows incrementally constructing rate Limiter
 /// objects.
-pub struct Builder<P, A>
+pub struct Builder<C, A>
 where
-    P: instant::Relative,
-    A: Algorithm<P> + Sized,
+    C: clock::Clock,
+    A: Algorithm<C::Instant> + Sized,
 {
     capacity: NonZeroU32,
     cell_weight: NonZeroU32,
     time_unit: Duration,
     end_result: PhantomData<A>,
-    point_result: PhantomData<P>,
+    clock: C,
 }
 
-impl<P, A> Builder<P, A>
+impl<C, A> Builder<C, A>
 where
-    P: instant::Relative,
-    A: Algorithm<P> + Sized,
+    C: clock::Clock,
+    A: Algorithm<C::Instant> + Sized,
 {
     /// Sets the "weight" of each cell being checked against the
     /// bucket. Each cell fills the bucket by this much.
     pub fn cell_weight(
         &mut self,
         weight: NonZeroU32,
-    ) -> Result<&mut Builder<P, A>, InconsistentCapacity> {
+    ) -> Result<&mut Builder<C, A>, InconsistentCapacity> {
         if self.cell_weight > self.capacity {
             return Err(InconsistentCapacity::new(self.capacity, self.cell_weight));
         }
@@ -194,20 +199,27 @@ where
     ///
     /// The assumption is that in a period of `time_unit` (if no cells
     /// are being checked), the bucket is fully drained.
-    pub fn per(&mut self, time_unit: Duration) -> &mut Builder<P, A> {
+    pub fn per(&mut self, time_unit: Duration) -> &mut Builder<C, A> {
         self.time_unit = time_unit;
         self
     }
 
+    /// Sets the clock used by the bucket.
+    pub fn using_clock(&mut self, clock: C) -> &mut Builder<C, A> {
+        self.clock = clock;
+        self
+    }
+
     /// Builds a rate limiter of the specified type.
-    pub fn build(&self) -> Result<DirectRateLimiter<A, P>, InconsistentCapacity> {
+    pub fn build(&self) -> Result<DirectRateLimiter<A, C>, InconsistentCapacity> {
         Ok(DirectRateLimiter {
-            state: <A as Algorithm<P>>::BucketState::default(),
-            algorithm: <A as Algorithm<P>>::construct(
+            state: <A as Algorithm<C::Instant>>::BucketState::default(),
+            algorithm: <A as Algorithm<C::Instant>>::construct(
                 self.capacity,
                 self.cell_weight,
                 self.time_unit,
             )?,
+            clock: self.clock,
         })
     }
 }
