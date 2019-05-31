@@ -1,15 +1,15 @@
 use crate::lib::*;
-use crate::{algorithms::Algorithm, instant, NegativeMultiDecision};
+use crate::{algorithms::Algorithm, clock, NegativeMultiDecision};
 
 /// A representation of a bare in-memory algorithm, without any bucket
 /// attached.
 #[derive(Debug)]
-pub struct AlgorithmForTest<A: Algorithm<P>, P: instant::Relative>(A, PhantomData<P>);
+pub struct AlgorithmForTest<A: Algorithm<C::Instant>, C: clock::Clock>(A, C);
 
-impl<'a, A, P> AlgorithmForTest<A, P>
+impl<'a, A, C> AlgorithmForTest<A, C>
 where
-    A: Algorithm<P>,
-    P: instant::Relative,
+    A: Algorithm<C::Instant>,
+    C: clock::Clock,
 {
     pub fn new<U: Into<Option<NonZeroU32>>, D: Into<Option<Duration>>>(
         cap: NonZeroU32,
@@ -25,7 +25,7 @@ where
                     .unwrap_or(crate::lib::Duration::from_secs(1)),
             )
             .unwrap(),
-            PhantomData,
+            Default::default(),
         )
     }
 
@@ -37,7 +37,7 @@ where
         A::BucketState::default()
     }
 
-    pub fn check(&self, state: &A::BucketState, t0: P) -> Result<(), A::NegativeDecision> {
+    pub fn check(&self, state: &A::BucketState, t0: C::Instant) -> Result<(), A::NegativeDecision> {
         self.0.test_and_update(state, t0)
     }
 
@@ -45,16 +45,16 @@ where
         &self,
         state: &A::BucketState,
         n: u32,
-        t0: P,
+        t0: C::Instant,
     ) -> Result<(), NegativeMultiDecision<A::NegativeDecision>> {
         self.0.test_n_and_update(state, n, t0)
     }
 }
 
-impl<A, P> Default for AlgorithmForTest<A, P>
+impl<A, C> Default for AlgorithmForTest<A, C>
 where
-    A: Algorithm<P>,
-    P: instant::Relative,
+    A: Algorithm<C::Instant>,
+    C: clock::Clock,
 {
     fn default() -> Self {
         Self::new(nonzero!(1u32), None, None)

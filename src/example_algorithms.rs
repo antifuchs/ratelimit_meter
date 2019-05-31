@@ -21,7 +21,7 @@ pub struct Allower {}
 impl Allower {
     /// Return a rate-limiter that lies, i.e. that allows all requests
     /// through.
-    pub fn ratelimiter() -> DirectRateLimiter<Allower, Always> {
+    pub fn ratelimiter() -> DirectRateLimiter<Allower, ForeverClock> {
         // These numbers are fake, but we make them up for convenience:
         DirectRateLimiter::per_second(nonzero!(1u32))
     }
@@ -89,6 +89,17 @@ impl Add<Duration> for Always {
 impl Sub<Duration> for Always {
     type Output = Always;
     fn sub(self, _rhs: Duration) -> Always {
+        Always()
+    }
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct ForeverClock();
+
+impl clock::Clock for ForeverClock {
+    type Instant = Always;
+
+    fn now(&self) -> Self::Instant {
         Always()
     }
 }
