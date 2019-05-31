@@ -39,13 +39,6 @@ pub trait NonConformance<P: clock::Reference = clock::DefaultReference> {
         let earliest = self.earliest_possible();
         earliest.duration_since(earliest.min(from))
     }
-
-    /// Returns the minimum amount of time (down to 0) that needs to
-    /// pass from the current instant for the Decider to consider a
-    /// cell conforming again.
-    fn wait_time(&self) -> Duration {
-        self.wait_time_from(P::now())
-    }
 }
 
 /// The trait that implementations of metered rate-limiter algorithms
