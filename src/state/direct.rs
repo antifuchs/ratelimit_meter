@@ -219,7 +219,7 @@ where
                 self.cell_weight,
                 self.time_unit,
             )?,
-            clock: self.clock,
+            clock: self.clock.clone(),
         })
     }
 }

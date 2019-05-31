@@ -25,7 +25,7 @@ pub trait Reference:
 }
 
 /// A time source used by rate limiters.
-pub trait Clock: Default {
+pub trait Clock: Default + Clone {
     /// A measurement of a monotonically increasing clock.
     type Instant: Reference;
 

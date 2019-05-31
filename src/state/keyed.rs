@@ -8,12 +8,12 @@ use evmap::{self, ReadHandle, WriteHandle};
 use parking_lot::Mutex;
 
 use crate::{
-    algorithms::{Algorithm, DefaultAlgorithm, KeyableRateLimitState},
+    algorithms::{Algorithm, DefaultAlgorithm, KeyableRateLimitState, RateLimitState},
     clock, InconsistentCapacity, NegativeMultiDecision,
 };
 
-type MapWriteHandle<K, C: clock::Clock, A, H> =
-    Arc<Mutex<WriteHandle<K, <A as Algorithm<C::Instant>>::BucketState, (), H>>>;
+type MapWriteHandle<K, C, A, H> =
+    Arc<Mutex<WriteHandle<K, <A as Algorithm<<C as clock::Clock>::Instant>>::BucketState, (), H>>>;
 
 /// An in-memory rate limiter that regulates a single rate limit for
 /// multiple keys.
@@ -79,6 +79,7 @@ pub struct KeyedRateLimiter<
     algorithm: A,
     map_reader: ReadHandle<K, A::BucketState, (), H>,
     map_writer: MapWriteHandle<K, C, A, H>,
+    clock: C,
 }
 
 impl<A, K, C: clock::Clock> fmt::Debug for KeyedRateLimiter<K, A, C>
@@ -127,6 +128,7 @@ where
             .unwrap(),
             map_reader: r,
             map_writer: Arc::new(Mutex::new(w)),
+            clock: Default::default(),
         }
     }
 
@@ -192,7 +194,7 @@ where
     /// about the earliest time at which a cell could be considered
     /// conforming under that key.
     pub fn check(&mut self, key: K) -> Result<(), <A as Algorithm<C::Instant>>::NegativeDecision> {
-        self.check_at(key, C::now())
+        self.check_at(key, self.clock.now())
     }
 
     /// Tests if `n` cells for the given key can be accommodated at
@@ -216,7 +218,7 @@ where
         key: K,
         n: u32,
     ) -> Result<(), NegativeMultiDecision<<A as Algorithm<C::Instant>>::NegativeDecision>> {
-        self.check_n_at(key, n, C::now())
+        self.check_n_at(key, n, self.clock.now())
     }
 
     /// Tests whether a single cell for the given key can be
@@ -225,7 +227,7 @@ where
     pub fn check_at(
         &mut self,
         key: K,
-        at: C,
+        at: C::Instant,
     ) -> Result<(), <A as Algorithm<C::Instant>>::NegativeDecision> {
         self.check_and_update_key(key, |state| self.algorithm.test_and_update(state, at))
     }
@@ -237,7 +239,7 @@ where
         &mut self,
         key: K,
         n: u32,
-        at: C,
+        at: C::Instant,
     ) -> Result<(), NegativeMultiDecision<<A as Algorithm<C::Instant>>::NegativeDecision>> {
         self.check_and_update_key(key, |state| self.algorithm.test_n_and_update(state, n, at))
     }
@@ -267,26 +269,30 @@ where
     /// The time window in which this can occur is hopefully short
     /// enough that this is an acceptable risk of loss in accuracy.
     pub fn cleanup<D: Into<Option<Duration>>>(&mut self, min_age: D) -> Vec<K> {
-        self.cleanup_at(min_age, C::now())
+        self.cleanup_at(min_age, self.clock.now())
     }
 
     /// Removes the keys from this rate limiter that can be expired
     /// safely at the given time stamp. See
     /// [`cleanup`](#method.cleanup). It returns the list of expired
     /// keys.
-    pub fn cleanup_at<D: Into<Option<Duration>>, I: Into<Option<C>>>(
+    pub fn cleanup_at<D: Into<Option<Duration>>, I: Into<Option<C::Instant>>>(
         &mut self,
         min_age: D,
         at: I,
     ) -> Vec<K> {
         let params = &self.algorithm;
         let min_age = min_age.into().unwrap_or_else(|| Duration::new(0, 0));
-        let at = at.into().unwrap_or_else(C::now);
+        let at = at.into().unwrap_or_else(|| self.clock.now());
 
         let mut expireable: Vec<K> = vec![];
         self.map_reader.for_each(|k, v| {
             if let Some(state) = v.get(0) {
-                if state.last_touched(params) < at - min_age {
+                if state
+                    .last_touched(params)
+                    .unwrap_or_else(|| self.clock.now())
+                    < at - min_age
+                {
                     expireable.push(k.clone());
                 }
             }
@@ -306,7 +312,8 @@ where
 /// A constructor for keyed rate limiters.
 pub struct Builder<K: Eq + Hash + Clone, C: clock::Clock, A: Algorithm<C::Instant>, H: BuildHasher>
 {
-    end_result: PhantomData<(K, C, A)>,
+    end_result: PhantomData<(K, A)>,
+    clock: C,
     capacity: NonZeroU32,
     cell_weight: NonZeroU32,
     per_time_unit: Duration,
@@ -324,6 +331,7 @@ where
     fn default() -> Builder<K, C, A, RandomState> {
         Builder {
             end_result: PhantomData,
+            clock: Default::default(),
             map_capacity: None,
             capacity: nonzero!(1u32),
             cell_weight: nonzero!(1u32),
@@ -345,6 +353,7 @@ where
     pub fn with_hasher<H2: BuildHasher>(self, hash_builder: H2) -> Builder<K, C, A, H2> {
         Builder {
             hasher: hash_builder,
+            clock: Default::default(),
             end_result: self.end_result,
             capacity: self.capacity,
             cell_weight: self.cell_weight,
@@ -374,6 +383,11 @@ where
         }
     }
 
+    /// Sets the clock used by the bucket.
+    pub fn using_clock(self, clock: C) -> Self {
+        Builder { clock, ..self }
+    }
+
     /// Constructs a keyed rate limiter with the given options.
     pub fn build(self) -> Result<KeyedRateLimiter<K, A, C, H>, InconsistentCapacity>
     where
@@ -395,6 +409,7 @@ where
                 self.cell_weight,
                 self.per_time_unit,
             )?,
+            clock: self.clock,
             map_reader: r,
             map_writer: Arc::new(Mutex::new(w)),
         })

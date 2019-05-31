@@ -59,9 +59,9 @@ impl<P: clock::Reference> Default for State<P> {
 }
 
 impl<P: clock::Reference> RateLimitState<LeakyBucket<P>, P> for State<P> {
-    fn last_touched(&self, _params: &LeakyBucket<P>) -> P {
+    fn last_touched(&self, _params: &LeakyBucket<P>) -> Option<P> {
         let data = self.0.snapshot();
-        data.last_update.unwrap_or_else(P::now) + data.level
+        Some(data.last_update? + data.level)
     }
 }
 

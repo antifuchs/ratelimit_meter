@@ -41,9 +41,9 @@ impl<P: clock::Reference> Default for State<P> {
 }
 
 impl<P: clock::Reference> RateLimitState<GCRA<P>, P> for State<P> {
-    fn last_touched(&self, params: &GCRA<P>) -> P {
+    fn last_touched(&self, params: &GCRA<P>) -> Option<P> {
         let data = self.0.snapshot();
-        data.0.unwrap_or_else(P::now) + params.tau
+        Some(data.0? + params.tau)
     }
 }
 

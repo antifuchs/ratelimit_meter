@@ -125,7 +125,7 @@ pub trait RateLimitState<P, I: clock::Reference>: Default + Send + Sync + Eq + f
     /// # Thread safety
     /// This uses a bucket state snapshot to determine eligibility;
     /// race conditions can occur.
-    fn last_touched(&self, params: &P) -> I;
+    fn last_touched(&self, params: &P) -> Option<I>;
 }
 
 #[cfg(feature = "std")]

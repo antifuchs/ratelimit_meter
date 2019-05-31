@@ -1,9 +1,7 @@
 use crate::lib::*;
 use crate::{
     algorithms::{Algorithm, RateLimitState},
-    clock,
-    instant::Absolute,
-    DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision,
+    clock, DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision,
 };
 
 /// The most naive implementation of a rate-limiter ever: Always
@@ -28,8 +26,8 @@ impl Allower {
 }
 
 impl RateLimitState<Allower, Always> for () {
-    fn last_touched(&self, _params: &Allower) -> Always {
-        Always::now()
+    fn last_touched(&self, _params: &Allower) -> Option<Always> {
+        None
     }
 }
 

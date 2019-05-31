@@ -4,6 +4,7 @@ use parking_lot::Mutex;
 use std::time::SystemTime;
 
 /// The default clock reference point in time: [`Instant`].
+// TODO: remove this in favor of `DefaultClock::Instant`.
 pub type DefaultReference = Instant;
 
 /// The default clock that reports [`Instant`]s.
@@ -42,6 +43,7 @@ impl Clock for FakeAbsoluteClock {
 }
 
 /// The monotonic clock implemented by [`Instant`].
+#[derive(Clone, Debug)]
 pub struct MonotonicClock();
 
 impl Default for MonotonicClock {
@@ -65,6 +67,7 @@ impl Clock for MonotonicClock {
 }
 
 /// The non-monotonic clock implemented by [`SystemTime`].
+#[derive(Clone, Debug)]
 pub struct SystemClock();
 
 impl Default for SystemClock {
