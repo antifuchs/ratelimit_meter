@@ -221,7 +221,6 @@ pub mod algorithms;
 pub mod clock;
 mod errors;
 pub mod example_algorithms;
-pub mod instant;
 pub mod state;
 pub mod test_utilities;
 mod thread_safety;

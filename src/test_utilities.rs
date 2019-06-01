@@ -6,13 +6,11 @@ pub mod variants;
 
 use crate::lib::*;
 
-use crate::instant;
+use crate::clock;
+use crate::clock::Clock;
 
 /// Returns a "current" moment that's suitable for tests.
-pub fn current_moment() -> instant::TimeSource {
-    #[cfg(feature = "std")]
-    return Instant::now();
-
-    #[cfg(not(feature = "std"))]
-    return Duration::from_secs(90);
+pub fn current_moment() -> clock::DefaultReference {
+    let c = clock::DefaultClock::default();
+    c.now()
 }
