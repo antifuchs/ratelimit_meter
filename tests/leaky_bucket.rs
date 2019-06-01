@@ -78,7 +78,7 @@ fn correct_wait_time() {
 #[test]
 fn prevents_time_travel() {
     let mut lb = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-    let now = current_moment();
+    let now = current_moment() + Duration::from_secs(1);
     let ms = Duration::from_millis(1);
 
     assert!(lb.check_at(now).is_ok());

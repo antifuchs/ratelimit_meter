@@ -75,6 +75,10 @@ impl clock::Reference for Always {
     fn duration_since(&self, _other: Self) -> Duration {
         Duration::new(0, 0)
     }
+
+    fn saturating_sub(&self, _: Duration) -> Self {
+        *self
+    }
 }
 
 impl Add<Duration> for Always {

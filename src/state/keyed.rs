@@ -9,7 +9,9 @@ use parking_lot::Mutex;
 
 use crate::{
     algorithms::{Algorithm, DefaultAlgorithm, KeyableRateLimitState, RateLimitState},
-    clock, InconsistentCapacity, NegativeMultiDecision,
+    clock,
+    clock::Reference,
+    InconsistentCapacity, NegativeMultiDecision,
 };
 
 type MapWriteHandle<K, C, A, H> =
@@ -291,7 +293,7 @@ where
                 if state
                     .last_touched(params)
                     .unwrap_or_else(|| self.clock.now())
-                    < at - min_age
+                    < at.saturating_sub(min_age)
                 {
                     expireable.push(k.clone());
                 }

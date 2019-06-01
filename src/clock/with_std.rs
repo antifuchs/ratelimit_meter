@@ -48,7 +48,15 @@ pub struct MonotonicClock();
 
 impl Reference for Instant {
     fn duration_since(&self, earlier: Self) -> Duration {
-        *self - earlier
+        if earlier < *self {
+            *self - earlier
+        } else {
+            Duration::new(0, 0)
+        }
+    }
+
+    fn saturating_sub(&self, duration: Duration) -> Self {
+        self.checked_sub(duration).unwrap_or(*self)
     }
 }
 
@@ -72,6 +80,10 @@ impl Reference for SystemTime {
     fn duration_since(&self, earlier: Self) -> Duration {
         self.duration_since(earlier)
             .unwrap_or_else(|_| Duration::new(0, 0))
+    }
+
+    fn saturating_sub(&self, duration: Duration) -> Self {
+        self.checked_sub(duration).unwrap_or(*self)
     }
 }
 

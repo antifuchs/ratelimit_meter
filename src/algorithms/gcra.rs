@@ -157,8 +157,7 @@ impl<P: clock::Reference> Algorithm<P> for GCRA<P> {
     }
 
     /// Tests if a single cell can be accommodated by the
-    /// rate-limiter. This is a threadsafe implementation of the
-    /// method described directly in the GCRA algorithm.
+    /// rate-limiter and updates the state, if so.
     fn test_and_update(
         &self,
         state: &Self::BucketState,
@@ -167,8 +166,9 @@ impl<P: clock::Reference> Algorithm<P> for GCRA<P> {
         let tau = self.tau;
         let t = self.t;
         state.0.measure_and_replace(|tat| {
+            // the "theoretical arrival time" of the next cell:
             let tat = tat.0.unwrap_or(t0);
-            if t0 < tat - tau {
+            if t0 < tat.saturating_sub(tau) {
                 (Err(NotUntil(tat)), None)
             } else {
                 (Ok(()), Some(Tat(Some(cmp::max(tat, t0) + t))))
@@ -210,7 +210,7 @@ impl<P: clock::Reference> Algorithm<P> for GCRA<P> {
                 1 => t,
                 _ => t * n,
             };
-            if t0 < tat - tau {
+            if t0 < tat.saturating_sub(tau) {
                 (
                     Err(NegativeMultiDecision::BatchNonConforming(n, NotUntil(tat))),
                     None,

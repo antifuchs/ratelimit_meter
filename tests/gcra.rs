@@ -51,7 +51,7 @@ fn allows_after_interval() {
 fn allows_n_after_interval() {
     let gcra = GCRA::construct(nonzero!(2u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
     let state = <GCRA as Algorithm>::BucketState::default();;
-    let now = current_moment();
+    let now = current_moment() + Duration::from_secs(1);
     let ms = Duration::from_millis(1);
     assert_eq!(Ok(()), gcra.test_n_and_update(&state, 2, now));
     assert!(!gcra.test_n_and_update(&state, 2, now + ms).is_ok());
@@ -130,24 +130,30 @@ fn correct_wait_time() {
 
 #[test]
 fn actual_threadsafety() {
-    let gcra = GCRA::construct(nonzero!(20u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
+    let gcra = GCRA::construct(nonzero!(20u32), nonzero!(1u32), Duration::from_secs(1))
+        .expect("can't build GCRA");
     let state = <GCRA as Algorithm>::BucketState::default();
 
-    let now = current_moment();
+    let now = current_moment() + Duration::from_secs(1);
     let ms = Duration::from_millis(1);
     let mut children = vec![];
 
-    gcra.test_and_update(&state, now).unwrap();
+    gcra.test_and_update(&state, now)
+        .expect("first update should work");
     for _i in 0..20 {
         let state = state.clone();
         let gcra = gcra.clone();
-        children.push(thread::spawn(move || {
-            gcra.test_and_update(&state, now).unwrap();
-        }));
+        children.push(thread::spawn(move || gcra.test_and_update(&state, now)));
     }
-    for child in children {
-        child.join().unwrap();
-    }
+    let results: Vec<Result<(), <ratelimit_meter::GCRA as Algorithm>::NegativeDecision>> = children
+        .into_iter()
+        .enumerate()
+        .map(|(n, c)| c.join().expect(&format!("thread {} panicked", n)))
+        .collect();
+    let expected: Vec<Result<(), <ratelimit_meter::GCRA as Algorithm>::NegativeDecision>> =
+        results.iter().map(|_| Ok(())).collect();
+    assert_eq!(expected, results);
+
     assert_ne!(Ok(()), gcra.test_and_update(&state, now + ms * 2));
     assert_eq!(Ok(()), gcra.test_and_update(&state, now + ms * 1000));
 }

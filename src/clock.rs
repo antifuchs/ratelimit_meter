@@ -8,20 +8,18 @@ use crate::lib::*;
 
 /// A measurement from a clock.
 pub trait Reference:
-    Sized
-    + Sub<Duration, Output = Self>
-    + Add<Duration, Output = Self>
-    + PartialEq
-    + Eq
-    + Ord
-    + Copy
-    + Clone
-    + Send
-    + Sync
-    + Debug
+    Sized + Add<Duration, Output = Self> + PartialEq + Eq + Ord + Copy + Clone + Send + Sync + Debug
 {
-    /// Determines the time that separates two measurements of a clock.
+    /// Determines the time that separates two measurements of a
+    /// clock. Implementations of this must perform a saturating
+    /// subtraction - if the `earlier` timestamp should be later,
+    /// `duration_since` must return the zero duration.
     fn duration_since(&self, earlier: Self) -> Duration;
+
+    /// Returns a reference point that lies at most `duration` in the
+    /// past from the current reference. If an underflow should occur,
+    /// returns the current reference.
+    fn saturating_sub(&self, duration: Duration) -> Self;
 }
 
 /// A time source used by rate limiters.
@@ -35,7 +33,12 @@ pub trait Clock: Default + Clone {
 
 impl Reference for Duration {
     fn duration_since(&self, earlier: Self) -> Duration {
-        *self - earlier
+        self.checked_sub(earlier)
+            .unwrap_or_else(|| Duration::new(0, 0))
+    }
+
+    fn saturating_sub(&self, duration: Duration) -> Self {
+        self.checked_sub(duration).unwrap_or(*self)
     }
 }
 
