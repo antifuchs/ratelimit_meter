@@ -2,6 +2,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
+use ratelimit_meter::clock;
 use ratelimit_meter::test_utilities::variants::{DirectBucket, KeyedBucket, Variant};
 
 pub fn bench_all(c: &mut Criterion) {

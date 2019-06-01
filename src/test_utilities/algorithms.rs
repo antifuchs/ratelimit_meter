@@ -69,14 +69,14 @@ macro_rules! bench_with_algorithm_variants {
             $crate::test_utilities::variants::Variant::GCRA => {
                 let mut $var = $crate::test_utilities::algorithms::AlgorithmForTest::<
                     $crate::GCRA<Instant>,
-                    Instant,
+                    $crate::clock::DefaultClock,
                 >::default();
                 $code
             }
             $crate::test_utilities::variants::Variant::LeakyBucket => {
                 let mut $var = $crate::test_utilities::algorithms::AlgorithmForTest::<
                     $crate::LeakyBucket<Instant>,
-                    Instant,
+                    $crate::clock::DefaultClock,
                 >::default();
                 $code
             }

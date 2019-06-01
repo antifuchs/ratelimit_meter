@@ -94,6 +94,12 @@ impl Sub<Duration> for Always {
 #[derive(Default, Debug, Clone)]
 pub struct ForeverClock();
 
+impl ForeverClock {
+    pub fn now() -> Always {
+        Always()
+    }
+}
+
 impl clock::Clock for ForeverClock {
     type Instant = Always;
 
