@@ -212,8 +212,6 @@
 //! lim.check().ok();
 //! ```
 
-// Allow using the alloc crate
-#![cfg_attr(not(feature = "std"), feature(alloc))]
 // Allow using ratelimit_meter without std
 #![cfg_attr(not(feature = "std"), no_std)]
 // Deny warnings
