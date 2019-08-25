@@ -1,5 +1,5 @@
 use crate::algorithms::Algorithm;
-use crate::instant;
+use crate::clock;
 use crate::state::DirectRateLimiter;
 
 #[derive(Debug)]
@@ -12,22 +12,22 @@ impl Variant {
     pub const ALL: &'static [Variant; 2] = &[Variant::GCRA, Variant::LeakyBucket];
 }
 
-pub struct DirectBucket<A: Algorithm<P>, P: instant::Relative>(DirectRateLimiter<A, P>);
-impl<A, P> Default for DirectBucket<A, P>
+pub struct DirectBucket<A: Algorithm<C::Instant>, C: clock::Clock>(DirectRateLimiter<A, C>);
+impl<A, C> Default for DirectBucket<A, C>
 where
-    P: instant::Relative,
-    A: Algorithm<P>,
+    C: clock::Clock,
+    A: Algorithm<C::Instant>,
 {
     fn default() -> Self {
         DirectBucket(DirectRateLimiter::per_second(nonzero!(50u32)))
     }
 }
-impl<A, P> DirectBucket<A, P>
+impl<A, C> DirectBucket<A, C>
 where
-    P: instant::Relative,
-    A: Algorithm<P>,
+    C: clock::Clock,
+    A: Algorithm<C::Instant>,
 {
-    pub fn limiter(self) -> DirectRateLimiter<A, P> {
+    pub fn limiter(self) -> DirectRateLimiter<A, C> {
         self.0
     }
 }
@@ -35,29 +35,29 @@ where
 #[cfg(feature = "std")]
 mod std {
     use super::*;
-    use crate::{algorithms::KeyableRateLimitState, instant::Absolute, KeyedRateLimiter};
+    use crate::{algorithms::KeyableRateLimitState, clock, KeyedRateLimiter};
 
-    pub struct KeyedBucket<A: Algorithm<P>, P: Absolute>(KeyedRateLimiter<u32, A, P>)
+    pub struct KeyedBucket<A: Algorithm<C::Instant>, C: clock::Clock>(KeyedRateLimiter<u32, A, C>)
     where
-        A::BucketState: KeyableRateLimitState<A, P>;
+        A::BucketState: KeyableRateLimitState<A, C::Instant>;
 
-    impl<A, P> Default for KeyedBucket<A, P>
+    impl<A, C> Default for KeyedBucket<A, C>
     where
-        A: Algorithm<P>,
-        A::BucketState: KeyableRateLimitState<A, P>,
-        P: Absolute,
+        A: Algorithm<C::Instant>,
+        A::BucketState: KeyableRateLimitState<A, C::Instant>,
+        C: clock::Clock,
     {
         fn default() -> Self {
             KeyedBucket(KeyedRateLimiter::per_second(nonzero!(50u32)))
         }
     }
-    impl<A, P> KeyedBucket<A, P>
+    impl<A, C> KeyedBucket<A, C>
     where
-        A: Algorithm<P>,
-        A::BucketState: KeyableRateLimitState<A, P>,
-        P: Absolute,
+        A: Algorithm<C::Instant>,
+        A::BucketState: KeyableRateLimitState<A, C::Instant>,
+        C: clock::Clock,
     {
-        pub fn limiter(self) -> KeyedRateLimiter<u32, A, P> {
+        pub fn limiter(self) -> KeyedRateLimiter<u32, A, C> {
             self.0
         }
     }
@@ -74,14 +74,19 @@ macro_rules! bench_with_variants {
     ($variant:expr, $var:ident : $bucket:tt, $code:block) => {
         match $variant {
             $crate::test_utilities::variants::Variant::GCRA => {
-                let mut $var =
-                    $bucket::<::ratelimit_meter::GCRA<Instant>, Instant>::default().limiter();
+                let mut $var = $bucket::<
+                    ::ratelimit_meter::GCRA<<clock::DefaultClock as clock::Clock>::Instant>,
+                    clock::DefaultClock,
+                >::default()
+                .limiter();
                 $code
             }
             $crate::test_utilities::variants::Variant::LeakyBucket => {
-                let mut $var =
-                    $bucket::<::ratelimit_meter::LeakyBucket<Instant>, Instant>::default()
-                        .limiter();
+                let mut $var = $bucket::<
+                    ::ratelimit_meter::LeakyBucket<<clock::DefaultClock as clock::Clock>::Instant>,
+                    clock::DefaultClock,
+                >::default()
+                .limiter();
                 $code
             }
         }

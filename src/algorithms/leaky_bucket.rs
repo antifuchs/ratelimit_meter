@@ -3,8 +3,8 @@
 use crate::lib::*;
 use crate::thread_safety::ThreadsafeWrapper;
 use crate::{
-    algorithms::{Algorithm, RateLimitState, RateLimitStateWithClock},
-    instant, InconsistentCapacity, NegativeMultiDecision, NonConformance,
+    algorithms::{Algorithm, RateLimitState},
+    clock, InconsistentCapacity, NegativeMultiDecision, NonConformance,
 };
 
 /// Implements the industry-standard leaky bucket rate-limiting
@@ -42,7 +42,7 @@ use crate::{
 /// # #[cfg(not(feature = "std"))] fn main() {}
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct LeakyBucket<P: instant::Relative = instant::TimeSource> {
+pub struct LeakyBucket<P: clock::Reference = <clock::DefaultClock as clock::Clock>::Instant> {
     full: Duration,
     token_interval: Duration,
     point: PhantomData<P>,
@@ -50,29 +50,27 @@ pub struct LeakyBucket<P: instant::Relative = instant::TimeSource> {
 
 /// Represents the state of a single history of decisions.
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct State<P: instant::Relative>(ThreadsafeWrapper<BucketState<P>>);
+pub struct State<P: clock::Reference>(ThreadsafeWrapper<BucketState<P>>);
 
-impl<P: instant::Relative> Default for State<P> {
+impl<P: clock::Reference> Default for State<P> {
     fn default() -> Self {
         State(Default::default())
     }
 }
 
-impl<P: instant::Relative> RateLimitState<LeakyBucket<P>, P> for State<P> {}
-
-impl<P: instant::Absolute> RateLimitStateWithClock<LeakyBucket<P>, P> for State<P> {
-    fn last_touched(&self, _params: &LeakyBucket<P>) -> P {
+impl<P: clock::Reference> RateLimitState<LeakyBucket<P>, P> for State<P> {
+    fn last_touched(&self, _params: &LeakyBucket<P>) -> Option<P> {
         let data = self.0.snapshot();
-        data.last_update.unwrap_or_else(P::now) + data.level
+        Some(data.last_update? + data.level)
     }
 }
 
 #[cfg(feature = "std")]
 mod std {
-    use crate::instant::Relative;
+    use crate::clock;
     use evmap::ShallowCopy;
 
-    impl<P: Relative> ShallowCopy for super::State<P> {
+    impl<P: clock::Reference> ShallowCopy for super::State<P> {
         unsafe fn shallow_copy(&mut self) -> Self {
             super::State(self.0.shallow_copy())
         }
@@ -84,15 +82,15 @@ mod std {
 /// To avoid the thundering herd effect, client code should always add
 /// some jitter to the wait time.
 #[derive(Debug, PartialEq)]
-pub struct TooEarly<P: instant::Relative>(P, Duration);
+pub struct TooEarly<P: clock::Reference>(P, Duration);
 
-impl<P: instant::Relative> fmt::Display for TooEarly<P> {
+impl<P: clock::Reference> fmt::Display for TooEarly<P> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "rate-limited until {:?}", self.0 + self.1)
     }
 }
 
-impl<P: instant::Relative> NonConformance<P> for TooEarly<P> {
+impl<P: clock::Reference> NonConformance<P> for TooEarly<P> {
     #[inline]
     fn earliest_possible(&self) -> P {
         self.0 + self.1
@@ -100,12 +98,12 @@ impl<P: instant::Relative> NonConformance<P> for TooEarly<P> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct BucketState<P: instant::Relative> {
+struct BucketState<P: clock::Reference> {
     level: Duration,
     last_update: Option<P>,
 }
 
-impl<P: instant::Relative> Default for BucketState<P> {
+impl<P: clock::Reference> Default for BucketState<P> {
     fn default() -> Self {
         BucketState {
             level: Duration::new(0, 0),
@@ -114,7 +112,7 @@ impl<P: instant::Relative> Default for BucketState<P> {
     }
 }
 
-impl<P: instant::Relative> Algorithm<P> for LeakyBucket<P> {
+impl<P: clock::Reference> Algorithm<P> for LeakyBucket<P> {
     type BucketState = State<P>;
 
     type NegativeDecision = TooEarly<P>;

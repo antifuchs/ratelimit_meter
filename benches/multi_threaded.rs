@@ -2,6 +2,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use criterion::{black_box, Criterion, ParameterizedBenchmark, Throughput};
+use ratelimit_meter::clock;
 use ratelimit_meter::test_utilities::variants::{DirectBucket, KeyedBucket, Variant};
 
 pub fn bench_all(c: &mut Criterion) {
@@ -22,7 +23,7 @@ fn bench_direct(c: &mut Criterion) {
 
                 for _i in 0..19 {
                     let mut lim = lim.clone();
-                    let mut b = b.clone();
+                    let mut b = *b;
                     children.push(thread::spawn(move || {
                         let mut i = 0;
                         b.iter(|| {
@@ -60,7 +61,7 @@ fn bench_keyed(c: &mut Criterion) {
 
                 for _i in 0..19 {
                     let mut lim = lim.clone();
-                    let mut b = b.clone();
+                    let mut b = *b;
                     children.push(thread::spawn(move || {
                         let mut i = 0;
                         b.iter(|| {
