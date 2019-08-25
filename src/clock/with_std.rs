@@ -3,10 +3,6 @@ use crate::lib::*;
 use parking_lot::Mutex;
 use std::time::SystemTime;
 
-/// The default clock reference point in time: [`Instant`].
-// TODO: remove this in favor of `DefaultClock::Instant`.
-pub type DefaultReference = Instant;
-
 /// The default clock that reports [`Instant`]s.
 pub type DefaultClock = MonotonicClock;
 

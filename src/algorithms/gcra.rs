@@ -126,7 +126,7 @@ impl<P: clock::Reference> NonConformance<P> for NotUntil<P> {
 /// # #[cfg(not(feature = "std"))] fn main() {}
 /// ```
 #[derive(Debug, Clone)]
-pub struct GCRA<P: clock::Reference = clock::DefaultReference> {
+pub struct GCRA<P: clock::Reference = <clock::DefaultClock as clock::Clock>::Instant> {
     // The "weight" of a single packet in units of time.
     t: Duration,
 

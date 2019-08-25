@@ -23,7 +23,7 @@ pub type DefaultAlgorithm = LeakyBucket;
 ///
 /// Since this does not account for effects like thundering herds,
 /// users should always add random jitter to the times given.
-pub trait NonConformance<P: clock::Reference = clock::DefaultReference> {
+pub trait NonConformance<P: clock::Reference = <clock::DefaultClock as clock::Clock>::Instant> {
     /// Returns the earliest time at which a decision could be
     /// conforming (excluding conforming decisions made by the Decider
     /// that are made in the meantime).
@@ -49,7 +49,7 @@ pub trait NonConformance<P: clock::Reference = clock::DefaultReference> {
 /// to make a decision, e.g. concrete usage statistics for an
 /// in-memory rate limiter, in the associated structure
 /// [`BucketState`](#associatedtype.BucketState).
-pub trait Algorithm<P: clock::Reference = clock::DefaultReference>:
+pub trait Algorithm<P: clock::Reference = <clock::DefaultClock as clock::Clock>::Instant>:
     Send + Sync + Sized + fmt::Debug
 {
     /// The state of a single rate limiting bucket.

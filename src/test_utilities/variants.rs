@@ -75,7 +75,7 @@ macro_rules! bench_with_variants {
         match $variant {
             $crate::test_utilities::variants::Variant::GCRA => {
                 let mut $var = $bucket::<
-                    ::ratelimit_meter::GCRA<clock::DefaultReference>,
+                    ::ratelimit_meter::GCRA<<clock::DefaultClock as clock::Clock>::Instant>,
                     clock::DefaultClock,
                 >::default()
                 .limiter();
@@ -83,7 +83,7 @@ macro_rules! bench_with_variants {
             }
             $crate::test_utilities::variants::Variant::LeakyBucket => {
                 let mut $var = $bucket::<
-                    ::ratelimit_meter::LeakyBucket<clock::DefaultReference>,
+                    ::ratelimit_meter::LeakyBucket<<clock::DefaultClock as clock::Clock>::Instant>,
                     clock::DefaultClock,
                 >::default()
                 .limiter();

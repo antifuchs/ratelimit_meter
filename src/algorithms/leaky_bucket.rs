@@ -42,7 +42,7 @@ use crate::{
 /// # #[cfg(not(feature = "std"))] fn main() {}
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct LeakyBucket<P: clock::Reference = clock::DefaultReference> {
+pub struct LeakyBucket<P: clock::Reference = <clock::DefaultClock as clock::Clock>::Instant> {
     full: Duration,
     token_interval: Duration,
     point: PhantomData<P>,

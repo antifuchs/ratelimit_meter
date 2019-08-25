@@ -10,7 +10,7 @@ use crate::clock;
 use crate::clock::Clock;
 
 /// Returns a "current" moment that's suitable for tests.
-pub fn current_moment() -> clock::DefaultReference {
+pub fn current_moment() -> <clock::DefaultClock as clock::Clock>::Instant {
     let c = clock::DefaultClock::default();
     c.now()
 }
