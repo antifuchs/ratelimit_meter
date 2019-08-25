@@ -1,3 +1,5 @@
+//! No-op examples.
+
 use crate::lib::*;
 use crate::{
     algorithms::{Algorithm, RateLimitState},

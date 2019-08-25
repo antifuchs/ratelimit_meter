@@ -1,3 +1,5 @@
+//! Data structures that keep rate-limiting state.
+
 pub mod direct;
 
 #[cfg(feature = "std")]

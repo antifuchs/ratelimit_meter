@@ -1,3 +1,5 @@
+//! Rate-limiting algorithms.
+
 pub mod gcra;
 pub mod leaky_bucket;
 
