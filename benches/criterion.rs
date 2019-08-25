@@ -3,8 +3,6 @@ extern crate criterion;
 #[macro_use]
 extern crate ratelimit_meter;
 
-use criterion::Criterion;
-
 mod algorithms;
 mod multi_threaded;
 mod no_op;

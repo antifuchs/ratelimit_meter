@@ -13,7 +13,12 @@ pub fn bench_all(c: &mut Criterion) {
         let algo = AlgorithmForTest::<Allower, ForeverClock>::default();
         let now = ForeverClock::now();
         let ms = Duration::from_millis(20);
+
+        #[allow(clippy::let_unit_value)]
+        // clippy complains that this is the unit value, but this is as much a demonstration of
+        // the code as it is a benchmark.
         let state = algo.state();
+
         let mut i = 0;
         b.iter(|| {
             i += 1;

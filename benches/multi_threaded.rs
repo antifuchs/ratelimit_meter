@@ -23,7 +23,7 @@ fn bench_direct(c: &mut Criterion) {
 
                 for _i in 0..19 {
                     let mut lim = lim.clone();
-                    let mut b = b.clone();
+                    let mut b = *b;
                     children.push(thread::spawn(move || {
                         let mut i = 0;
                         b.iter(|| {
@@ -61,7 +61,7 @@ fn bench_keyed(c: &mut Criterion) {
 
                 for _i in 0..19 {
                     let mut lim = lim.clone();
-                    let mut b = b.clone();
+                    let mut b = *b;
                     children.push(thread::spawn(move || {
                         let mut i = 0;
                         b.iter(|| {
