@@ -1,7 +1,7 @@
 [package]
 edition = "2018"
 name = "ratelimit_meter"
-version = "5.0.0-dev"
+version = "5.0.0"
 authors = ["Andreas Fuchs <asf@boinkor.net>"]
 license = "MIT"
 homepage = "https://github.com/antifuchs/ratelimit_meter"
@@ -13,15 +13,6 @@ categories = ["algorithms", "network-programming", "concurrency"]
 
 # We use criterion, don't infer benchmark files.
 autobenches = false
-
-[badges]
-circle-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
-maintenance = { status = "actively-developed" }
-
-[features]
-default = ["std"]
-std = ["parking_lot", "evmap", "nonzero_ext/std"]
-no_std = ["spin"]
 
 [package.metadata.release]
 sign-commit = false
@@ -47,6 +38,15 @@ commandline = "cargo +nightly test --no-default-features --features no_std"
 run = true
 version = "stable"
 commandline = "cargo test --no-default-features --features no_std"
+
+[badges]
+circle-ci = { repository = "antifuchs/ratelimit_meter", branch = "master" }
+maintenance = { status = "actively-developed" }
+
+[features]
+default = ["std"]
+std = ["parking_lot", "evmap", "nonzero_ext/std"]
+no_std = ["spin"]
 
 [[bench]]
 name = "criterion"
