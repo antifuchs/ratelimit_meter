@@ -2,9 +2,10 @@ extern crate ratelimit_meter;
 #[macro_use]
 extern crate nonzero_ext;
 
+use ratelimit_meter::jitter::Jitter;
 use ratelimit_meter::{
-    algorithms::Algorithm, test_utilities::current_moment, DirectRateLimiter, LeakyBucket,
-    NegativeMultiDecision, NonConformance,
+    algorithms::Algorithm, prelude::*, test_utilities::current_moment, DirectRateLimiter,
+    LeakyBucket, NegativeMultiDecision, NonConformance,
 };
 use std::thread;
 use std::time::Duration;
@@ -120,4 +121,15 @@ fn tooearly_wait_time_from() {
     } else {
         assert!(false, "Second attempt should fail");
     }
+}
+
+#[test]
+fn applies_jitter() {
+    let mut lim = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(20u32));
+    let now = current_moment();
+    let ms = Duration::from_millis(1);
+
+    let j = Jitter::up_to(Duration::from_secs(1));
+    lim.check_at(now).jitter(&j).unwrap();
+    lim.check_n_at(1, now).jitter(&j).unwrap();
 }
