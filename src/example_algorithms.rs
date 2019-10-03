@@ -3,7 +3,7 @@
 use crate::lib::*;
 use crate::{
     algorithms::{Algorithm, RateLimitState},
-    clock, DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision,
+    clock, DirectRateLimiter, InconsistentCapacity, NegativeMultiDecision, NonConformance,
 };
 
 /// The most naive implementation of a rate-limiter ever: Always
@@ -37,6 +37,13 @@ impl RateLimitState<Allower, Always> for () {
 /// positive result, so this error is never returned.
 #[derive(Debug, PartialEq)]
 pub enum Impossible {}
+
+// This is never used in practice, but the compiler demands it.
+impl NonConformance<Always> for Impossible {
+    fn earliest_possible(&self) -> Always {
+        Always()
+    }
+}
 
 impl fmt::Display for Impossible {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
