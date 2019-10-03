@@ -226,6 +226,8 @@ pub mod state;
 pub mod test_utilities;
 mod thread_safety;
 
+pub mod prelude;
+
 #[macro_use]
 extern crate nonzero_ext;
 
