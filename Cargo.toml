@@ -57,6 +57,7 @@ nonzero_ext = {version = "0.1.5", default-features = false}
 spin = {version = "0.5.0", optional = true}
 parking_lot = {version = "0.9.0", optional = true}
 evmap = {version = "6.0.0", optional = true}
+rand = "0.7.2"
 
 [dev_dependencies]
 libc = "0.2.41"

@@ -25,7 +25,10 @@ pub type DefaultAlgorithm = LeakyBucket;
 ///
 /// Since this does not account for effects like thundering herds,
 /// users should always add random jitter to the times given.
-pub trait NonConformance<P: clock::Reference = <clock::DefaultClock as clock::Clock>::Instant> {
+pub trait NonConformance<P: clock::Reference = <clock::DefaultClock as clock::Clock>::Instant>
+where
+    Self: Sized + PartialEq + fmt::Debug + fmt::Display + Send + Sync,
+{
     /// Returns the earliest time at which a decision could be
     /// conforming (excluding conforming decisions made by the Decider
     /// that are made in the meantime).
@@ -63,11 +66,10 @@ pub trait Algorithm<P: clock::Reference = <clock::DefaultClock as clock::Clock>:
 
     /// The type returned when a rate limiting decision for a single
     /// cell is negative. Each rate limiting algorithm can decide to
-    /// return the type that suits it best, but most algorithms'
-    /// decisions also implement
+    /// return the type that suits it best, it must also implement
     /// [`NonConformance`](trait.NonConformance.html), to ease
     /// handling of how long to wait.
-    type NegativeDecision: PartialEq + fmt::Display + fmt::Debug + Send + Sync;
+    type NegativeDecision: NonConformance<P>;
 
     /// Constructs a rate limiter with the given parameters:
     /// `capacity` is the number of cells to allow, weighing
