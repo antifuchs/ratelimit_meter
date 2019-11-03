@@ -6,10 +6,12 @@
 
 use crate::lib::*;
 use crate::{clock, NegativeMultiDecision, NonConformance};
+use once_cell::sync::OnceCell;
+use std::default::Default;
 
 /// A time interval specification that gets added to the wait time returned by the rate limiter's
 /// non-conformance results.
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct Jitter {
     min: Duration,
     interval: Duration,
@@ -40,17 +42,23 @@ impl Jitter {
 /// A non-conforming result that has had random jitter applied.
 pub struct NonConformanceWithJitter<NC: NonConformance<P>, P: clock::Reference> {
     inner: NC,
-    additional: Duration,
+    jitter: Jitter,
+    additional: OnceCell<Duration>,
     phantom: PhantomData<P>,
 }
 
 impl<NC: NonConformance<P>, P: clock::Reference> NonConformanceWithJitter<NC, P> {
-    pub(crate) fn new(inner: NC, additional: Duration) -> NonConformanceWithJitter<NC, P> {
+    pub(crate) fn new(inner: NC, jitter: Jitter) -> NonConformanceWithJitter<NC, P> {
         NonConformanceWithJitter {
             inner,
-            additional,
+            jitter,
+            additional: OnceCell::default(),
             phantom: PhantomData,
         }
+    }
+
+    fn additional_wait_time(&self) -> Duration {
+        *(self.additional.get_or_init(|| self.jitter.get()))
     }
 }
 
@@ -58,11 +66,11 @@ impl<NC: NonConformance<P>, P: clock::Reference> NonConformance<P>
     for NonConformanceWithJitter<NC, P>
 {
     fn earliest_possible(&self) -> P {
-        self.inner.earliest_possible() + self.additional
+        self.inner.earliest_possible() + self.additional_wait_time()
     }
 
     fn wait_time_from(&self, from: P) -> Duration {
-        self.inner.wait_time_from(from) + self.additional
+        self.inner.wait_time_from(from) + self.additional_wait_time()
     }
 }
 
@@ -83,7 +91,7 @@ pub trait JitterResultExt<P: clock::Reference, NC: NonConformance<P>> {
 /// Blanket implementation for applying jitter to any single-cell negative decision.
 impl<P: clock::Reference, NC: NonConformance<P>> JitterResultExt<P, NC> for Result<(), NC> {
     fn jitter(self, jitter: &Jitter) -> Result<(), NonConformanceWithJitter<NC, P>> {
-        self.map_err(|nc| NonConformanceWithJitter::new(nc, jitter.get()))
+        self.map_err(|nc| NonConformanceWithJitter::new(nc, *jitter))
     }
 }
 
@@ -110,7 +118,7 @@ impl<P: clock::Reference, NC: NonConformance<P>> JitterMultiResultExt<P, NC>
             NegativeMultiDecision::BatchNonConforming(n, nc) => {
                 NegativeMultiDecision::BatchNonConforming(
                     n,
-                    NonConformanceWithJitter::new(nc, jitter.get()),
+                    NonConformanceWithJitter::new(nc, *jitter),
                 )
             }
             NegativeMultiDecision::InsufficientCapacity(n) => {
