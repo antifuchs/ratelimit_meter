@@ -27,7 +27,7 @@ pub type DefaultAlgorithm = LeakyBucket;
 /// users should always add random jitter to the times given.
 pub trait NonConformance<P: clock::Reference = <clock::DefaultClock as clock::Clock>::Instant>
 where
-    Self: Sized + PartialEq + fmt::Debug + fmt::Display + Send + Sync,
+    Self: Sized + PartialEq + fmt::Debug + fmt::Display,
 {
     /// Returns the earliest time at which a decision could be
     /// conforming (excluding conforming decisions made by the Decider

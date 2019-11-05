@@ -271,6 +271,7 @@ mod lib {
     /// Imports that are only available on std.
     #[cfg(feature = "std")]
     mod std {
+        pub use once_cell::unsync::OnceCell;
         pub use std::collections::hash_map::RandomState;
         pub use std::hash::{BuildHasher, Hash};
         pub use std::sync::Arc;
@@ -280,6 +281,7 @@ mod lib {
     #[cfg(feature = "no_std")]
     mod no_std {
         pub use alloc::sync::Arc;
+        pub use once_cell::unsync::OnceCell;
     }
 
     #[cfg(feature = "std")]

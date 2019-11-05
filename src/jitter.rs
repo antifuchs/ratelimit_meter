@@ -6,8 +6,6 @@
 
 use crate::lib::*;
 use crate::{clock, NegativeMultiDecision, NonConformance};
-use once_cell::sync::OnceCell;
-use std::default::Default;
 
 /// A time interval specification that gets added to the wait time returned by the rate limiter's
 /// non-conformance results.
