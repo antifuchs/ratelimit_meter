@@ -127,7 +127,6 @@ fn tooearly_wait_time_from() {
 fn applies_jitter() {
     let mut lim = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(20u32));
     let now = current_moment();
-    let ms = Duration::from_millis(1);
 
     let j = Jitter::up_to(Duration::from_secs(1));
     lim.check_at(now).jitter(&j).unwrap();
