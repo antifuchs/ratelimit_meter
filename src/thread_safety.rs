@@ -32,6 +32,9 @@ where
     T: fmt::Debug + Default + Clone + PartialEq + Eq,
 {
     fn eq(&self, other: &Self) -> bool {
+        if self as *const _ == other as *const _ {
+            return true;
+        }
         let mine = self.data.lock();
         let other = other.data.lock();
         *other == *mine
