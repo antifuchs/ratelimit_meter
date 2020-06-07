@@ -12,7 +12,7 @@ use std::time::Duration;
 #[test]
 fn accepts_first_cell() {
     let gcra = GCRA::construct(nonzero!(5u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
-    let state = <GCRA as Algorithm>::BucketState::default();;
+    let state = <GCRA as Algorithm>::BucketState::default();
     let now = current_moment();
     assert_eq!(Ok(()), gcra.test_and_update(&state, now));
 }
@@ -20,7 +20,7 @@ fn accepts_first_cell() {
 #[test]
 fn rejects_too_many() {
     let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
-    let state = <GCRA as Algorithm>::BucketState::default();;
+    let state = <GCRA as Algorithm>::BucketState::default();
     let now = current_moment();
     gcra.test_and_update(&state, now).unwrap();
     gcra.test_and_update(&state, now).unwrap();
@@ -36,7 +36,7 @@ fn rejects_too_many() {
 #[test]
 fn allows_after_interval() {
     let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
-    let state = <GCRA as Algorithm>::BucketState::default();;
+    let state = <GCRA as Algorithm>::BucketState::default();
     let now = current_moment();
     let ms = Duration::from_millis(1);
     gcra.test_and_update(&state, now).unwrap();
@@ -50,7 +50,7 @@ fn allows_after_interval() {
 #[test]
 fn allows_n_after_interval() {
     let gcra = GCRA::construct(nonzero!(2u32), nonzero!(1u32), Duration::from_secs(1)).unwrap();
-    let state = <GCRA as Algorithm>::BucketState::default();;
+    let state = <GCRA as Algorithm>::BucketState::default();
     let now = current_moment() + Duration::from_secs(1);
     let ms = Duration::from_millis(1);
     assert_eq!(Ok(()), gcra.test_n_and_update(&state, 2, now));
@@ -72,7 +72,7 @@ fn allows_n_after_interval() {
 fn correctly_handles_per() {
     let ms = Duration::from_millis(1);
     let gcra = GCRA::construct(nonzero!(1u32), nonzero!(1u32), ms * 20).unwrap();
-    let state = <GCRA as Algorithm>::BucketState::default();;
+    let state = <GCRA as Algorithm>::BucketState::default();
     let now = current_moment();
 
     assert_eq!(Ok(()), gcra.test_and_update(&state, now));
