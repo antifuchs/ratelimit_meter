@@ -109,3 +109,14 @@ where
         data.clone()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn no_deadlock_on_eq() {
+        let wrapper: ThreadsafeWrapper<u32> = ThreadsafeWrapper::default();
+        assert_eq!(wrapper, wrapper);
+    }
+}
