@@ -44,6 +44,7 @@ fn expiration() {
     removed.sort();
     assert_eq!(vec!["bar", "baz", "foo"], removed);
     assert_eq!(0, lim.len());
+    assert!(lim.is_empty());
 
     // clean up all keys that have been so for 300ms:
     let mut lim = make_bucket();
@@ -51,6 +52,7 @@ fn expiration() {
     removed.sort();
     assert_eq!(vec!["bar", "foo"], removed);
     assert_eq!(1, lim.len());
+    assert!(!lim.is_empty());
 
     // clean up 2 seconds plus change later:
     let mut lim = make_bucket();
@@ -58,6 +60,7 @@ fn expiration() {
     removed.sort();
     assert_eq!(vec!["foo"], removed);
     assert_eq!(2, lim.len());
+    assert!(!lim.is_empty());
 }
 
 #[test]

@@ -139,6 +139,11 @@ where
         self.map_reader.len()
     }
 
+    /// Returns `true` if `self` has no keys stored in it.
+    pub fn is_empty(&self) -> bool {
+        self.map_reader.is_empty()
+    }
+
     /// Construct a new keyed rate limiter that allows `capacity`
     /// cells per second.
     ///
