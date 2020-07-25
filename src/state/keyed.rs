@@ -134,6 +134,11 @@ where
         }
     }
 
+    /// Returns the number of non-empty keys present in the map.
+    pub fn len(&self) -> usize {
+        self.map_reader.len()
+    }
+
     /// Construct a new keyed rate limiter that allows `capacity`
     /// cells per second.
     ///
