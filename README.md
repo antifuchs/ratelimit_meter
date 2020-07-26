@@ -11,7 +11,7 @@ fully-featured, more modern, [less
 buggy](https://github.com/antifuchs/ratelimit_meter/issues?q=is%3Aissue+label%3A%22fixed+in+governor%22)
 and it has way less potential for buggy usage.
 
-There is a [migration guide](https://docs.rs/governor/governor/_guide/index.html) available.
+There is a [migration guide](https://docs.rs/governor/~0.3/governor/_guide) available.
 
 With the above in mind, please take the rest of this README with
 several grains of salt (and use
