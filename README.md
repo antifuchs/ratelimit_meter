@@ -1,5 +1,22 @@
 [![Build Status](https://travis-ci.org/antifuchs/ratelimit_meter.svg?branch=master)](https://travis-ci.org/antifuchs/ratelimit_meter) [![Docs](https://docs.rs/ratelimit_meter/badge.svg)](https://docs.rs/ratelimit_meter/) [![crates.io](https://img.shields.io/crates/v/ratelimit_meter.svg)](https://crates.io/crates/ratelimit_meter)
 
+# `ratelimit_meter` is deprecated & in maintenance-only mode
+
+In late 2019, I realized that a bunch of design decisions I made in
+`ratelimit_meter` (one of my first "real" rust projects) meant that
+some bugs were ~forever baked in. To fix that, I re-wrote the core of
+this library as
+[`governor`](https://github.com/antifuchs/governor). It is more
+fully-featured, more modern, [less
+buggy](https://github.com/antifuchs/ratelimit_meter/issues?q=is%3Aissue+label%3A%22fixed+in+governor%22)
+and it has way less potential for buggy usage.
+
+There is a [migration guide](https://docs.rs/governor/governor/_guide/index.html) available.
+
+With the above in mind, please take the rest of this README with
+several grains of salt (and use
+[`governor`](https://crates.io/crates/governor) if you can)!
+
 # Rate-Limiting with leaky buckets in Rust
 
 This crate implements two rate-limiting algorithms in Rust:
